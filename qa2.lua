@@ -5,7 +5,6 @@ function QuickApp:onInit()
     QuickApp:debug("Started",self.id)
 
     local gs = api.get("/globalVariables")
-    a=gs
 
     local function loop(str)
         local function loop1()
