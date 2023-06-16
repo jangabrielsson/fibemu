@@ -65,6 +65,7 @@ local function runner(task)
         env.__config = config
         local debugFlags, fmt = {}, string.format
         debugFlags.color = true
+        if config.dark then util.fibColors['TEXT']='white' end
 
         env.setTimeout = setTimer
         env.clearTimeout = clearTimer
