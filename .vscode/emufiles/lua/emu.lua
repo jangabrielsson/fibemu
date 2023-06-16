@@ -57,8 +57,8 @@ local function runner(task)
         local funs = {
             "os", "pairs", "ipairs", "select", "print", "math", "string", "pcall", "xpcall", "table", "error",
             "next","json","tostring", "tonumber", "assert", "unpack", "utf8", "collectgarbage",
-            "setmetatable", "getmetatable", "type", "rawset", "rawget",
-            "__HTTP"
+            "setmetatable", "getmetatable", "type", "rawset", "rawget", -- extra stuff
+            "__HTTP" -- pythin api
         }
         for _, k in ipairs(funs) do env[k] = _G[k] end
         env._G = env
