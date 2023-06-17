@@ -22,7 +22,7 @@
             "program": {
               "command": "python3"
             },
-            "args": ["${workspaceFolder}/.vscode/emufiles/__init__.py","${file}"],
+            "args": ["${workspaceFolder}/.vscode/emufiles/__init__.py","-f","${file}"],
             "scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
             "scriptFiles": ["*.lua","**/*.lua"],
             "stepUnmappedLines": false,

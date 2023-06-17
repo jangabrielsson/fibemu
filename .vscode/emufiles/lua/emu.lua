@@ -1,5 +1,5 @@
-local props = ...
-local luapath = props.path.."lua/"
+local pconfig = ...
+local luapath = pconfig.path.."lua/"
 local util = dofile(luapath.."utils.lua")
 dofile(luapath.."json.lua")
 local resources = dofile(luapath.."resources.lua")
@@ -26,11 +26,12 @@ end
 local f = io.open("config.json", "r")
 assert(f, "Can't open config.json")
 local config = json.decode(f:read("*all"))
+f:close()
+for k, v in pairs(pconfig) do if config[k]==nil then config[k]=v end end
 config.creds = util.basicAuthorization(config.user, config.password)
 
 QA = {}
 local tasks = {}
--- props = {stopOnLoad = <boolean>}
 
 local function runner(task)
     local env,id = {},task.id
@@ -42,7 +43,7 @@ local function runner(task)
         assert(type(ms)=='number',"setTimeout second arg need to be a number")
         local t = clock() + ms / 1000
         return timers.add(id, t, tasks[id].f,{ type = 'timer', fun = f, ms = t, log = log or "" })
-    end    
+    end
     local function setTimer2(f, ms, log)
         coroutine.yield({ type = 'timer', fun = f, ms = ms / 1000, log = log or "" })
         f()
@@ -62,10 +63,8 @@ local function runner(task)
         }
         for _, k in ipairs(funs) do env[k] = _G[k] end
         env._G = env
-        env.__config = config
         local debugFlags, fmt = {}, string.format
         debugFlags.color = true
-        if config.dark then util.fibColors['TEXT']='white' end
 
         env.setTimeout = setTimer
         env.clearTimeout = clearTimer
@@ -102,7 +101,8 @@ local function runner(task)
         end
         errfun = env.fibaro.error
         env.fibaro.debugFlags = debugFlags
-        if debugFlags.dark then util.fibColors['TEXT'] = util.fibColors['TEXT'] or 'white' end
+        env.fibaro.config = config
+        if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['TEXT'] or 'white' end
 
         local qa, res = loadfile(fname, "t", env)     -- Load QA
         if not qa then
@@ -113,7 +113,7 @@ local function runner(task)
         local function ff() lldebugger.call(qa, true) end
         collectgarbage("collect")
         log("Starting", "%s (%.2fkb)", fname, collectgarbage("count"))
-        local stat, err = pcall(props.stopOnLoad and ff or qa)     -- Start QA
+        local stat, err = pcall(config['break'] and ff or qa)     -- Start QA
         if not stat then
             logerr("Start", "%s - %s - restarting in 5s", fname, err)
             QA.delete(id)
@@ -162,7 +162,8 @@ local function createTask(id, f, fname)
     return t
 end
 
-function QA.start(id, fname)
+function QA.start(fname, id)
+    id = id or 42
     timers.add(id, 0, createTask(id, runner, fname), { type = 'qa', id = id, fname = fname })
 end
 

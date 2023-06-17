@@ -26,11 +26,11 @@ function net.HTTPCall()
 end
 
 local function callHC3(method, path, data)
-    local url = fmt("http://%s/api%s", __config.host, path)
+    local url = fmt("http://%s/api%s", fibaro.config.host, path)
     local options = { 
         headers = {
-            ['Authorization'] = __config.creds,
-            ["Accept"] = '*/*', ["X-Fibaro-Version"] = "2", ["Fibaro-User-PIN"] = __config.pin,
+            ['Authorization'] = fibaro.config.creds,
+            ["Accept"] = '*/*', ["X-Fibaro-Version"] = "2", ["Fibaro-User-PIN"] = fibaro.config.pin,
             ["Content-Type"] = "application/json",
         }
     }

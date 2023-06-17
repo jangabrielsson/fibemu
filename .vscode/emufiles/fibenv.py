@@ -39,10 +39,8 @@ def httpCall(method, url, options, data = None):
     return res.status_code, res.text, res.headers
 
 class FibaroEnvironment:
-    def __init__(self, loader, fname, props):
-        self.fname = fname
-        self.props = props
-        self.loader = loader
+    def __init__(self, config):
+        self.config = config
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.event = Event()
         self.task = None
@@ -58,14 +56,21 @@ class FibaroEnvironment:
     def run(self):
 
         def runner():
+            config = self.config
             globals = self.lua.globals()
             globals['clock'] = time.time
             globals['__HTTP'] = httpCall
-            loader = self.props['path'] + self.loader
-            f = self.lua.eval(f'function(props) loadfile("{loader}")(props) end')
-            f(self.lua.table_from(self.props))
+            emulator = config['path'] + "lua/" + config['emulator']
+            print(emulator)
+            f = self.lua.eval(f'function(config) loadfile("{emulator}")(config) end')
+            f(self.lua.table_from(config))
             QA = globals.QA
-            QA.start(42,self.fname)
+            if config['file1']:
+                QA.start(config['file1'])
+            if config['file2']:
+                QA.start(config['file2'])
+            if config['file2']:
+                QA.start(config['file3'])
             while True:
                 delay = QA.loop()
                 # print(f"event: {delay}s", end='')
