@@ -24,7 +24,14 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory=".vscode/emufiles/static"), name="static")
 
 fibenv = dict()
-fibenv['fe']=42 
+fibenv['fe']=42
+fibenv['app']=app 
+
+def tolist(d):
+    res = list()
+    for k,v in d.items():
+        res.append(v)
+    return res
 
 ''' Emulator methods '''
 @app.get("/", tags=["Emulator methods"])
@@ -32,7 +39,6 @@ async def root():
     return {"message": "Hello from FibEmu!"}
 
 ''' Device methods '''
-
 class ActionParams(BaseModel):
     args: list
 
@@ -41,6 +47,29 @@ async def callOnAction(id: int, name: str, args: ActionParams):
     t = time.time()
     fibenv.get('fe').onAction({"deviceId":id,"actionName":name,"args":args.args})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
+
+''' GlobalVariables methods '''
+@app.get("/api/globalVariables", tags=["GlobalVariabes methods"])
+async def getGlobalVariables():
+    vars = fibenv.get('fe').getResource("globalVariables")
+    return tolist(vars)
+
+@app.get("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
+async def getGlobalVariable(name: str):
+    var = fibenv.get('fe').getResource("globalVariables",name)
+    return var
+
+''' Rooms methods '''
+@app.get("/api/rooms", tags=["Rooms methods"])
+async def getRooms():
+    vars = fibenv.get('fe').getResource("rooms")
+    return tolist(vars)
+
+''' Sections methods '''
+@app.get("/api/sections", tags=["Sections methods"])
+async def getSections():
+    vars = fibenv.get('fe').getResource("sections")
+    return tolist(vars)
 
 ''' Plugins methods '''
 @app.get("/api/plugins/callUIEvent", tags=["Plugins methods"])

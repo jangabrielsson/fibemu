@@ -9,47 +9,6 @@ function __assert_type(value, typeOfValue)
     end
 end
 
-net = {}
-function net.HTTPCall()
-    return {
-        request = function(_, url, opts)
-            local options = (opts or {}).options or {}
-            local data = options.data and json.encode(options.data) or nil
-            local status,res,headers = __HTTP(options.method or "GET", url, options, data )
-            if status < 303 and opts.success and type(opts.success)=='function' then
-                setTimeout(function() opts.success({status=status, data=res,headers=headers}) end,0)
-            elseif opts.error and type(opts.error)=='function' then
-                setTimeout(function() opts.error(status,headers) end,0)
-            end
-        end
-    }
-end
-
-local function callHC3(method, path, data)
-    local url = fmt("http://%s/api%s", fibaro.config.host, path)
-    local options = { 
-        headers = {
-            ['Authorization'] = fibaro.config.creds,
-            ["Accept"] = '*/*', ["X-Fibaro-Version"] = "2", ["Fibaro-User-PIN"] = fibaro.config.pin,
-            ["Content-Type"] = "application/json",
-        }
-    }
-    local status, res, headers = __HTTP(method, url, options, data and json.encode(data) or nil)
-    if status >= 303 then
-        return nil,status
-        --error(fmt("HTTP error %d: %s", status, res))
-    end
-    return res and type(res)=='string' and json.decode(res) or nil,status
-end
-
-api = {
-    get = function(url) return callHC3("GET", url) end,
-    post = function(url, data) return callHC3("POST", url, data) end,
-    put = function(url, data) return callHC3("PUT", url, data) end,
-    delete = function(url, data) return callHC3("DELETE", url, data) end
-}
-
-
 function setInterval(fun, ms)
     local ref = {}
     local function loop()
@@ -66,13 +25,6 @@ end
 
 fibaro = {}
 hub = fibaro
-
-function __assert_type(value, typeOfValue)
-    if type(value) ~= typeOfValue then -- Wrong parameter type, string required. Provided param 'nil' is type of nil
-        error(fmt("Wrong parameter type, %s required. Provided param '%s' is type of %s", typeOfValue, tostring(value),
-            type(value)), 3)
-    end
-end
 
 function string.split(str, sep)
     local fields, s = {}, sep or "%s"

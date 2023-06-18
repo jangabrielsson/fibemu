@@ -1,11 +1,15 @@
 
+--%%name=Test
+--%%type=fibaro.com.binarySwitch
+ 
  a = 0
 
 function QuickApp:onInit()
     QuickApp:debug("Started",self.id)
-
+    print("CONF",json.encode(fibaro.config))
     local gs = api.get("/globalVariables")
-
+    print("#vars = ",#gs)
+    --jkjkjk()
     local function loop(str)
         local function loop1()
             QuickApp:debug("Loop",str,a)
@@ -15,12 +19,12 @@ function QuickApp:onInit()
         loop1()
     end
 
-    loop("A")
+   loop("A")
     loop("B")
     setTimeout(function()
         fooo()
     end,2000)
-                  
+    
     net.HTTPCall():request("http://worldtimeapi.org/api/timezone/Europe/Stockholm",{
         options = {
             method = "GET",
@@ -35,6 +39,9 @@ function QuickApp:onInit()
             self:error("Error",err)
         end
     })
+
+    local val,t = fibaro.getGlobalVariable("A")
+    self:debug("Global variable 'A'=",val,os.date("%c",t))
 end
 
 --foo()

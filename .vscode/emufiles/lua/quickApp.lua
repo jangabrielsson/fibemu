@@ -1,4 +1,3 @@
-plugin = { mainDeviceId=___id }
 function print(...) fibaro.debug(__TAG,...) end
 __TAG="QUICKAPP"..plugin.mainDeviceId
 
