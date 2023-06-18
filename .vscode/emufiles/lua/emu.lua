@@ -36,7 +36,7 @@ QA,DIR = { config=config },{}
 local gID = 5000
 
 resources.refresh()
-refreshState.start()
+refreshState.start(config)
 
 local function createQAstruct(fname, id)
     local env = {}
@@ -238,6 +238,10 @@ function QA.onAction(event)
     if not DIR[id] then return end
     timers.add(id, 0, DIR[id].f,
         { type = 'onAction', deviceId = id, actionName = event.actionName, args = event.args })
+end
+
+function QA.onEvent(event)
+    print("EV:",event)
 end
 
 function QA.getResource(name, id)

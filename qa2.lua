@@ -19,8 +19,8 @@ function QuickApp:onInit()
         loop1()
     end
 
-   loop("A")
-    loop("B")
+   --loop("A")
+   -- loop("B")
     setTimeout(function()
         fooo()
     end,2000)
