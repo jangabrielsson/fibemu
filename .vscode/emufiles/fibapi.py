@@ -111,6 +111,18 @@ async def callUIEvent(args: UpdatePropertyParams):
     fibenv.get('fe').resources("updateDeviceProp",json.dumps(args.__dict__))
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
+class UpdateViewParams(BaseModel):
+    deviceId: int
+    componentName: str
+    propertyName: str
+    newValue: str
+
+@app.post("/api/plugins/updateView", tags=["Plugins methods"])
+async def callUIEvent(args: UpdateViewParams):
+    t = time.time()
+    fibenv.get('fe').resources("updateDeviceProp",json.dumps(args.__dict__))
+    return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
+
 ''' QuickApp methods '''
 @app.get("/api/quickApp/{id}/files", tags=["QuickApp methods"])
 async def getQuickAppFiles(id: int):

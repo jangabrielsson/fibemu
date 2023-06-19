@@ -10,7 +10,7 @@
       "request": "launch",
       "program": {
         "command": "python3",
-        "communication": "pipe"
+        //"communication": "pipe"
       },
       "args": [
         "${workspaceFolder}/.vscode/emufiles/__init__.py",

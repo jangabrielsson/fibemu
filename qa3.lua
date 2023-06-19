@@ -1,3 +1,7 @@
+--%%name=FibEmuTester
+--%%type=com.fibaro.bianrySwitch
+--%%file=qa3_1.lua,extra;
+
 local function printf(fmt,...) print(string.format(fmt,...)) end
 function QuickApp:onInit()
     quickApp = self
