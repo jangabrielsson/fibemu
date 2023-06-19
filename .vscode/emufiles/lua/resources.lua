@@ -100,13 +100,11 @@ function r.updateGlobalVariable(name, d)
     if rsrcs.globalVariables[name]==nil then return nil,404 end
     local gv = rsrcs.globalVariables[name]
     local flag = false
-    for k,v in pairs(d) do
-        if gv[k] ~= v then flag=true end
-        gv[k] = v
-    end
-    if flag then
+    if gv.value ~= d.value then 
         gv.modified = os.time()
-        postEvent("GlobalVariableChangedEvent",{variableName=name})
+        local oldValue = gv.value
+        gv.value = d.value
+        postEvent("GlobalVariableChangedEvent",{variableName=name,value=gv.value,oldValue=oldValue})
     end
     return gv,200
 end

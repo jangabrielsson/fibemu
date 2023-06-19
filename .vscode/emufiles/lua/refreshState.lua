@@ -32,11 +32,11 @@ local EventTypes = { -- There are more, but these are what I seen so far...
     },
     GlobalVariableChangedEvent = {
         f = function(d) r.rsrcs.updateGlobalVariable(d.variableName, {name=d.variableName,value=d.value},true) end,
-        l = function(d,e) return fmt("%s '%s'='%s'",e.type,d.variableName,d.value) end
+        l = function(d,e) return fmt("%s '%s' = '%s', old:'%s'",e.type,d.variableName,d.value,tostring(d.oldValue)) end
     },
     GlobalVariableAddedEvent = {
         f = function(d) r.rsrcs.createGlobalVariable({name=d.variableName,value=d.value},true) end,
-        l = function(d,e) return fmt("%s '%s'='%s'",e.type,d.variableName,d.value) end
+        l = function(d,e) return fmt("%s '%s' = '%s'",e.type,d.variableName,d.value) end
     },
     GlobalVariableRemovedEvent = {
         f = function(d) r.rsrcs.removeGlobalVariable(d.variableName,true) end,
@@ -76,7 +76,7 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         f = function(d) r.rsrcs.updatePropDevice(d.variableName, d.value, d) end,
         l = function(d,e)
             if propFilter[d.property] then return end
-            return fmt("%s ID:%s prop:%s val:%s",e.type,d.id,d.property,tostring(d.newValue)) 
+            return fmt("%s ID:%s prop:%s val:%s",e.type,d.id,d.property,tostring(d.newValue))
         end
     },
     DeviceRemovedEvent = {
@@ -208,7 +208,7 @@ local EventTypes = { -- There are more, but these are what I seen so far...
     },
     DeviceActionRanEvent = {
         f=function(d) end,
-        l=function(d,e) return fmt("%s",e.type) end
+        l=function(d,e) return fmt("%s ID:%s %s",e.type,d.id,d.actionName) end
     },
 }
 
@@ -218,10 +218,12 @@ end
 
 function r.newEvent(event)
     local h,m = EventTypes[event.type],nil
-    print(json.encode(event))
     if h then
         if not event._emu then h.f(event.data, event) end
-        if h.l then m=h.l(event.data, event) if m then QA.syslog("REFRESH",m) end end
+        if h.l then
+            m=h.l(event.data, event)
+            if m then QA.syslog("REFRESH",m) else print(json.encode(event)) end
+        end
     else
         print("Unknown event type: ", json.encode(event))
     end
@@ -239,7 +241,7 @@ function r.start(config)
             ["Content-Type"] = "application/json",
         }
     }
-    __REFRESH(true, url, options)
+    os.refreshStates(true, url, options)
 end
 
 return r

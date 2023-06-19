@@ -90,9 +90,12 @@ class FibaroEnvironment:
         def runner():
             config = self.config
             globals = self.lua.globals()
-            globals['clock'] = time.time
-            globals['__HTTP'] = httpCall
-            globals['__REFRESH'] = lambda start, url, options: self.refreshStates(start,url,options)
+            hooks = {
+                'clock':time.time,
+                'http':httpCall,
+                'refreshStates':lambda start, url, options: self.refreshStates(start,url,options)
+            }
+            config['hooks'] = hooks
             emulator = config['path'] + "lua/" + config['emulator']
             f = self.lua.eval(f'function(config) loadfile("{emulator}")(config) end')
             f(self.lua.table_from(config))

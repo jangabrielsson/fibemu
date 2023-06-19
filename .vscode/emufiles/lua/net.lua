@@ -7,7 +7,7 @@ function net.HTTPCall()
         request = function(_, url, opts)
             local options = (opts or {}).options or {}
             local data = options.data and json.encode(options.data) or nil
-            local status,res,headers = __HTTP(options.method or "GET", url, options, data, false )
+            local status,res,headers = os.http(options.method or "GET", url, options, data, false )
             if status < 303 and opts.success and type(opts.success)=='function' then
                 setTimeout(function() opts.success({status=status, data=res,headers=headers}) end,0)
             elseif opts.error and type(opts.error)=='function' then
@@ -31,7 +31,7 @@ local function callHC3(method, path, data, hc3)
             ["Content-Type"] = "application/json",
         }
     }
-    local status, res, headers = __HTTP(method, url, options, data and json.encode(data) or nil, lcl)
+    local status, res, headers = os.http(method, url, options, data and json.encode(data) or nil, lcl)
     if status >= 303 then
         return nil,status
         --error(fmt("HTTP error %d: %s", status, res))

@@ -6,7 +6,7 @@ dofile(luapath .. "net.lua")
 local resources = dofile(luapath .. "resources.lua")
 local refreshState = dofile(luapath .. "refreshState.lua")
 local timers = util.timerQueue()
-local clock = util.clock
+local clock = pconfig.hooks.clock
 local format = string.format
 
 print(os.date("Lua loader started %c"))
@@ -35,7 +35,10 @@ config.creds = util.basicAuthorization(config.user, config.password)
 QA,DIR = { config=config },{}
 local gID = 5000
 
-
+os.milliclock = config.hooks.clock
+os.http = config.hooks.http
+os.refreshStates = config.hooks.refreshStates
+config.hooks = nil
 resources.init(refreshState)
 resources.refresh(true)
 refreshState.init(resources)
@@ -68,7 +71,6 @@ local function createQAstruct(fname, id)
         "os", "pairs", "ipairs", "select", "print", "math", "string", "pcall", "xpcall", "table", "error",
         "next", "json", "tostring", "tonumber", "assert", "unpack", "utf8", "collectgarbage",
         "setmetatable", "getmetatable", "type", "rawset", "rawget",  -- extra stuff
-        "__HTTP"                                                     -- pythin api
     }
     for _, k in ipairs(funs) do env[k] = _G[k] end
     env._G = env

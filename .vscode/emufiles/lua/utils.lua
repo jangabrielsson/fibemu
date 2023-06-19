@@ -2,8 +2,6 @@ local util = {}
 
 local format = string.format
 
-function util.clock() return clock() end
-
 function util.timerQueue()
     local queue,ref = {},0
     local function addTimer(id, t, fun, args)
