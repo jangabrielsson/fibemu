@@ -49,10 +49,13 @@ class FibaroEnvironment:
         self.queue.put(event)  # safely qeued for lua thread
 
     def remoteCall(self,method,*args): # called from another thread
-        fun = self.QA.fun              # unsafe call to lua function in other thread
-        fun = tofun(fun)[method]
-        res,code = tofun(fun)(*args)
-        res = convertTable(res)
+        try:
+            fun = self.QA.fun              # unsafe call to lua function in other thread
+            fun = tofun(fun)[method]
+            res,code = tofun(fun)(*args)
+            res = convertTable(res)
+        except Exception as e:
+            print(f"Remote Call Error: {e}")
         return res,code
 
     def refreshStates(self,start,url,options):
@@ -106,7 +109,10 @@ class FibaroEnvironment:
                     event = None
                 # print(f", {self.event}")
                 if event:
-                    QA.onEvent(json.dumps(event))
+                    try:
+                        QA.onEvent(json.dumps(event))
+                    except Exception as e:
+                        print(f"onEvent Error: {e}")
 
         self.thread = Thread(target=runner, args=())
         self.thread.start()

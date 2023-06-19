@@ -42,7 +42,7 @@ config.hooks = nil
 resources.init(refreshStates)
 resources.refresh(true)
 refreshStates.init(resources)
---refreshState.start(config)
+refreshStates.start(config)
 
 function QA.syslog(typ, fmt, ...)
     util.debug({ color = true }, typ, format(fmt, ...), "SYS")
@@ -312,7 +312,6 @@ end
 
 function eventHandler.updateView(event)
     print("UV",json.encode(event))
-    refreshStates.newEvent(event.event)
 end
 
 function eventHandler.refreshStates(event)

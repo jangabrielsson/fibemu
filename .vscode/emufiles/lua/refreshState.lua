@@ -73,7 +73,7 @@ local EventTypes = { -- There are more, but these are what I seen so far...
     },
 
     DevicePropertyUpdatedEvent = {
-        f = function(d) r.rsrcs.updatePropDevice(d.variableName, d.value, d) end,
+        f = function(d) r.rsrcs.updateDeviceProp({deviceId=d.id,propertyName=d.property, value=d.newValue},true) end,
         l = function(d,e)
             if propFilter[d.property] then return end
             return fmt("%s ID:%s prop:%s val:%s",e.type,d.id,d.property,json.encode(d.newValue))
@@ -220,9 +220,9 @@ function r.newEvent(event)
     local h,m = EventTypes[event.type],nil
     if h then
         if not event._emu then h.f(event.data, event) end
-        if h.l then
+        if h.l and not not event._emu then
             m=h.l(event.data, event)
-            if m then QA.syslog("REFRESH",m) else print(json.encode(event)) end
+            if m then QA.syslog("REFRESH",m) end
         end
     else
         print("Unknown event type: ", json.encode(event))
