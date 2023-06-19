@@ -27,6 +27,10 @@
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/.vscode/emufiles/__init__.py",
+      "args": [
+        "-f",
+        "${workspaceFolder}/qa3.lua"
+      ],
       "console": "integratedTerminal",
       "justMyCode": true,
         "env": {

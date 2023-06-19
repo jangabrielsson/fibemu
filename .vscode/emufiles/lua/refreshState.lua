@@ -31,15 +31,15 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         l=function(d,e) return fmt("%s",e.type) end
     },
     GlobalVariableChangedEvent = {
-        f = function(d) r.rsrcs.updateGlobalVariable(d.variableName, d.value, d.oldValue) end,
-        l = function(d,e) return fmt("%s '%s'='%s'",e.type,d.name,d.value) end
+        f = function(d) r.rsrcs.updateGlobalVariable(d.variableName, {name=d.variableName,value=d.value},true) end,
+        l = function(d,e) return fmt("%s '%s'='%s'",e.type,d.variableName,d.value) end
     },
     GlobalVariableAddedEvent = {
-        f = function(d) r.rsrcs.createGlobalVariable(d.variableName, d.value, d) end,
-        l = function(d,e) return fmt("%s '%s'='%s'",e.type,d.name,d.value) end
+        f = function(d) r.rsrcs.createGlobalVariable({name=d.variableName,value=d.value},true) end,
+        l = function(d,e) return fmt("%s '%s'='%s'",e.type,d.variableName,d.value) end
     },
     GlobalVariableRemovedEvent = {
-        f = function(d) r.rsrcs.removeGlobalVariable(d.variableName) end,
+        f = function(d) r.rsrcs.removeGlobalVariable(d.variableName,true) end,
         l = function(d,e) return fmt("%s '%s'",e.type,d.variableName) end
     },
 
@@ -220,7 +220,7 @@ function r.newEvent(event)
     local h,m = EventTypes[event.type],nil
     print(json.encode(event))
     if h then
-        h.f(event.data, event)
+        if not event._emu then h.f(event.data, event) end
         if h.l then m=h.l(event.data, event) if m then QA.syslog("REFRESH",m) end end
     else
         print("Unknown event type: ", json.encode(event))

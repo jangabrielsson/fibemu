@@ -59,23 +59,11 @@ class FibaroEnvironment:
     def onEvent(self,event):  # called from another thread
         self.postEvent({"type":"event","payload":event})
 
-    def getResource(self,typ,id=None):  # called from another thread
-        fun = self.QA.getResource
-        res = tofun(fun)(typ,id)
+    def resources(self,method,*args):  # called from another thread
+        fun = self.QA.resources
+        res,code = tofun(fun)(method,*args)
         res = convertTable(res)
-        return res
-
-    def createResource(self,typ,data):  # called from another thread
-        fun = self.QA.createResource
-        res = tofun(fun)(typ,data)
-        res = convertTable(res)
-        return res
-
-    def deleteResource(self,typ,id):  # called from another thread
-        fun = self.QA.deleteResource
-        res = tofun(fun)(typ,id)
-        res = convertTable(res)
-        return res
+        return res,code
 
     def refreshStates(self,start,url,options):
         options = convertTable(options)

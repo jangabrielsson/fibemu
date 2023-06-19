@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import time
+import time,json
 
 from fastapi.openapi.docs import (
     get_redoc_html,
@@ -45,20 +45,39 @@ async def callOnAction(id: int, name: str, args: ActionParams):
 ''' GlobalVariables methods '''
 @app.get("/api/globalVariables", tags=["GlobalVariabes methods"])
 async def getGlobalVariables():
-    vars = fibenv.get('fe').getResource("globalVariables")
+    vars = fibenv.get('fe').resources("getGlobalVariables")
     return list(vars.items())
 
 @app.get("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
 async def getGlobalVariable(name: str):
-    var = fibenv.get('fe').getResource("globalVariables",name)
+    var = fibenv.get('fe').resources("getGlobalVariable",name)
     return var
 
 class GlobalVarParams(BaseModel):
-    name: str
+    name: str | None = None
     value: str | None = None
+    isEnum: bool | None = False
+    readOnly: bool | None = False
+    invokeScenes: bool | None = True
+
 @app.post("/api/globalVariables", tags=["GlobalVariabes methods"])
 async def createGlobalVariable(data: GlobalVarParams):
-    var = fibenv.get('fe').createResource("globalVariables",data)
+    var,code = fibenv.get('fe').resources("createGlobalVariable",json.dumps(data.__dict__))
+    if code == 409: 
+       return JSONResponse(
+        status_code=418,
+        content={"type": "ERROR","reason": "CONFLICT","message": "Resource already exists in the system"},
+        )
+    return var
+
+@app.put("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
+async def createGlobalVariable(name: str, data: GlobalVarParams):
+    var = fibenv.get('fe').resources("updateGlobalVariable",name,json.dumps(data.__dict__))
+    return var
+
+@app.delete("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
+async def createGlobalVariable(name: str):
+    var = fibenv.get('fe').resources("removeGlobalVariable",name)
     return var
 
 ''' Rooms methods '''

@@ -36,7 +36,8 @@ QA,DIR = { config=config },{}
 local gID = 5000
 
 
-resources.refresh()
+resources.init(refreshState)
+resources.refresh(true)
 refreshState.init(resources)
 refreshState.start(config)
 
@@ -257,9 +258,10 @@ function QA.onEvent(event)
     refreshState.newEvent(event)
 end
 
-function QA.createResource(typ, id, data) return resources.createResource(typ, data) end
-function QA.getResource(typ, id) return resources.getResource(typ, id) end
-function QA.deleteResource(typ, id) return resources.deleteResource(typ, id) end
+function QA.resources(method, ...)
+    --print("R:",method)
+    return resources[method](...)
+end
 
 function QA.loop()
     local t, c, task = timers.peek()

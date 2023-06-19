@@ -1,5 +1,12 @@
 local r = {}
 
+local function copy(o)
+    if type(o) ~= 'table' then return o end
+    local res = {}
+    for k,v in pairs(o) do res[k] = copy(v) end
+    return res
+end
+
 local keys = {
     globalVariables = "name",
     devices = "id",
@@ -14,7 +21,24 @@ local rsrcs = {
     sections = nil,
 }
 
-function r.refresh()
+function r.refresh(flag)
+    if flag then
+        r.refresh_resource("globalVariables","name")
+    end
+end
+
+local function postEvent(typ,data)
+    local e = {
+        type = typ, 
+        _emu = true,
+        data = data,
+        created = os.time(),
+    }
+    r.refreshStates.newEvent(e)
+end
+
+function r.init(refreshStates)
+    r.refreshStates = refreshStates
 end
 
 function r.refresh_resource(name,key)
@@ -25,50 +49,115 @@ function r.refresh_resource(name,key)
     end
 end
 
-function r.getResource(name,id)
-    if rsrcs[name] == nil then
-        r.refresh_resource(name,keys[name])
+local function initr(typ)
+    if rsrcs[typ] == nil then
+        r.refresh_resource(typ,keys[typ])
     end
-    local rs = rsrcs[name] or {}
-    local res = id and rs[id] or rs
-    return res
 end
 
-function r.createGlobalVariable(name, value, d)
+function r.getResource(typ,id)
+    initr(typ)
+
+    local rs = rsrcs[typ] or {}
+    local res = id and rs[id] or rs
+    return res, res and 200 or 404
+end
+
+function r.createResource(typ,d)
+    d = type(d)=='string' and json.decode(d) or d
+    initr(typ)
+    local rs = rsrcs[typ] or {}
+    local id = d[keys[typ]]
+    if rs[id] then return nil,404 end
+    rs[id] = d
+    return d,200
+end
+
+function r.createGlobalVariable(d)
+    initr("globalVariables")
+    d = type(d)=='string' and json.decode(d) or d
+    local name = d.name
+    if rsrcs.globalVariables[name] then return nil,409 end
+    local gv = copy(d)
+    gv.modified = os.time()
+    gv.created = gv.modified
+    rsrcs.globalVariables[name] = gv
+    postEvent("GlobalVariableAddedEvent",{variableName=name,value=gv.value})
+    return gv,200
 end
 
 function r.removeGlobalVariable(name)
+    initr("globalVariables")
+    if rsrcs.globalVariables[name]==nil then return nil,404 end
+    rsrcs.globalVariables[name] = nil
+    postEvent("GlobalVariableRemovedEvent",{variableName=name})
+    return nil,200
 end
 
-function r.updateGlobalVariable(name, value, d)
+function r.updateGlobalVariable(name, d)
+    initr("globalVariables")
+    d = type(d)=='string' and json.decode(d) or d
+    if rsrcs.globalVariables[name]==nil then return nil,404 end
+    local gv = rsrcs.globalVariables[name]
+    local flag = false
+    for k,v in pairs(d) do
+        if gv[k] ~= v then flag=true end
+        gv[k] = v
+    end
+    if flag then
+        gv.modified = os.time()
+        postEvent("GlobalVariableChangedEvent",{variableName=name})
+    end
+    return gv,200
 end
 
-function r.createDevice(id, d)
+function r.createDevice(d)
+    d = type(d)=='string' and json.decode(d) or d
+    return nil,200
 end
 
 function r.removeDevice(id)
+    return nil,200
 end
 
-function r.updatePropDevice(deviceId, value, d)
+function r.updatePropDevice(id, d)
+    d = type(d)=='string' and json.decode(d) or d
+    return nil,200
 end
 
 
-function r.createRoom(id, d)
+function r.createRoom(d)
+    d = type(d)=='string' and json.decode(d) or d
+    return nil,200
 end
 
 function r.removeRoom(id)
+    initr("rooms")
+    if rsrcs.rooms[id]==nil then return nil,404 end
+    rsrcs.rooms[id] = nil
+    return nil,200
 end
 
 function r.updateRoom(id, d)
+    d = type(d)=='string' and json.decode(d) or d
+    return nil,200
 end
 
-function r.createSection(id, d)
+function r.createSection(d)
+    d = type(d)=='string' and json.decode(d) or d
+    return nil,200
 end
 
 function r.removeSection(id)
+    initr("sections")
+    if rsrcs.sections[id]==nil then return nil,404 end
+    rsrcs.sections[id] = nil
+    return nil,200
 end
 
 function r.updateSection(id, d)
+    d = type(d)=='string' and json.decode(d) or d
+    return nil,200
 end
 
 return r
