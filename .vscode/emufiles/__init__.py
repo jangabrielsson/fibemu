@@ -49,7 +49,11 @@ if __name__ == "__main__":
     config['file3'] = args.file3 or None
     config['path'] = ".vscode/emufiles/"
 
-    print(f"Starting emulator with config: {config}")
+    print(f"Starting emulator")
+    print(f"API: http://{config['whost']}:{config['wport']}/api")
+    print(f"Docs: http://{config['whost']}:{config['wport']}/docs")
+    sys.stdout.flush()
+    
     f = FibaroEnvironment(config)
     fibapi.fibenv['fe'] = f
     f.run()
