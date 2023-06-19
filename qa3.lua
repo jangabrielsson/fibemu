@@ -11,6 +11,7 @@ function QuickApp:onInit()
     end
 
     self:testGlobalVariables()
+    self:testQA()
 end
 
 function QuickApp:testGlobalVariables()
@@ -23,4 +24,19 @@ function QuickApp:testGlobalVariables()
     val,t = fibaro.getGlobalVariable("A42")
     printf("Global 'A42' = %s (%s)",val,os.date('%c',t))
     api.delete("/globalVariables/A42")
+end
+
+function QuickApp:testQA_fun(a,b) self:debug("testQA_fun",a,b) end
+function QuickApp:testQA_button(a,b) self:debug("testQA_button pressed") end
+
+function QuickApp:testQA()
+    print("Calling testQA")
+    local res,code = api.post("/devices/"..self.id.."/action/testQA_fun",{args={ "A",  "B" }})
+    print(json.encode({code,res}))
+    fibaro.call(self.id,"testQA_fun","C","D")
+    self:registerUICallback("test", "onReleased", "testQA_button")
+    fibaro.callUI(self.id,"onReleased","test")
+    self:setVariable("test",{42})
+    local val = self:getVariable("test")
+    printf("Variable 'test' = %s",json.encode(val))
 end

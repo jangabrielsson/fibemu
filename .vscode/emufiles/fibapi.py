@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
+from pydantic import typing
 import time,json
 
 from fastapi.openapi.docs import (
@@ -96,7 +97,18 @@ async def getSections():
 @app.get("/api/plugins/callUIEvent", tags=["Plugins methods"])
 async def callUIEvent(deviceID: int, eventType: str, elementName: str, value: str):
     t = time.time()
-    fibenv.get('fe').onUIEvent({"deviceId":deviceID,"elementName":elementName,"values":value})
+    fibenv.get('fe').onUIEvent({"deviceId":deviceID,"eventType":eventType,"elementName":elementName,"values":value})
+    return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
+
+class UpdatePropertyParams(BaseModel):
+    deviceId: int
+    propertyName: str
+    value: typing.Any
+
+@app.post("/api/plugins/updateProperty", tags=["Plugins methods"])
+async def callUIEvent(args: UpdatePropertyParams):
+    t = time.time()
+    fibenv.get('fe').resources("updateDeviceProp",json.dumps(args.__dict__))
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
 ''' QuickApp methods '''

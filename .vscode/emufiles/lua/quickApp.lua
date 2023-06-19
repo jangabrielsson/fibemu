@@ -18,8 +18,8 @@ function QuickAppBase:__init(dev)
   self.properties = dev.properties
   self.interfaces = dev.interfaces
   self.parentId   = dev.parentId
-  self._view      = {} -- TBD
   self.uiCallbacks = {}
+  self._view = {}
   for _,e in ipairs(dev.properties.uiCallbacks or {}) do
     self.uiCallbacks[e.name] = self.uiCallbacks[e.name] or {} 
     self.uiCallbacks[e.name][e.eventType]=e.callback
@@ -37,6 +37,19 @@ function QuickAppBase:callAction(name,...)
     return
   end
   self[name](self,...) 
+end
+
+function QuickAppBase:setupUICallbacks()
+  local callbacks = (self.properties or {}).uiCallbacks or {}
+  for _,elm in pairs(callbacks) do
+      self:registerUICallback(elm.name, elm.eventType, elm.callback)
+  end
+end
+
+function QuickAppBase:registerUICallback(elm, typ, fun)
+  local uic = self.uiCallbacks
+  uic[elm] = uic[elm] or {}
+  uic[elm][typ] = fun
 end
 
 function QuickAppBase:setName(name)
@@ -82,12 +95,13 @@ function QuickAppBase:setVariable(name,value)
     if v.name==name then 
       v.value=value
       api.post("/plugins/updateProperty", {deviceId=self.id, propertyName='quickAppVariables', value=vars})
+      self.properties.quickAppVariables = vars
       return 
     end 
   end
-  --self.properties.quickAppVariables = vars
   vars[#vars+1]={name=name,value=value}
   api.post("/plugins/updateProperty", {deviceId=self.id, propertyName='quickAppVariables', value=vars})
+  self.properties.quickAppVariables = vars
 end
 
 function QuickAppBase:updateProperty(prop,val)
@@ -114,6 +128,7 @@ class 'QuickApp'(QuickAppBase)
 function QuickApp:__init(device)
   QuickAppBase.__init(self,device)
   self.childDevices = {}
+  self:setupUICallbacks()
   if self.onInit then
     self:onInit()
   end

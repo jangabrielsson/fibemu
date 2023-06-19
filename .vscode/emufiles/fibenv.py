@@ -53,7 +53,7 @@ class FibaroEnvironment:
         self.postEvent({"type":"action","payload":ev})
 
     def onUIEvent(self,event): # {"deviceID":<id>, "elementName":<name>, "values":<args>}
-        ev = {"deviceId":event["deviceId"],"elementName":event['elementName'],"values":event['values']}
+        ev = {"deviceId":event["deviceId"],"elementName":event['elementName'],"eventType":event['eventType'],"values":event['values']}
         self.postEvent({"type":"uievent","payload":ev})
 
     def onEvent(self,event):  # called from another thread

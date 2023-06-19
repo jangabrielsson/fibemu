@@ -24,6 +24,9 @@ local rsrcs = {
 function r.refresh(flag)
     if flag then
         r.refresh_resource("globalVariables","name")
+        r.refresh_resource("devices","id")
+        r.refresh_resource("rooms","id")
+        r.refresh_resource("sections","id")
     end
 end
 
@@ -111,15 +114,31 @@ end
 
 function r.createDevice(d)
     d = type(d)=='string' and json.decode(d) or d
-    return nil,200
+    local id = d.id
+    if rsrcs.devices[id] then return nil,409 end
+    local dv = copy(d)
+    dv.modified = os.time()
+    dv.created = dv.modified
+    rsrcs.devices[id] = dv
+    postEvent("DeviceCreatedEvent",{id=id})
+    return dv,200
 end
 
 function r.removeDevice(id)
     return nil,200
 end
 
-function r.updatePropDevice(id, d)
+function r.updateDeviceProp(d)
     d = type(d)=='string' and json.decode(d) or d
+    local id = d.deviceId
+    local prop = d.propertyName
+    local value = d.value
+    if rsrcs.devices[id]==nil then return nil,404 end
+    local dv = rsrcs.devices[id]
+    if dv.properties[prop] == value then return nil,200 end
+    local oldValue = dv.properties[prop]
+    dv.properties[prop] = value
+    postEvent("DevicePropertyUpdatedEvent",{id=id,property=prop,newValue=value,oldValue=oldValue})
     return nil,200
 end
 

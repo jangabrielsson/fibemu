@@ -76,7 +76,7 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         f = function(d) r.rsrcs.updatePropDevice(d.variableName, d.value, d) end,
         l = function(d,e)
             if propFilter[d.property] then return end
-            return fmt("%s ID:%s prop:%s val:%s",e.type,d.id,d.property,tostring(d.newValue))
+            return fmt("%s ID:%s prop:%s val:%s",e.type,d.id,d.property,json.encode(d.newValue))
         end
     },
     DeviceRemovedEvent = {

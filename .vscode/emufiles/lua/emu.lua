@@ -42,7 +42,7 @@ config.hooks = nil
 resources.init(refreshState)
 resources.refresh(true)
 refreshState.init(resources)
-refreshState.start(config)
+--refreshState.start(config)
 
 function QA.syslog(typ,fmt, ...) 
     util.debug({color=true},typ, format(fmt, ...),"SYS")
@@ -54,7 +54,7 @@ local function createQAstruct(fname, id)
     debugFlags.color = true
 
     local function log(str, fmt, ...) util.debug(debugFlags,env.__TAG, format("%s %s", str, format(fmt, ...)),"DEBUG") end
-    local function logerr(str, fmt, ...) env.fibaro.error(env.__TAG, format("%s Error: %s", str, format(fmt, ...))) end
+    local function logerr(str, fmt, ...) env.fibaro.error(env.__TAG, format("%s Error : %s", str, format(fmt, ...))) end
 
     local function setTimer(f, ms, log)
         assert(type(f) == 'function', "setTimeout first arg need to be function")
@@ -114,7 +114,10 @@ local function createQAstruct(fname, id)
     f:close()
 
     local name, ftype = fname:match("([%w_]+)%.([luafq]+)$")
-    local dev = { name = name, id = id, type = 'com.fibaro.binarySwitch', properties = {}, interfaces={}, parentId = 0 }
+    local dev = { 
+        name = name, id = id, type = 'com.fibaro.binarySwitch', 
+        properties = { quickAppVariables = {}, value = {}}, interfaces={}, parentId = 0 
+    }
     assert(ftype == "lua", "Unsupported file type - " .. tostring(ftype))
 
     local chandler = {}
@@ -163,13 +166,14 @@ local function runner(fname, fc, id)
     local qastr = createQAstruct(fname, id)
     local qa, env, dev, log, logerr = qastr.qa, qastr.env, qastr.dev, qastr.log, qastr.logerr
     local errfun = env.fibaro.error
+    id = dev.id
     local function checkErr(str, f, ...)
         local ok, err = pcall(f, ...)
         if not ok then env.fibaro.error(env.__TAG, format("%s Error: %s", str, err)) end
     end
 
     DIR[dev.id] = { f = fc, fname = fname, env = env, dev = dev}
-
+    resources.createDevice(dev)
     collectgarbage("collect")
     log("Starting", "%s (%.2fkb)", fname, collectgarbage("count"))
     local stat, err = pcall(qa) -- Start QA
@@ -237,6 +241,7 @@ function QA.delete(id)
         timers.removeId(id)
         DIR[id] = nil
     end
+    resources.removeDevice(id)
 end
 
 function QA.UIEvent(event)
@@ -244,7 +249,7 @@ function QA.UIEvent(event)
     local id = event.deviceId
     if not DIR[id] then return end
     timers.add(id, clock(), DIR[id].f,
-        { type = 'UIEvent', deviceId = id, elementName = event.elementName, values = event.values or {} })
+        { type = 'UIEvent', deviceId = id, elementName = event.elementName, eventType = event.eventType, values = event.values or {} })
 end
 
 function QA.onAction(event)
