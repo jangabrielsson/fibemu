@@ -4,7 +4,7 @@ local util = dofile(luapath .. "utils.lua")
 dofile(luapath .. "json.lua")
 dofile(luapath .. "net.lua")
 local resources = dofile(luapath .. "resources.lua")
-local refreshState = dofile(luapath .. "refreshState.lua")
+local refreshStates = dofile(luapath .. "refreshState.lua")
 local timers = util.timerQueue()
 local clock = pconfig.hooks.clock
 local format = string.format
@@ -39,9 +39,9 @@ os.milliclock = config.hooks.clock
 os.http = config.hooks.http
 os.refreshStates = config.hooks.refreshStates
 config.hooks = nil
-resources.init(refreshState)
+resources.init(refreshStates)
 resources.refresh(true)
-refreshState.init(resources)
+refreshStates.init(resources)
 --refreshState.start(config)
 
 function QA.syslog(typ, fmt, ...)
@@ -288,8 +288,16 @@ function QA.delete(id)
     resources.removeDevice(id)
 end
 
-function QA.UIEvent(event)
-    event = json.decode(event)
+local eventHandler = {}
+
+function eventHandler.onAction(event)
+    local id = event.deviceId
+    if not DIR[id] then return end
+    timers.add(id, 0, DIR[id].f,
+        { type = 'onAction', deviceId = id, actionName = event.actionName, args = event.args })
+end
+
+function eventHandler.uiEvent(event)
     local id = event.deviceId
     if not DIR[id] then return end
     timers.add(id, clock(), DIR[id].f,
@@ -302,23 +310,23 @@ function QA.UIEvent(event)
         })
 end
 
-function QA.onAction(event)
-    event = json.decode(event)
-    local id = event.deviceId
-    if not DIR[id] then return end
-    timers.add(id, 0, DIR[id].f,
-        { type = 'onAction', deviceId = id, actionName = event.actionName, args = event.args })
+function eventHandler.updateView(event)
+    print("UV",json.encode(event))
+    refreshStates.newEvent(event.event)
 end
 
-function QA.onEvent(event)
-    event = json.decode(event)
-    refreshState.newEvent(event)
+function eventHandler.refreshStates(event)
+    refreshStates.newEvent(event.event)
 end
 
-function QA.resources(method, ...)
-    --print("R:",method)
-    return resources[method](...)
+function QA.onEvent(event) -- dispatch to event handler
+    event = json.decode(event)
+    local h = eventHandler[event.type]
+    if h then h(event) else print("Unknown event", event.type) end
 end
+
+QA.fun = {}
+for name,fun in pairs(resources) do QA.fun[name] = fun end -- export resource functions
 
 function QA.loop()
     local t, c, task = timers.peek()

@@ -60,9 +60,8 @@ end
 
 function r.getResource(typ,id)
     initr(typ)
-
     local rs = rsrcs[typ] or {}
-    local res = id and rs[id] or rs
+    local res = id==nil and rs or rs[id]
     return res, res and 200 or 404
 end
 

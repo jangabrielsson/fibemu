@@ -1,4 +1,7 @@
 from fastapi import FastAPI
+from fastapi.responses import JSONResponse
+from fastapi.responses import Response
+from fastapi import status
 from pydantic import BaseModel
 from pydantic import typing
 import time,json
@@ -40,18 +43,20 @@ class ActionParams(BaseModel):
 @app.post("/api/devices/{id}/action/{name}", tags=["Device methods"])
 async def callOnAction(id: int, name: str, args: ActionParams):
     t = time.time()
-    fibenv.get('fe').onAction({"deviceId":id,"actionName":name,"args":args.args})
+    fibenv.get('fe').postEvent({"type":"onAction","deviceId":id,"actionName":name,"args":args.args})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
 ''' GlobalVariables methods '''
 @app.get("/api/globalVariables", tags=["GlobalVariabes methods"])
 async def getGlobalVariables():
-    vars = fibenv.get('fe').resources("getGlobalVariables")
+    vars,code = fibenv.get('fe').remoteCall("getResource","globalVariables")
     return list(vars.items())
 
 @app.get("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
-async def getGlobalVariable(name: str):
-    var = fibenv.get('fe').resources("getGlobalVariable",name)
+async def getGlobalVariable(name: str, response: Response):
+    var,code = fibenv.get('fe').remoteCall("getResource","globalVariables",name)
+    if code == 404:
+        response.status_code = status.HTTP_404_NOT_FOUND
     return var
 
 class GlobalVarParams(BaseModel):
@@ -63,41 +68,55 @@ class GlobalVarParams(BaseModel):
 
 @app.post("/api/globalVariables", tags=["GlobalVariabes methods"])
 async def createGlobalVariable(data: GlobalVarParams):
-    var,code = fibenv.get('fe').resources("createGlobalVariable",json.dumps(data.__dict__))
+    var,code = fibenv.get('fe').remoteCall("createGlobalVariable",json.dumps(data.__dict__))
     if code == 409: 
        return JSONResponse(
-        status_code=418,
+        status_code=409,
         content={"type": "ERROR","reason": "CONFLICT","message": "Resource already exists in the system"},
         )
     return var
 
 @app.put("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
 async def createGlobalVariable(name: str, data: GlobalVarParams):
-    var = fibenv.get('fe').resources("updateGlobalVariable",name,json.dumps(data.__dict__))
+    var,code = fibenv.get('fe').remoteCall("updateGlobalVariable",name,json.dumps(data.__dict__))
+    if code == 404:
+        response.status_code = status.HTTP_404_NOT_FOUND
     return var
 
 @app.delete("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
 async def createGlobalVariable(name: str):
-    var = fibenv.get('fe').resources("removeGlobalVariable",name)
+    var,code = fibenv.get('fe').remoteCall("removeGlobalVariable",name)
+    if code == 404:
+        response.status_code = status.HTTP_404_NOT_FOUND
     return var
 
 ''' Rooms methods '''
 @app.get("/api/rooms", tags=["Rooms methods"])
 async def getRooms():
-    vars = fibenv.get('fe').getResource("rooms")
+    vars = fibenv.get('fe').remoteCall("getResource","rooms")
     return list(vars.items())
+
+@app.get("/api/rooms/{id}", tags=["Rooms methods"])
+async def getRooms(id: int):
+    var = fibenv.get('fe').remoteCall("getResource","rooms",id)
+    return var
 
 ''' Sections methods '''
 @app.get("/api/sections", tags=["Sections methods"])
 async def getSections():
-    vars = fibenv.get('fe').getResource("sections")
+    vars = fibenv.get('fe').remoteCall("getResource","sections")
     return list(vars.items())
+
+@app.get("/api/sections/{id}", tags=["Sections methods"])
+async def getSections(id: int):
+    var = fibenv.get('fe').remoteCall("getResource","sections",id)
+    return var
 
 ''' Plugins methods '''
 @app.get("/api/plugins/callUIEvent", tags=["Plugins methods"])
 async def callUIEvent(deviceID: int, eventType: str, elementName: str, value: str):
     t = time.time()
-    fibenv.get('fe').onUIEvent({"deviceId":deviceID,"eventType":eventType,"elementName":elementName,"values":value})
+    fibenv.get('fe').postEvent({"type":"uiEvent","deviceId":deviceID,"eventType":eventType,"elementName":elementName,"values":value})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
 class UpdatePropertyParams(BaseModel):
@@ -108,7 +127,7 @@ class UpdatePropertyParams(BaseModel):
 @app.post("/api/plugins/updateProperty", tags=["Plugins methods"])
 async def callUIEvent(args: UpdatePropertyParams):
     t = time.time()
-    fibenv.get('fe').resources("updateDeviceProp",json.dumps(args.__dict__))
+    fibenv.get('fe').remoteCall("updateDeviceProp",json.dumps(args.__dict__))
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
 class UpdateViewParams(BaseModel):
@@ -116,11 +135,12 @@ class UpdateViewParams(BaseModel):
     componentName: str
     propertyName: str
     newValue: str
-
 @app.post("/api/plugins/updateView", tags=["Plugins methods"])
 async def callUIEvent(args: UpdateViewParams):
     t = time.time()
-    fibenv.get('fe').resources("updateDeviceProp",json.dumps(args.__dict__))
+    event = dict(args.__dict__)
+    event['type'] = 'updateView'
+    fibenv.get('fe').postEvent(event)
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
 ''' QuickApp methods '''

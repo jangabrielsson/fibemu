@@ -46,22 +46,12 @@ class FibaroEnvironment:
         self.queue = queue.Queue()
 
     def postEvent(self,event): # called from another thread
-        self.queue.put(event)
+        self.queue.put(event)  # safely qeued for lua thread
 
-    def onAction(self,event): # {"deviceId":<id>, "actionName":<name>, "args":<args>}
-        ev = {"deviceId":event["deviceId"],"actionName":event['actionName'],"args":event['args']}
-        self.postEvent({"type":"action","payload":ev})
-
-    def onUIEvent(self,event): # {"deviceID":<id>, "elementName":<name>, "values":<args>}
-        ev = {"deviceId":event["deviceId"],"elementName":event['elementName'],"eventType":event['eventType'],"values":event['values']}
-        self.postEvent({"type":"uievent","payload":ev})
-
-    def onEvent(self,event):  # called from another thread
-        self.postEvent({"type":"event","payload":event})
-
-    def resources(self,method,*args):  # called from another thread
-        fun = self.QA.resources
-        res,code = tofun(fun)(method,*args)
+    def remoteCall(self,method,*args): # called from another thread
+        fun = self.QA.fun              # unsafe call to lua function in other thread
+        fun = tofun(fun)[method]
+        res,code = tofun(fun)(*args)
         res = convertTable(res)
         return res,code
 
@@ -78,7 +68,7 @@ class FibaroEnvironment:
                         last = data['last'] if data['last'] else last
                         if data['events']:
                             for event in data['events']:
-                                self.onEvent(event)
+                                self.postEvent({"type":"refreshStates","event":event})
                 except Exception as e:
                     print(f"Error: {e}")
                     
@@ -116,13 +106,7 @@ class FibaroEnvironment:
                     event = None
                 # print(f", {self.event}")
                 if event:
-                    match event['type']:
-                        case 'action':
-                            QA.onAction(json.dumps(event['payload']))
-                        case 'uievent':
-                            QA.UIEvent(json.dumps(event['payload']))
-                        case 'event':
-                            QA.onEvent(json.dumps(event['payload']))
+                    QA.onEvent(json.dumps(event))
 
         self.thread = Thread(target=runner, args=())
         self.thread.start()
