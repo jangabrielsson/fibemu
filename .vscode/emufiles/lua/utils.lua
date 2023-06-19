@@ -88,7 +88,7 @@ function util.debug(flags,tag,str,typ)
     if flags.color then
         local txt_color = COLORMAP[(fibColors['TEXT'] or "black")]
         local typ_color = COLORMAP[(fibColors[typ] or "black")]
-        print(format("%s%s [%s%s%s] [%s]: %s",
+        print(format("%s%s [%s%-5s%s] [%s]: %s",
             txt_color, os.date("[%d.%m.%Y] [%H:%M:%S]"),
             typ_color, typ, txt_color,
             tag,
@@ -117,5 +117,10 @@ function util.base64encode(data)
 
 function util.basicAuthorization(user,password) return "Basic "..util.base64encode(user..":"..password) end
 
+function util.toarray(t)
+    local a = {}
+    for k,v in pairs(t) do a[#a+1] = v end
+    return a
+end
 
 return util

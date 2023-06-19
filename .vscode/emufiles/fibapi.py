@@ -25,13 +25,7 @@ app.mount("/static", StaticFiles(directory=".vscode/emufiles/static"), name="sta
 
 fibenv = dict()
 fibenv['fe']=42
-fibenv['app']=app 
-
-def tolist(d):
-    res = list()
-    for k,v in d.items():
-        res.append(v)
-    return res
+fibenv['app']=app
 
 ''' Emulator methods '''
 @app.get("/", tags=["Emulator methods"])
@@ -52,24 +46,32 @@ async def callOnAction(id: int, name: str, args: ActionParams):
 @app.get("/api/globalVariables", tags=["GlobalVariabes methods"])
 async def getGlobalVariables():
     vars = fibenv.get('fe').getResource("globalVariables")
-    return tolist(vars)
+    return list(vars.items())
 
 @app.get("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
 async def getGlobalVariable(name: str):
     var = fibenv.get('fe').getResource("globalVariables",name)
     return var
 
+class GlobalVarParams(BaseModel):
+    name: str
+    value: str | None = None
+@app.post("/api/globalVariables", tags=["GlobalVariabes methods"])
+async def createGlobalVariable(data: GlobalVarParams):
+    var = fibenv.get('fe').createResource("globalVariables",data)
+    return var
+
 ''' Rooms methods '''
 @app.get("/api/rooms", tags=["Rooms methods"])
 async def getRooms():
     vars = fibenv.get('fe').getResource("rooms")
-    return tolist(vars)
+    return list(vars.items())
 
 ''' Sections methods '''
 @app.get("/api/sections", tags=["Sections methods"])
 async def getSections():
     vars = fibenv.get('fe').getResource("sections")
-    return tolist(vars)
+    return list(vars.items())
 
 ''' Plugins methods '''
 @app.get("/api/plugins/callUIEvent", tags=["Plugins methods"])

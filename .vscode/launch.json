@@ -5,29 +5,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: Currentt File",
-      "type": "python",
-      "request": "launch",
-      "program": "${file}",
-      "console": "integratedTerminal",
-      "justMyCode": true,
-        "env": {
-          //  "GEVENT_SUPPORT": "True"
-        }
-    },
-    {
-      "name": "Debug Lua file",
-      "type": "lua-local",
-      "request": "launch",
-      "program": {
-        "lua": "lua",
-        "file": "${file}"
-      },
-      "breakInCoroutines": true,
-      "ignorePatterns": ["^copas"]
-    },
-    {
-      "name": "fibenv",
+      "name": "Fibenv QA file",    // For debugging QA lua file
       "type": "lua-local",
       "request": "launch",
       "program": {
@@ -41,8 +19,30 @@
       "scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
       "scriptFiles": ["*.lua", "**/*.lua"],
       "stepUnmappedLines": false,
-      //"ignorePatterns": ["^emu","lldebugger"]
+      //"ignorePatterns": ["^emufiles","lldebugger"] // Add to skip the emufiles and focus on QA
       "ignorePatterns": ["lldebugger"]
+    },
+    {
+      "name": "Python: __init__.py", // For debugging the python wrapper
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/.vscode/emufiles/__init__.py",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+        "env": {
+          //  "GEVENT_SUPPORT": "True"
+        }
+    },
+    {
+      "name": "Debug Lua file", // For debugging the lua file
+      "type": "lua-local",
+      "request": "launch",
+      "program": {
+        "lua": "lua",
+        "file": "${file}"
+      },
+      "breakInCoroutines": true,
+      "ignorePatterns": ["^copas"]
     }
   ]
 }

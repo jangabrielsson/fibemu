@@ -2,7 +2,7 @@ import lupa
 from lupa import LuaRuntime
 from threading import Thread
 from threading import Timer
-from threading import Event
+import queue
 import json
 import requests_async
 import requests
@@ -43,26 +43,39 @@ class FibaroEnvironment:
     def __init__(self, config):
         self.config = config
         self.lua = LuaRuntime(unpack_returned_tuples=True)
-        self.event = Event()
-        self.task = None
+        self.queue = queue.Queue()
+
+    def postEvent(self,event): # called from another thread
+        self.queue.put(event)
 
     def onAction(self,event): # {"deviceId":<id>, "actionName":<name>, "args":<args>}
-        self.task = {"type":"action","payload":json.dumps({"deviceId":event["deviceId"],"actionName":event['actionName'],"args":event['args']})}
-        self.event.set()
+        ev = {"deviceId":event["deviceId"],"actionName":event['actionName'],"args":event['args']}
+        self.postEvent({"type":"action","payload":ev})
 
     def onUIEvent(self,event): # {"deviceID":<id>, "elementName":<name>, "values":<args>}
-        self.task = {"type":"uievent","payload":json.dumps({"deviceId":event["deviceId"],"elementName":event['elementName'],"values":event['values']})}
-        self.event.set()
+        ev = {"deviceId":event["deviceId"],"elementName":event['elementName'],"values":event['values']}
+        self.postEvent({"type":"uievent","payload":ev})
 
-    def getResource(self,name,id=None):
+    def onEvent(self,event):  # called from another thread
+        self.postEvent({"type":"event","payload":event})
+
+    def getResource(self,typ,id=None):  # called from another thread
         fun = self.QA.getResource
-        res = tofun(fun)(name,id)
+        res = tofun(fun)(typ,id)
         res = convertTable(res)
         return res
 
-    def onEvent(self,event):
-        self.task = {"type":"event","payload":json.dumps(event)}
-        self.event.set()
+    def createResource(self,typ,data):  # called from another thread
+        fun = self.QA.createResource
+        res = tofun(fun)(typ,data)
+        res = convertTable(res)
+        return res
+
+    def deleteResource(self,typ,id):  # called from another thread
+        fun = self.QA.deleteResource
+        res = tofun(fun)(typ,id)
+        res = convertTable(res)
+        return res
 
     def refreshStates(self,start,url,options):
         options = convertTable(options)
@@ -106,18 +119,19 @@ class FibaroEnvironment:
             while True:
                 delay = QA.loop()
                 # print(f"event: {delay}s", end='')
-                self.event.wait(delay)
-                # print(f", {self.task}")
-                if self.task:
-                    match self.task['type']:
+                try:
+                    event = self.queue.get(block=True, timeout=delay)
+                except queue.Empty:
+                    event = None
+                # print(f", {self.event}")
+                if event:
+                    match event['type']:
                         case 'action':
-                            QA.onAction(self.task['payload'])
+                            QA.onAction(json.dumps(event['payload']))
                         case 'uievent':
-                            QA.UIEvent(self.task['payload'])
+                            QA.UIEvent(json.dumps(event['payload']))
                         case 'event':
-                            QA.onEvent(self.task['payload'])
-                    self.task = None # Should be a queue?
-                    self.event.clear()
+                            QA.onEvent(json.dumps(event['payload']))
 
         self.thread = Thread(target=runner, args=())
         self.thread.start()

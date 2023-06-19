@@ -10,17 +10,17 @@ function QuickApp:onInit()
     local gs = api.get("/globalVariables")
     print("#vars = ",#gs)
     --jkjkjk()
-    local function loop(str)
+    local function loop(str,delay)
         local function loop1()
             QuickApp:debug("Loop",str,a)
             a = a+1
-            setTimeout(loop1,1000,str)
+            setTimeout(loop1,delay,str)
         end
         loop1()
     end
 
-   --loop("A")
-   -- loop("B")
+   loop("A",2000)
+   loop("B",2500)
     setTimeout(function()
         fooo()
     end,2000)

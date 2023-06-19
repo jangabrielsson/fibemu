@@ -25,17 +25,50 @@ function r.refresh_resource(name,key)
     end
 end
 
-function r.createGlobalVariable(name,value)
-end
-
 function r.getResource(name,id)
-    --print("getResource",name,id,tostring(rsrcs[name]))
     if rsrcs[name] == nil then
         r.refresh_resource(name,keys[name])
     end
     local rs = rsrcs[name] or {}
     local res = id and rs[id] or rs
     return res
+end
+
+function r.createGlobalVariable(name, value, d)
+end
+
+function r.removeGlobalVariable(name)
+end
+
+function r.updateGlobalVariable(name, value, d)
+end
+
+function r.createDevice(id, d)
+end
+
+function r.removeDevice(id)
+end
+
+function r.updatePropDevice(deviceId, value, d)
+end
+
+
+function r.createRoom(id, d)
+end
+
+function r.removeRoom(id)
+end
+
+function r.updateRoom(id, d)
+end
+
+function r.createSection(id, d)
+end
+
+function r.removeSection(id)
+end
+
+function r.updateSection(id, d)
 end
 
 return r

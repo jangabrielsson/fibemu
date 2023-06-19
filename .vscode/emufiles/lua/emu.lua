@@ -35,8 +35,14 @@ config.creds = util.basicAuthorization(config.user, config.password)
 QA,DIR = { config=config },{}
 local gID = 5000
 
+
 resources.refresh()
+refreshState.init(resources)
 refreshState.start(config)
+
+function QA.syslog(typ,fmt, ...) 
+    util.debug({color=true},typ, format(fmt, ...),"SYS")
+end
 
 local function createQAstruct(fname, id)
     local env = {}
@@ -71,17 +77,23 @@ local function createQAstruct(fname, id)
 
     function env.__fibaroSleep(ms) end
 
-    function env.__fibaro_get_global_variable(name) return api.get("/globalVariables/"..name) end
+    function env.__fibaro_get_global_variable(name) return resources.getResource("globalVariables",name) end
 
-    function env.__fibaro_get_device(id) end
+    function env.__fibaro_get_device(id) return resources.getResource("devices",id) end
 
-    function env.__fibaro_get_devices() end
+    function env.__fibaro_get_devices() return util.toarray(resources.getResource("devices") or {}) end
 
-    function env.__fibaro_get_room(id) end
+    function env.__fibaro_get_room(id) return resources.getResource("rooms",id) end
 
-    function env.__fibaro_get_scene(id) return nil end
+    function env.__fibaro_get_scene(id) return resources.getResource("scenes",id) end
 
-    function env.__fibaro_get_device_property(id, prop) end
+    function env.__fibaro_get_device_property(id, prop)
+        local d = resources.getResource("devices",id)
+        if d then
+            local pv = (d.properties or {})[prop]
+            return { value = pv, modified = d.modified or 0 }
+        end
+    end
 
     function env.__fibaro_get_breached_partitions() end
 
@@ -241,17 +253,13 @@ function QA.onAction(event)
 end
 
 function QA.onEvent(event)
-    print("EV:",event)
+    event = json.decode(event)
+    refreshState.newEvent(event)
 end
 
-function QA.getResource(name, id)
-    return resources.getResource(name, id)
-end
-
--- setTimeout(function() QA.start(41, "test.lua") end, 2000)
--- setTimeout(function() QA.start(42, "test.lua") end, 3000)
--- setTimeout(function() QA.UIEvent({ deviceId = 42, elementName = 'test', values = {} }) end, 5000)
--- setTimeout(function() QA.onAction({ deviceId = 42, actionName = 'foo', args = { 34, 56 } }) end, 7000)
+function QA.createResource(typ, id, data) return resources.createResource(typ, data) end
+function QA.getResource(typ, id) return resources.getResource(typ, id) end
+function QA.deleteResource(typ, id) return resources.deleteResource(typ, id) end
 
 function QA.loop()
     local t, c, task = timers.peek()
