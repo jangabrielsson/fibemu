@@ -1,12 +1,12 @@
 local pconfig = ...
 local luapath = pconfig.path .. "lua/"
 local util = dofile(luapath .. "utils.lua")
+local devices = dofile(luapath .. "device.lua")
 dofile(luapath .. "json.lua")
 dofile(luapath .. "net.lua")
 local resources = dofile(luapath .. "resources.lua")
 local refreshStates = dofile(luapath .. "refreshState.lua")
 local timers = util.timerQueue()
-local clock = pconfig.hooks.clock
 local format = string.format
 
 print(os.date("Lua loader started %c"))
@@ -25,20 +25,25 @@ else
     print("Not waiting for debugger")
 end
 
-local f = io.open("config.json", "r")
-assert(f, "Can't open config.json")
-local config = json.decode(f:read("*all"))
-f:close()
-for k, v in pairs(pconfig) do if config[k] == nil then config[k] = v end end
-config.creds = util.basicAuthorization(config.user, config.password)
+local config
+do
+    local f = io.open("config.json", "r")
+    assert(f, "Can't open config.json")
+    config = json.decode(f:read("*all"))
+    f:close()
+    for k, v in pairs(pconfig) do if config[k] == nil then config[k] = v end end
+    config.creds = util.basicAuthorization(config.user, config.password)
+end
 
 QA, DIR = { config = config }, {}
 local gID = 5000
 
 os.milliclock = config.hooks.clock
+local clock = config.hooks.clock
 os.http = config.hooks.http
 os.refreshStates = config.hooks.refreshStates
 config.hooks = nil
+devices.init(luapath .. "devices.json")
 resources.init(refreshStates)
 resources.refresh(true)
 refreshStates.init(resources)
@@ -48,10 +53,66 @@ function QA.syslog(typ, fmt, ...)
     util.debug({ color = true }, typ, format(fmt, ...), "SYS")
 end
 
+local function systemTimer(fun, ms)
+    local t = clock() + ms / 1000
+    return timers.add(-1, t, fun, { type = 'timer', fun = fun, ms = t, log = "system" })
+end
+
 function string.split(str, sep)
     local fields, s = {}, sep or "%s"
     str:gsub("([^" .. s .. "]+)", function(c) fields[#fields + 1] = c end)
     return fields
+end
+
+local function log(fmt, ...) util.debug({color=true}, "", format(fmt, ...), "SYS") end
+local function logerr(fmt, ...) util.debug({color=true}, "", format("Error : %s", format(fmt, ...)), "SYS") end
+
+local function installQA(fname, id)
+    local f = io.open(fname, "r")
+    if not f then
+        logerr("Install %s - %s", fname, "File not found")
+        return
+    end
+    local code = f:read("*all")
+    f:close()
+
+    local name, ftype = fname:match("([%w_]+)%.([luafq]+)$")
+    assert(ftype == "lua", "Unsupported file type - " .. tostring(ftype))
+
+
+    local qaFiles = {}
+    local chandler = {}
+    function chandler.name(var, val, dev) dev.name = val end
+    function chandler.type(var, val, dev) dev.type = val end
+    function chandler.id(var, val, dev) dev.id = tonumber(id) end
+    function chandler.file(var, val, dev)
+        local fn, qn = table.unpack(val:sub(1, -2):split(","))
+        dev.files = dev.files or {}
+        dev.files[#dev.files + 1] = { fname = fn, qaname = qn }
+    end
+
+    local vars = {}
+    code:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
+        if chandler[var] then
+            chandler[var](var, val, vars)
+        else
+            logerr("Load", "%s - Unknown header variable '%s'", fname, var)
+        end
+    end)
+    table.insert(vars.files, { code = code, fname = fname, qaname = 'main' })
+
+    if vars.id == nil then
+        vars.id = gID; gID = gID + 1
+    end
+    id = vars.id
+
+    local dev = devices.getDeviceStruct(vars.type or "com.fibaro.binarySwitch")
+    dev.name = vars.name or "APP"
+    dev.id = vars.id
+    dev.properties.quickAppVariables = {}
+    dev.interfaces = {}
+    dev.parentId = 0
+
 end
 
 local function createQAstruct(fname, id)
@@ -75,8 +136,8 @@ local function createQAstruct(fname, id)
 
     local funs = {
         "os", "pairs", "ipairs", "select", "print", "math", "string", "pcall", "xpcall", "table", "error",
-        "next", "json", "tostring", "tonumber", "assert", "unpack", "utf8", "collectgarbage",
-        "setmetatable", "getmetatable", "type", "rawset", "rawget", -- extra stuff
+        "next", "json", "tostring", "tonumber", "assert", "unpack", "utf8", "collectgarbage", "type",
+        "setmetatable", "getmetatable", "rawset", "rawget", "coroutine" -- extra stuff
     }
     for _, k in ipairs(funs) do env[k] = _G[k] end
     env._G = env
@@ -217,7 +278,7 @@ local function runner(fname, fc, id)
         if not stat then
             logerr("Start", "%s - %s - restarting in 5s", q.fname, err)
             QA.delete(id)
-            return 5000
+            systemTimer(function() QA.start(fname, id) end, 5000)
         end
     end
 
@@ -228,7 +289,7 @@ local function runner(fname, fc, id)
     if not stat then
         logerr(":onInit()", "%s - restarting in 5s", err)
         QA.delete(id)
-        return 5000
+        systemTimer(function() QA.start(fname, id) end, 5000)
     end
 
     local ok, err
@@ -260,12 +321,13 @@ local function createQA(runner, fname, id)
             coroutine.resume(c)
         end
     end
-    local stat, res = coroutine.resume(c, fname, t, id)
-    if not stat then
-        print(res)
-    elseif type(res) == 'number' then
-        timers.add(id, clock() + res / 1000, function() QA.start(fname, id) end, { type = 'next' })
-    end
+    local stat, res = coroutine.resume(c, fname, t, id) -- Start QA
+    if not stat then print(res) end
+end
+
+function QA.install(fname, id)
+    installQA(fname, id)
+    createQA(runner, fname, id)
 end
 
 function QA.start(fname, id)
@@ -311,7 +373,7 @@ function eventHandler.uiEvent(event)
 end
 
 function eventHandler.updateView(event)
-    print("UV",json.encode(event))
+    print("UV", json.encode(event))
 end
 
 function eventHandler.refreshStates(event)
@@ -325,7 +387,7 @@ function QA.onEvent(event) -- dispatch to event handler
 end
 
 QA.fun = {}
-for name,fun in pairs(resources) do QA.fun[name] = fun end -- export resource functions
+for name, fun in pairs(resources) do QA.fun[name] = fun end -- export resource functions
 
 function QA.loop()
     local t, c, task = timers.peek()
