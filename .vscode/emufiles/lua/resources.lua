@@ -1,4 +1,4 @@
-local r = {}
+local r, config, refreshStates = {},nil
 
 local function copy(o)
     if type(o) ~= 'table' then return o end
@@ -37,22 +37,27 @@ local function postEvent(typ, data)
         data = data,
         created = os.time(),
     }
-    r.refreshStates.newEvent(e)
+    refreshStates.newEvent(e)
 end
 
-function r.init(refreshStates)
-    r.refreshStates = refreshStates
+function r.init(conf, libs)
+    config = conf
+    refreshStates = libs.refreshStates
+    for name, fun in pairs(r) do QA.fun[name] = fun end -- export resource functions
 end
 
 function r.refresh_resource(name, key, id)
     if id then
-        local r = api.get("/" .. name .. "/" .. id, "hc3")
+        local r = nil
+        if not config.lcl then r = api.get("/" .. name .. "/" .. id, "hc3") end
         if r then
             rsrcs[name][id] = r
         end
+        return r
     else
         rsrcs[name] = {}
-        local rss = api.get("/" .. name, "hc3") or {}
+        local rss = {}
+        if not config.lcl then rss = api.get("/" .. name, "hc3") or {} end
         for _, rs in ipairs(rss) do
             rsrcs[name][rs[key]] = rs
         end

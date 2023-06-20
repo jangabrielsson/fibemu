@@ -1,5 +1,5 @@
 --%%name=FibEmuTester
---%%type=com.fibaro.bianrySwitch
+--%%type=com.fibaro.binarySwitch
 --%%file=qa3_1.lua,extra;
 
 local function printf(fmt,...) print(string.format(fmt,...)) end

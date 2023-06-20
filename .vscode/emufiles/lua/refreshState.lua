@@ -1,5 +1,6 @@
 local fmt = string.format
-local r = {}
+local r,config = {},nil
+local resources
 
 local propFilter = {
     icon = true
@@ -31,15 +32,15 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         l=function(d,e) return fmt("%s",e.type) end
     },
     GlobalVariableChangedEvent = {
-        f = function(d,s) r.rsrcs.updateGlobalVariable(d.variableName, {name=d.variableName,value=d.value},s) end,
+        f = function(d,s) resources.updateGlobalVariable(d.variableName, {name=d.variableName,value=d.value},s) end,
         l = function(d,e) return fmt("%s '%s' = '%s', old:'%s'",e.type,d.variableName,d.value,tostring(d.oldValue)) end
     },
     GlobalVariableAddedEvent = {
-        f = function(d,s) r.rsrcs.createGlobalVariable({name=d.variableName,value=d.value},s) end,
+        f = function(d,s) resources.createGlobalVariable({name=d.variableName,value=d.value},s) end,
         l = function(d,e) return fmt("%s '%s' = '%s'",e.type,d.variableName,d.value) end
     },
     GlobalVariableRemovedEvent = {
-        f = function(d,s) r.rsrcs.removeGlobalVariable(d.variableName,true) end,
+        f = function(d,s) resources.removeGlobalVariable(d.variableName,true) end,
         l = function(d,e) return fmt("%s '%s'",e.type,d.variableName) end
     },
 
@@ -73,14 +74,14 @@ local EventTypes = { -- There are more, but these are what I seen so far...
     },
 
     DevicePropertyUpdatedEvent = {
-        f = function(d,s) r.rsrcs.updateDeviceProp({deviceId=d.id,propertyName=d.property, value=d.newValue},s) end,
+        f = function(d,s) resources.updateDeviceProp({deviceId=d.id,propertyName=d.property, value=d.newValue},s) end,
         l = function(d,e)
             if propFilter[d.property] then return end
             return fmt("%s ID:%s prop:%s val:%s",e.type,d.id,d.property,json.encode(d.newValue))
         end
     },
     DeviceRemovedEvent = {
-        f = function(d,s) r.rsrcs.removeDevice(d.id,s) end,
+        f = function(d,s) resources.removeDevice(d.id,s) end,
         l = function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
     DeviceChangedRoomEvent = {
@@ -88,7 +89,7 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
     DeviceCreatedEvent = {
-        f = function(d,s) r.rsrcs.createDevice(d, s) end,
+        f = function(d,s) resources.createDevice(d, s) end,
         l = function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
     DeviceModifiedEvent = {
@@ -113,7 +114,7 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
     SceneRemovedEvent = {
-        f = function(d,s) r.rsrcs.removeScene(d.id) end,
+        f = function(d,s) resources.removeScene(d.id) end,
         l = function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
     SceneModifiedEvent = {
@@ -121,7 +122,7 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
     SceneCreatedEvent = {
-        f = function(d,s) r.rsrcs.createScene(d, s) end,
+        f = function(d,s) resources.createScene(d, s) end,
         l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
 
@@ -212,8 +213,9 @@ local EventTypes = { -- There are more, but these are what I seen so far...
     },
 }
 
-function r.init(rsrcs)
-    r.rsrcs = rsrcs
+function r.init(conf, libs)
+    config = conf
+    resources = libs.resources
 end
 
 function r.newEvent(event)
@@ -229,7 +231,7 @@ function r.newEvent(event)
     end
 end
 
-function r.start(config)
+function r.start()
     local url = fmt("http://%s:%s/api/refreshStates?lang=en&rand=0.09580020181569104&logs=false&last=", config.host,
         config.port)
     local options = {

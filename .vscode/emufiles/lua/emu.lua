@@ -1,11 +1,16 @@
 local pconfig = ...
 local luapath = pconfig.path .. "lua/"
-local util = dofile(luapath .. "utils.lua")
-local devices = dofile(luapath .. "device.lua")
-dofile(luapath .. "json.lua")
-dofile(luapath .. "net.lua")
-local resources = dofile(luapath .. "resources.lua")
-local refreshStates = dofile(luapath .. "refreshState.lua")
+local function doload(fname) return dofile(luapath .. fname) end
+
+doload("json.lua")
+doload("net.lua")
+
+local util = doload("utils.lua")
+local devices = doload("device.lua")
+local resources = doload("resources.lua")
+local refreshStates = doload("refreshState.lua")
+local files = doload("file.lua")
+
 local timers = util.timerQueue()
 local format = string.format
 
@@ -28,29 +33,41 @@ end
 local config
 do
     local f = io.open("config.json", "r")
-    assert(f, "Can't open config.json")
-    config = json.decode(f:read("*all"))
-    f:close()
+    if not f then
+        print("No config.json")
+        config = {}
+    else
+        config = json.decode(f:read("*all"))
+        f:close()
+    end
     for k, v in pairs(pconfig) do if config[k] == nil then config[k] = v end end
-    config.creds = util.basicAuthorization(config.user, config.password)
+    config.creds = util.basicAuthorization(config.user or "", config.password or "")
 end
 
-QA, DIR = { config = config }, {}
-local gID = 5000
+QA, DIR = { config = config, fun = {} }, {}
 
+config.lcl = config['local'] or false
 os.milliclock = config.hooks.clock
 local clock = config.hooks.clock
 os.http = config.hooks.http
+
+local libs = { devices = devices, resources = resources, files = files, refreshStates = refreshStates }
 os.refreshStates = config.hooks.refreshStates
 config.hooks = nil
-devices.init(luapath .. "devices.json")
-resources.init(refreshStates)
+devices.init(config, luapath.."devices.json", libs)
+resources.init(config, libs)
+refreshStates.init(config, libs)
+files.init(config, libs)
+
 resources.refresh(true)
-refreshStates.init(resources)
-refreshStates.start(config)
+if not config.lcl then refreshStates.start() end
 
 function QA.syslog(typ, fmt, ...)
     util.debug({ color = true }, typ, format(fmt, ...), "SYS")
+end
+
+function QA.syslogerr(typ, fmt, ...)
+    util.debug({ color = true }, typ, format(fmt, ...), "SYSERR")
 end
 
 local function systemTimer(fun, ms)
@@ -64,64 +81,15 @@ function string.split(str, sep)
     return fields
 end
 
-local function log(fmt, ...) util.debug({color=true}, "", format(fmt, ...), "SYS") end
-local function logerr(fmt, ...) util.debug({color=true}, "", format("Error : %s", format(fmt, ...)), "SYS") end
+local function log(fmt, ...) util.debug({ color = true }, "", format(fmt, ...), "SYS") end
+local function logerr(fmt, ...) util.debug({ color = true }, "", format("Error : %s", format(fmt, ...)), "SYS") end
 
-local function installQA(fname, id)
-    local f = io.open(fname, "r")
-    if not f then
-        logerr("Install %s - %s", fname, "File not found")
-        return
-    end
-    local code = f:read("*all")
-    f:close()
-
-    local name, ftype = fname:match("([%w_]+)%.([luafq]+)$")
-    assert(ftype == "lua", "Unsupported file type - " .. tostring(ftype))
-
-
-    local qaFiles = {}
-    local chandler = {}
-    function chandler.name(var, val, dev) dev.name = val end
-    function chandler.type(var, val, dev) dev.type = val end
-    function chandler.id(var, val, dev) dev.id = tonumber(id) end
-    function chandler.file(var, val, dev)
-        local fn, qn = table.unpack(val:sub(1, -2):split(","))
-        dev.files = dev.files or {}
-        dev.files[#dev.files + 1] = { fname = fn, qaname = qn }
-    end
-
-    local vars = {}
-    code:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
-        if chandler[var] then
-            chandler[var](var, val, vars)
-        else
-            logerr("Load", "%s - Unknown header variable '%s'", fname, var)
-        end
-    end)
-    table.insert(vars.files, { code = code, fname = fname, qaname = 'main' })
-
-    if vars.id == nil then
-        vars.id = gID; gID = gID + 1
-    end
-    id = vars.id
-
-    local dev = devices.getDeviceStruct(vars.type or "com.fibaro.binarySwitch")
-    dev.name = vars.name or "APP"
-    dev.id = vars.id
-    dev.properties.quickAppVariables = {}
-    dev.interfaces = {}
-    dev.parentId = 0
-
-end
-
-local function createQAstruct(fname, id)
-    local env = {}
+local function createEnvironment(id)
+    local qa = DIR[id]
+    local env,dev = {},qa.dev
     local debugFlags, fmt = {}, string.format
     debugFlags.color = true
-
-    local function log(str, fmt, ...) util.debug(debugFlags, env.__TAG, format("%s %s", str, format(fmt, ...)), "SYS") end
-    local function logerr(str, fmt, ...) env.fibaro.error(env.__TAG, format("%s Error : %s", str, format(fmt, ...))) end
+    qa.env = env
 
     local function setTimer(f, ms, log)
         assert(type(f) == 'function', "setTimeout first arg need to be function")
@@ -172,60 +140,16 @@ local function createQAstruct(fname, id)
         util.debug(debugFlags, tag, str, typ)
     end
 
-    local f = io.open(fname, "r")
-    if not f then
-        logerr("Load", "%s - %s", fname, "File not found")
-        return
-    end
-    local code = f:read("*all")
-    f:close()
-
-    local name, ftype = fname:match("([%w_]+)%.([luafq]+)$")
-    local dev = {
-        name = name,
-        id = id,
-        type = 'com.fibaro.binarySwitch',
-        properties = { quickAppVariables = {}, value = {} },
-        interfaces = {},
-        parentId = 0
-    }
-    assert(ftype == "lua", "Unsupported file type - " .. tostring(ftype))
-
-    local qaFiles = {}
-    local chandler = {}
-    function chandler.name(var, val, dev) dev.name = val end
-
-    function chandler.type(var, val, dev) dev.type = val end
-
-    function chandler.id(var, val, dev) dev.idtype = tonumber(id) end
-
-    function chandler.file(var, val, dev)
-        local fn, qn = table.unpack(val:sub(1, -2):split(","))
-        qaFiles[#qaFiles + 1] = { fname = fn, qaname = qn }
-    end
-
-    code:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
-        if chandler[var] then
-            chandler[var](var, val, dev)
-        else
-            logerr("Load", "%s - Unknown header variable '%s'", fname, var)
-        end
-    end)
-
-    if dev.id == nil then
-        dev.id = gID; gID = gID + 1
-    end
-    id = dev.id
-
     env.plugin = { mainDeviceId = dev.id }
     env.__TAG = "QUICKAPP" .. dev.id
 
     for _, l in ipairs({ "json.lua", "class.lua", "net.lua", "fibaro.lua", "quickApp.lua" }) do
-        log("Load", "library " .. luapath .. l)
-        local stat, res = pcall(function() loadfile(luapath .. l, "t", env)() end)
+        local fn = luapath .. l
+        QA.syslog("Loading","Library " .. fn)
+        local stat, res = pcall(function() loadfile(fn, "t", env)() end)
         if not stat then
-            logerr("Load", "%s - %s", fname, res)
-            QA.delete(id)
+            logerr("Loading %s - %s", fn, res)
+            qa.env = nil
             return
         end
     end
@@ -233,21 +157,24 @@ local function createQAstruct(fname, id)
     env.fibaro.debugFlags = debugFlags
     env.fibaro.config = config
     if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['TEXT'] or 'white' end
+    return env
+end
 
-    table.insert(qaFiles, { code = code, fname = fname, qaname = 'main' })
-
-    for _, qf in ipairs(qaFiles) do
+local function loadFiles(id)
+    local qa = DIR[id]
+    local env = qa.env
+    for _, qf in ipairs(qa.files) do
         if qf.code == nil then
             local file = io.open(qf.fname, "r")
             assert(file, "File not found:" .. qf.fname)
             qf.code = file:read("*all")
             file:close()
         end
-        log("Load", "loading user file " .. qf.fname)
+        QA.syslog("Loading","User file %s",qf.fname)
         local qa, res = load(qf.code, qf.fname, "t", env) -- Load QA
         if not qa then
-            logerr("Load", "%s - %s", qf.fname, res)
-            return
+            logerr("Loading %s - %s", qf.fname, res)
+            return false
         end
         qf.qa = qa
         qf.code = nil
@@ -255,52 +182,51 @@ local function createQAstruct(fname, id)
             qf.qa = function() lldebugger.call(qa, true) end
         end
     end
-
-    return { qafiles = qaFiles, env = env, dev = dev, logerr = logerr, log = log }
+    return true
 end
 
-local function runner(fname, fc, id)
-    local qastr = createQAstruct(fname, id)
-    local qaf, env, dev, log, logerr = qastr.qafiles, qastr.env, qastr.dev, qastr.log, qastr.logerr
+local function runner(fc, id)
+    local qa = DIR[id]
+    qa.f = fc
+    if not createEnvironment(id) then return end
+    local env = qa.env
+    if not loadFiles(id) then return end
+
     local errfun = env.fibaro.error
-    id = dev.id
+    local debugFlags = env.fibaro.debugFlags
+
+    local function log(fmt, ...) util.debug(debugFlags, env.__TAG, format(fmt, ...), "SYS") end
+    local function logerr(fmt, ...) env.fibaro.error(env.__TAG, format("Error : %s", format(fmt, ...))) end
+
     local function checkErr(str, f, ...)
         local ok, err = pcall(f, ...)
         if not ok then env.fibaro.error(env.__TAG, format("%s Error: %s", str, err)) end
     end
 
-    DIR[dev.id] = { f = fc, fname = fname, env = env, dev = dev }
-    resources.createDevice(dev)
     collectgarbage("collect")
-    for _, q in ipairs(qaf) do
-        log("Running", "%s", q.fname)
-        local stat, err = pcall(q.qa) -- Start QA
+    for _, qf in ipairs(qa.files) do
+        log("Running %s", qf.fname)
+        local stat, err = pcall(qf.qa) -- Start QA
         if not stat then
-            logerr("Start", "%s - %s - restarting in 5s", q.fname, err)
-            QA.delete(id)
-            systemTimer(function() QA.start(fname, id) end, 5000)
+            logerr("Running %s - %s - restarting in 5s", qf.fname, err)
+            systemTimer(function() QA.restart(id) end, 5000)
         end
     end
 
     local stat, err = pcall(function()
-        local qo = env.QuickApp(dev)
+        local qo = env.QuickApp(qa.dev)
         env.quickApp = qo
     end)
     if not stat then
-        logerr(":onInit()", "%s - restarting in 5s", err)
+        logerr(":onInit() %s - restarting in 5s", err)
         QA.delete(id)
-        systemTimer(function() QA.start(fname, id) end, 5000)
+        systemTimer(function() QA.restart(id) end, 5000)
     end
 
     local ok, err
     while true do -- QA coroutine loop
         local task = coroutine.yield({ type = 'next', log = "X" })
-        ::foo::
-        if task.type == 'timer' then
-            ok, err = pcall(task.fun)
-            if not ok then errfun(env.__TAG, format("%s Error: %s", "timer", err)) end
-            task = coroutine.yield({ type = 'next' })
-            goto foo
+        ::foo:: if task.type == 'timer' then ok, err = pcall(task.fun) if not ok then errfun(env.__TAG, format("%s Error: %s", "timer", err)) end task = coroutine.yield({ type = 'next' }) goto foo
             -- if task.type == 'timer' then
             --     checkErr("setTimeout", task.fun)
         elseif task.type == 'onAction' then
@@ -311,7 +237,7 @@ local function runner(fname, fc, id)
     end
 end
 
-local function createQA(runner, fname, id)
+local function createQArunner(runner, id)
     local c = coroutine.create(runner)
     local function t(task)
         local res, task = coroutine.resume(c, task)
@@ -321,24 +247,20 @@ local function createQA(runner, fname, id)
             coroutine.resume(c)
         end
     end
-    local stat, res = coroutine.resume(c, fname, t, id) -- Start QA
+    local stat, res = coroutine.resume(c, t, id) -- Start QA
     if not stat then print(res) end
 end
 
 function QA.install(fname, id)
-    installQA(fname, id)
-    createQA(runner, fname, id)
-end
-
-function QA.start(fname, id)
-    createQA(runner, fname, id)
+    local qa = files.installQA(fname, id)
+    if qa then
+        QA.restart(qa.dev.id)
+    end
 end
 
 function QA.restart(id)
     if DIR[id] then
-        local fname = DIR[id].fname
-        QA.delete(id)
-        QA.start(fname, id)
+        createQArunner(runner,id)
     end
 end
 
@@ -385,9 +307,6 @@ function QA.onEvent(event) -- dispatch to event handler
     local h = eventHandler[event.type]
     if h then h(event) else print("Unknown event", event.type) end
 end
-
-QA.fun = {}
-for name, fun in pairs(resources) do QA.fun[name] = fun end -- export resource functions
 
 function QA.loop()
     local t, c, task = timers.peek()

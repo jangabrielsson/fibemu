@@ -25,6 +25,7 @@ if __name__ == "__main__":
     parser.add_argument('-f', "--file", help='initial QA to load')
     parser.add_argument('-f2', "--file2", help='second QA to load')
     parser.add_argument('-f3', "--file3", help='third QA to load')
+    parser.add_argument('-l', "--local", help='run with no HC3 connection', action='store_true')
     parser.add_argument('-h3', "--host", help='HC3 host name or IP')
     parser.add_argument('-u', "--user", help='HC3 user name')
     parser.add_argument('-pwd', "--password", help='HC3 user password')
@@ -36,6 +37,7 @@ if __name__ == "__main__":
     parser.add_argument('-wlv', '--web_log_level', default='warning', help='log level for webserver',choices=['debug', 'info', 'trace', 'warning', 'error', 'critical'])
 
     args = parser.parse_args()
+    config['local'] = args.local or True 
     config['user'] = args.user or config.get('user') or os.environ.get('HC3_USER')
     config['password'] = args.password or config.get('password') or os.environ.get('HC3_PASSWORD')
     config['host'] = args.host or config.get('host') or os.environ.get('HC3_HOST')

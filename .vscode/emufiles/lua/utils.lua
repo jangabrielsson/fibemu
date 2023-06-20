@@ -61,7 +61,7 @@ local COLORMAP = {
 }
 
 local fibColors = { 
-    ["SYS"] = 'brown', ["DEBUG"] = 'green', ["TRACE"] = 'blue', ["WARNING"] = 'orange', ["ERROR"] = 'red', ['TEXT'] = 'black'
+    ["SYS"] = 'brown', ["SYSERR"] = 'red', ["DEBUG"] = 'green', ["TRACE"] = 'blue', ["WARNING"] = 'orange', ["ERROR"] = 'red', ['TEXT'] = 'black'
 }
 
 local function html2color(str, startColor, dflTxt)

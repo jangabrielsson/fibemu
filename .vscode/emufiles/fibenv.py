@@ -59,6 +59,8 @@ class FibaroEnvironment:
         return res,code
 
     def refreshStates(self,start,url,options):
+        if self.config.get('local'):
+            return
         options = convertTable(options)
         def refreshRunner():
             last = 0
@@ -95,11 +97,11 @@ class FibaroEnvironment:
             QA = globals.QA
             self.QA = QA
             if config['file1']:
-                QA.start(config['file1'])
+                QA.install(config['file1'])
             if config['file2']:
-                QA.start(config['file2'])
+                QA.install(config['file2'])
             if config['file2']:
-                QA.start(config['file3'])
+                QA.install(config['file3'])
             while True:
                 delay = QA.loop()
                 # print(f"event: {delay}s", end='')

@@ -1,11 +1,11 @@
 local devices = nil
 
-local function init(fname)
+local function init(conf, fname, libs)
     local file = io.open(fname, "r")
     assert(file, fname.." not found")
-    local data = json.decode(file:read("*a"))
+    devices = json.decode(file:read("*a"))
     file:close()
-    return data
+    return devices
 end
 
 local function getDeviceStruct(typ)
