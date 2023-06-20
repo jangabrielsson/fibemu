@@ -86,7 +86,7 @@ function util.debug(flags,tag,str,typ)
     if flags.color then
         local txt_color = COLORMAP[(fibColors['TEXT'] or "black")]
         local typ_color = COLORMAP[(fibColors[typ] or "black")]
-        print(format("%s%s [%s%-5s%s] [%s]: %s",
+        print(format("%s%s [%s%-6s%s] [%-7s]: %s",
             txt_color, os.date("[%d.%m.%Y] [%H:%M:%S]"),
             typ_color, typ, txt_color,
             tag,

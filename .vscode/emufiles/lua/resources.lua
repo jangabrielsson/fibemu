@@ -1,4 +1,10 @@
-local r, config, refreshStates = {},nil
+local r, config, refreshStates = {},nil,nil
+
+function r.init(conf, libs)
+    config = conf
+    refreshStates = libs.refreshStates
+    for name, fun in pairs(r) do QA.fun[name] = fun end -- export resource functions
+end
 
 local function copy(o)
     if type(o) ~= 'table' then return o end
@@ -38,12 +44,6 @@ local function postEvent(typ, data)
         created = os.time(),
     }
     refreshStates.newEvent(e)
-end
-
-function r.init(conf, libs)
-    config = conf
-    refreshStates = libs.refreshStates
-    for name, fun in pairs(r) do QA.fun[name] = fun end -- export resource functions
 end
 
 function r.refresh_resource(name, key, id)

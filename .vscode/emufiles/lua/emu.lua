@@ -2,6 +2,8 @@ local pconfig = ...
 local luapath = pconfig.path .. "lua/"
 local function doload(fname) return dofile(luapath .. fname) end
 
+local RESTART_TIME = 5000 -- 5s wait before restarting QA
+
 doload("json.lua")
 doload("net.lua")
 
@@ -14,7 +16,6 @@ local files = doload("file.lua")
 local timers = util.timerQueue()
 local format = string.format
 
-print(os.date("Lua loader started %c"))
 local lldebugger
 if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
     print("Waiting for debugger to attach...")
@@ -44,14 +45,17 @@ do
     config.creds = util.basicAuthorization(config.user or "", config.password or "")
 end
 
-QA, DIR = { config = config, fun = {} }, {}
-
 config.lcl = config['local'] or false
 os.milliclock = config.hooks.clock
 local clock = config.hooks.clock
 os.http = config.hooks.http
 
-local libs = { devices = devices, resources = resources, files = files, refreshStates = refreshStates }
+QA, DIR = { config = config, fun = {} }, {}
+
+local libs = { 
+    devices = devices, resources = resources, files = files, refreshStates = refreshStates, lldebugger = lldebugger,
+    emu = QA
+}
 os.refreshStates = config.hooks.refreshStates
 config.hooks = nil
 devices.init(config, luapath.."devices.json", libs)
@@ -70,9 +74,9 @@ function QA.syslogerr(typ, fmt, ...)
     util.debug({ color = true }, typ, format(fmt, ...), "SYSERR")
 end
 
-local function systemTimer(fun, ms)
+local function systemTimer(fun, ms, msg)
     local t = clock() + ms / 1000
-    return timers.add(-1, t, fun, { type = 'timer', fun = fun, ms = t, log = "system" })
+    return timers.add(-1, t, fun, { type = 'timer', fun = fun, ms = t, log = "system"..(msg and msg or "") })
 end
 
 function string.split(str, sep)
@@ -80,9 +84,6 @@ function string.split(str, sep)
     str:gsub("([^" .. s .. "]+)", function(c) fields[#fields + 1] = c end)
     return fields
 end
-
-local function log(fmt, ...) util.debug({ color = true }, "", format(fmt, ...), "SYS") end
-local function logerr(fmt, ...) util.debug({ color = true }, "", format("Error : %s", format(fmt, ...)), "SYS") end
 
 local function createEnvironment(id)
     local qa = DIR[id]
@@ -148,7 +149,7 @@ local function createEnvironment(id)
         QA.syslog("Loading","Library " .. fn)
         local stat, res = pcall(function() loadfile(fn, "t", env)() end)
         if not stat then
-            logerr("Loading %s - %s", fn, res)
+            QA.syslogerr("Loading","%s - %s", fn, res)
             qa.env = nil
             return
         end
@@ -160,37 +161,12 @@ local function createEnvironment(id)
     return env
 end
 
-local function loadFiles(id)
-    local qa = DIR[id]
-    local env = qa.env
-    for _, qf in ipairs(qa.files) do
-        if qf.code == nil then
-            local file = io.open(qf.fname, "r")
-            assert(file, "File not found:" .. qf.fname)
-            qf.code = file:read("*all")
-            file:close()
-        end
-        QA.syslog("Loading","User file %s",qf.fname)
-        local qa, res = load(qf.code, qf.fname, "t", env) -- Load QA
-        if not qa then
-            logerr("Loading %s - %s", qf.fname, res)
-            return false
-        end
-        qf.qa = qa
-        qf.code = nil
-        if qf.qaname == "main" and config['break'] and lldebugger then
-            qf.qa = function() lldebugger.call(qa, true) end
-        end
-    end
-    return true
-end
-
 local function runner(fc, id)
     local qa = DIR[id]
     qa.f = fc
     if not createEnvironment(id) then return end
     local env = qa.env
-    if not loadFiles(id) then return end
+    if not files.loadFiles(id) then return end
 
     local errfun = env.fibaro.error
     local debugFlags = env.fibaro.debugFlags
@@ -209,7 +185,7 @@ local function runner(fc, id)
         local stat, err = pcall(qf.qa) -- Start QA
         if not stat then
             logerr("Running %s - %s - restarting in 5s", qf.fname, err)
-            systemTimer(function() QA.restart(id) end, 5000)
+            QA.restart(id, RESTART_TIME)
         end
     end
 
@@ -219,8 +195,7 @@ local function runner(fc, id)
     end)
     if not stat then
         logerr(":onInit() %s - restarting in 5s", err)
-        QA.delete(id)
-        systemTimer(function() QA.restart(id) end, 5000)
+        QA.restart(id, RESTART_TIME)
     end
 
     local ok, err
@@ -258,9 +233,10 @@ function QA.install(fname, id)
     end
 end
 
-function QA.restart(id)
+function QA.restart(id, delay)
     if DIR[id] then
-        createQArunner(runner,id)
+        delay = delay or 0
+        systemTimer(function() createQArunner(runner,id) end, delay, " restart:"..delay)
     end
 end
 
@@ -311,7 +287,7 @@ end
 function QA.loop()
     local t, c, task = timers.peek()
     local cl = clock()
-    --if t then print("loop",task.type,t-cl) else print("loop") end
+    --if t then print("loop",task.type,t-cl,task.log or "") else print("loop") end
     if t then
         local diff = t - cl
         if diff <= 0 then
@@ -324,3 +300,5 @@ function QA.loop()
     end
     return 0.5
 end
+
+QA.syslog("BOOT","Lua loader started")

@@ -1,10 +1,14 @@
-local config, resources, devices = nil, nil, nil
+local config, resources, devices, lldebugger = nil, nil, nil, nil
+local libs,exports = nil, nil
 local gID = 5000
 
-local function init(conf, libs)
+local function init(conf, libs2)
+    libs = libs2
     config = conf
     resources = libs.resources
     devices = libs.devices
+    lldebugger = libs.lldebugger
+    for name, fun in pairs(exports) do QA.fun[name] = fun end -- export file functions
 end
 
 local function installQA(fname, id)
@@ -23,23 +27,21 @@ local function installQA(fname, id)
         return
     end
 
-    local qaFiles = {}
     local chandler = {}
     function chandler.name(var, val, dev) dev.name = val end
     function chandler.type(var, val, dev) dev.type = val end
     function chandler.id(var, val, dev) dev.id = tonumber(id) end
     function chandler.file(var, val, dev)
         local fn, qn = table.unpack(val:sub(1, -2):split(","))
-        dev.files = dev.files or {}
         dev.files[#dev.files + 1] = { fname = fn, qaname = qn }
     end
 
-    local vars = {}
+    local vars = { files = {} }
     code:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
         if chandler[var] then
             chandler[var](var, val, vars)
         else
-            QA.syslogerr("Install %s - Unknown header variable '%s'", fname, var)
+            QA.syslogerr("Install","%s - Unknown header variable '%s'", fname, var)
         end
     end)
     table.insert(vars.files, { code = code, fname = fname, qaname = 'main' })
@@ -50,13 +52,13 @@ local function installQA(fname, id)
     id = vars.id
 
     if DIR[id] then
-        QA.syslogerr("Install ID:%s already installed (%s)", id, fname)
+        QA.syslogerr("Install","ID:%s already installed (%s)", id, fname)
         return
     end
 
     local dev = devices.getDeviceStruct(vars.type or "com.fibaro.binarySwitch")
     if dev == nil then
-        QA.syslogerr("Install %s - Unknown device type '%s'", fname, vars.type)
+        QA.syslogerr("Install","%s - Unknown device type '%s'", fname, vars.type)
         dev = devices.getDeviceStruct("com.fibaro.binarySwitch")
     end
     dev.name = vars.name or name
@@ -70,4 +72,76 @@ local function installQA(fname, id)
     return DIR[id]
 end
 
-return { installQA = installQA, init = init }
+local function loadFiles(id)
+    local qa = DIR[id]
+    local env = qa.env
+    for _, qf in ipairs(qa.files) do
+        if qf.code == nil then
+            local file = io.open(qf.fname, "r")
+            assert(file, "File not found:" .. qf.fname)
+            qf.code = file:read("*all")
+            file:close()
+        end
+        QA.syslog("Loading","User file %s",qf.fname)
+        local qa, res = load(qf.code, qf.fname, "t", env) -- Load QA
+        if not qa then
+            QA.syslogerr("Loading","%s - %s", qf.fname, res)
+            return false
+        end
+        qf.qa = qa
+        qf.code = nil
+        if qf.qaname == "main" and config['break'] and lldebugger then
+            qf.qa = function() lldebugger.call(qa, true) end
+        end
+    end
+    return true
+end
+
+local function getQAfiles(id,name)
+    if not DIR[id] then return nil,404 end
+    if name == nil then
+        local res
+        for f in ipairs(DIR[id].files) do
+            res[#res+1]={name=f.qaname,content=f.content,type='lua',isOpen=false,isMain=f.isMain}
+        end
+        return res,200
+    end
+    for f in ipairs(DIR[id].files) do
+        if f.qaname == name then
+            return {name=f.qaname,content=f.content,type='lua',isOpen=false,isMain=f.isMain},200
+        end
+    end
+end
+
+local function setQAfiles(id,name,files)
+    if not DIR[id] then return nil,404 end
+    QA.restart(id)
+end
+
+local function exportFQA(id)
+    if not DIR[id] then return nil,404 end
+end
+
+local function importFQA(file)
+end
+
+local function deleteQAfile(id,name)
+    if not DIR[id] then return nil,404 end
+    local files = DIR[id].files
+    for i = 1, #files do
+        if files[i].qaname == name then
+            table.remove(files, i)
+            QA.restart(id)
+            return name,200
+        end
+    end
+    return nil,404
+end
+
+exports = { 
+    installQA = installQA, init = init, loadFiles = loadFiles,
+    getQAfiles = getQAfiles, setQAfiles = setQAfiles,
+    importQA = importFQA, exportFQA = exportFQA,
+    deleteQAfile = deleteQAfile
+}
+return exports

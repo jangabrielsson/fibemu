@@ -1,6 +1,6 @@
 
 --%%name=Test
---%%type=fibaro.com.binarySwitch
+--%%type=com.fibaro.binarySwitch
  
  a = 0
 
