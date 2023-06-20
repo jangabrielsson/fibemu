@@ -2,4 +2,5 @@ fastapi==0.97.0
 lupa==2.0
 pydantic==1.10.9
 Requests==2.31.0
+requests_async==0.6.2
 uvicorn==0.22.0
