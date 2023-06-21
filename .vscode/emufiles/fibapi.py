@@ -190,7 +190,16 @@ async def getQuickAppFQA(id: int, response: Response):
 @app.post("/api/quickApp/", tags=["QuickApp methods"])
 async def installQuickApp():
     t = time.time()
-    fibenv.get('fe').postEvent({"type":"importQA","file":""})
+    fibenv.get('fe').postEvent({"type":"importFQA","file":""})
+    return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
+
+class QAImportData(BaseModel):
+    file: str
+    roomId : int | None = None
+@app.post("/api/quickApp/import", tags=["QuickApp methods"])
+async def installQuickApp(file: QAImportData, response: Response):
+    t = time.time()
+    fibenv.get('fe').postEvent({"type":"importFQA","file":file.file,"roomId":file.roomId})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
 @app.delete("/api/quickApp/{id}/files/{name}", tags=["QuickApp methods"])

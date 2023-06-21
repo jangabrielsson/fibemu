@@ -54,7 +54,7 @@ QA, DIR = { config = config, fun = {} }, {}
 
 local libs = { 
     devices = devices, resources = resources, files = files, refreshStates = refreshStates, lldebugger = lldebugger,
-    emu = QA
+    emu = QA, util = util,
 }
 os.refreshStates = config.hooks.refreshStates
 config.hooks = nil
@@ -180,8 +180,8 @@ local function runner(fc, id)
     end
 
     collectgarbage("collect")
-    for _, qf in ipairs(qa.files) do
-        log("Running %s", qf.fname)
+    for _, qf in pairs(qa.files) do
+        log("Running %s", qf.name)
         local stat, err = pcall(qf.qa) -- Start QA
         if not stat then
             logerr("Running %s - %s - restarting in 5s", qf.fname, err)
@@ -233,6 +233,13 @@ function QA.install(fname, id)
     end
 end
 
+function QA.installFQA(data, roomId)
+    local qa = files.installFQA(data, roomId)
+    if qa then
+        QA.restart(qa.dev.id)
+    end
+end
+
 function QA.restart(id, delay)
     if DIR[id] then
         delay = delay or 0
@@ -252,7 +259,12 @@ local eventHandler = {}
 
 function eventHandler.onAction(event)
     local id = event.deviceId
-    if not DIR[id] then return end
+    if not DIR[id] then
+        local d = resources.getResource("devices", id)
+        if d then
+        end
+        return
+    end
     timers.add(id, 0, DIR[id].f,
         { type = 'onAction', deviceId = id, actionName = event.actionName, args = event.args })
 end
@@ -272,6 +284,15 @@ end
 
 function eventHandler.updateView(event)
     print("UV", json.encode(event))
+end
+
+function eventHandler.importFQA(event)
+    local file = event.file
+    file = json.decode(file)
+    local qa = QA.installFQA(file, event.roomId)
+    if qa then
+        QA.restart(qa.dev.id)
+    end
 end
 
 function eventHandler.refreshStates(event)

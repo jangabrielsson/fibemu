@@ -121,4 +121,20 @@ function util.toarray(t)
     return a
 end
 
+local function copy(o)
+    if type(o) ~= 'table' then return o end
+    local res = {}
+    for k, v in pairs(o) do res[k] = copy(v) end
+    return res
+end
+util.copy = copy
+
+function util.merge(a,b)
+    local m,res = {},{}
+    for _,v in ipairs(a) do m[v] = true end
+    for _,v in ipairs(b) do m[v] = true end
+    for k,_ in pairs(m) do res[#res+1] = k end
+    return res
+end
+
 return util

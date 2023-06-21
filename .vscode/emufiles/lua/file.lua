@@ -1,5 +1,6 @@
 local config, resources, devices, lldebugger = nil, nil, nil, nil
 local libs,exports = nil, nil
+local copy,merge
 local gID = 5000
 
 local function init(conf, libs2)
@@ -8,11 +9,33 @@ local function init(conf, libs2)
     resources = libs.resources
     devices = libs.devices
     lldebugger = libs.lldebugger
+    copy,merge = libs.util.copy,libs.util.merge
     for name, fun in pairs(exports) do QA.fun[name] = fun end -- export file functions
 end
 
+local function installFQA(fqa, id)
+    QA.syslog("Install","FQA '%s'", fqa.name)
+    local dev = devices.getDeviceStruct(fqa.type)
+    if dev == nil then
+        QA.syslogerr("Install","%s - Unknown device type '%s'", fqa.name, fqa.type)
+        return
+    end
+    dev = copy(dev)
+    dev.name = fqa.name
+    dev.type = fqa.type
+    dev.id = gID; gID = gID + 1
+    for k,v in pairs(fqa.initialProperties or {}) do
+        dev.properties[k] = v
+    end
+    dev.interfaces = merge(dev.interfaces,fqa.initialInterfaces or {})
+    dev.parentId = 0
+    DIR[dev.id] = { fname = "", dev = dev, files = fqa.files, name = dev.name }
+    resources.createDevice(dev)
+    return DIR[dev.id]
+end
+
 local function installQA(fname, id)
-    QA.syslog("Install","QA %s", fname)
+    QA.syslog("Install","QA '%s'", fname)
     local f = io.open(fname, "r")
     if not f then
         QA.syslogerr("Install","File not found - %s", fname)
@@ -61,6 +84,7 @@ local function installQA(fname, id)
         QA.syslogerr("Install","%s - Unknown device type '%s'", fname, vars.type)
         dev = devices.getDeviceStruct("com.fibaro.binarySwitch")
     end
+    dev = copy(dev)
     dev.name = vars.name or name
     dev.id = vars.id
     dev.properties.quickAppVariables = {}
@@ -75,17 +99,17 @@ end
 local function loadFiles(id)
     local qa = DIR[id]
     local env = qa.env
-    for _, qf in ipairs(qa.files) do
+    for _, qf in pairs(qa.files) do
         if qf.content == nil then
             local file = io.open(qf.fname, "r")
             assert(file, "File not found:" .. qf.fname)
             qf.content = file:read("*all")
             file:close()
         end
-        QA.syslog("Loading","User file %s",qf.fname)
+        QA.syslog("Loading","User file %s",qf.fname or qf.name)
         local qa, res = load(qf.content, qf.fname, "t", env) -- Load QA
         if not qa then
-            QA.syslogerr("Loading","%s - %s", qf.fname, res)
+            QA.syslogerr("Loading","%s - %s", qf.fname or qf.nam, res)
             return false
         end
         qf.qa = qa
@@ -131,7 +155,13 @@ local function setQAfiles(id,files)
 end
 
 local function exportFQA(id)
-    if not DIR[id] then return nil,404 end
+    if not DIR[id] then 
+        if resources.getResource("devices",id) then
+            local fqa,code = api.get("/quickApp/export/"..id,"hc3")
+            return fqa,code
+        end
+        return nil,404 
+    end
 end
 
 local function importFQA(file)
@@ -154,6 +184,7 @@ exports = {
     installQA = installQA, init = init, loadFiles = loadFiles,
     getQAfiles = getQAfiles, setQAfiles = setQAfiles,
     importQA = importFQA, exportFQA = exportFQA,
+    installFQA = installFQA,
     deleteQAfile = deleteQAfile
 }
 return exports

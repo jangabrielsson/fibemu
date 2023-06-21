@@ -37,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument('-wlv', '--web_log_level', default='warning', help='log level for webserver',choices=['debug', 'info', 'trace', 'warning', 'error', 'critical'])
 
     args = parser.parse_args()
-    config['local'] = args.local or True 
+    config['local'] = args.local
     config['user'] = args.user or config.get('user') or os.environ.get('HC3_USER')
     config['password'] = args.password or config.get('password') or os.environ.get('HC3_PASSWORD')
     config['host'] = args.host or config.get('host') or os.environ.get('HC3_HOST')

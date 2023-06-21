@@ -1,16 +1,11 @@
 local r, config, refreshStates = {},nil,nil
+local copy
 
 function r.init(conf, libs)
     config = conf
     refreshStates = libs.refreshStates
+    copy = libs.util.copy
     for name, fun in pairs(r) do QA.fun[name] = fun end -- export resource functions
-end
-
-local function copy(o)
-    if type(o) ~= 'table' then return o end
-    local res = {}
-    for k, v in pairs(o) do res[k] = copy(v) end
-    return res
 end
 
 local keys = {
@@ -94,10 +89,11 @@ function r.createGlobalVariable(d, sync)
     if sync then r.refresh_resource("globalVariables", nil, d.name) return end
     local name = d.name
     if rsrcs.globalVariables[name] then return nil, 409 end
-    local gv = copy(d)
+    local gv,code = copy(d)
     gv.modified = os.time()
     gv.created = gv.modified
-    rsrcs.globalVariables[name] = gv
+    gv,code = r.createResource("globalVariables", gv)
+    if code ~= 200 then return nil, code end
     postEvent("GlobalVariableAddedEvent", { variableName = name, value = gv.value })
     return gv, 200
 end
@@ -114,7 +110,7 @@ end
 function r.updateGlobalVariable(name, d, sync)
     initr("globalVariables")
     d = type(d) == 'string' and json.decode(d) or d
-    if sync then r.refresh_resource("globalVariables", nil, name) return end
+    if sync then r.refresh_resource("globalVariables", nil, name) return end -- optimize
     if rsrcs.globalVariables[name] == nil then return nil, 404 end
     local gv = rsrcs.globalVariables[name]
     local flag = false
@@ -132,10 +128,11 @@ function r.createDevice(d, sync)
     if sync then r.refresh_resource("devices", nil, d.id) return end
     local id = d.id
     if rsrcs.devices[id] then return nil, 409 end
-    local dv = copy(d)
+    local dv,code = copy(d)
     dv.modified = os.time()
     dv.created = dv.modified
-    rsrcs.devices[id] = dv
+    dv,code = r.createResource("devices", dv)
+    if code ~= 200 then return nil, code end
     postEvent("DeviceCreatedEvent", { id = id })
     return dv, 200
 end
