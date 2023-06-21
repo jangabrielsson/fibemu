@@ -117,6 +117,15 @@ local function setQAfiles(id,files)
     if not DIR[id] then return nil,404 end
     local qa = DIR[id]
     files = type(files)=="string" and json.decode(files) or files
+    for i = 1,#qa.files do
+        local f = qa.files[i]
+        if f.name == files.name then
+            qa.files[i] = files
+            QA.restart(id)
+            return nil,200
+        end
+    end
+    qa.files[#qa.files+1] = files
     QA.restart(id)
     return nil,200
 end
