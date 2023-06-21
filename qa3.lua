@@ -60,5 +60,8 @@ function QuickApp:testQA()
         local file = {isMain=false,type='lua',isOpen=false,name="new",content=testContent}
         res,code = api.post("/quickApp/"..self.id.."/files",file)
         print("Adding file 'new', code",code)
+    else
+        print("file 'new' found, code",code)
+        self:hello()
     end
 end
