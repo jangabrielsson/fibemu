@@ -71,8 +71,12 @@ function QuickApp:testQA()
         print("exported fqa",rid)
         local res,code = api.post("/quickApp/import",{file=json.encode(fqa)})
         print("imported fqa",rid)
+
+        setTimeout(function()
+            fibaro.call(5001,"test",42,8)
+        end,1000)
+        
+    else
+        print("fqa",rid,"not found, code",code)
     end
-    setTimeout(function()
-        fibaro.call(5001,"test",42,8)
-    end,1000)
 end

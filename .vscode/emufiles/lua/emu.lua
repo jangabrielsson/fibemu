@@ -6,12 +6,14 @@ local RESTART_TIME = 5000 -- 5s wait before restarting QA
 
 doload("json.lua")
 doload("net.lua")
+doload("class.lua")
 
 local util = doload("utils.lua")
 local devices = doload("device.lua")
 local resources = doload("resources.lua")
 local refreshStates = doload("refreshState.lua")
 local files = doload("file.lua")
+local fakes = doload("fakes.lua")
 
 local timers = util.timerQueue()
 local format = string.format
@@ -62,6 +64,7 @@ devices.init(config, luapath.."devices.json", libs)
 resources.init(config, libs)
 refreshStates.init(config, libs)
 files.init(config, libs)
+fakes.init(config, libs)
 
 resources.refresh(true)
 if not config.lcl then refreshStates.start() end
@@ -108,6 +111,7 @@ local function createEnvironment(id)
         "next", "json", "tostring", "tonumber", "assert", "unpack", "utf8", "collectgarbage", "type",
         "setmetatable", "getmetatable", "rawset", "rawget", "coroutine" -- extra stuff
     }
+
     for _, k in ipairs(funs) do env[k] = _G[k] end
     env._G = env
 
@@ -146,10 +150,10 @@ local function createEnvironment(id)
 
     for _, l in ipairs({ "json.lua", "class.lua", "net.lua", "fibaro.lua", "quickApp.lua" }) do
         local fn = luapath .. l
-        QA.syslog("Loading","Library " .. fn)
+        QA.syslog(qa.tag,"Loading library " .. fn)
         local stat, res = pcall(function() loadfile(fn, "t", env)() end)
         if not stat then
-            QA.syslogerr("Loading","%s - %s", fn, res)
+            QA.syslogerr(qa.tag,"%s - %s", fn, res)
             qa.env = nil
             return
         end
@@ -157,6 +161,7 @@ local function createEnvironment(id)
 
     env.fibaro.debugFlags = debugFlags
     env.fibaro.config = config
+    env.fibaro.createDevice = fakes.createDevice
     if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['TEXT'] or 'white' end
     return env
 end
@@ -164,12 +169,14 @@ end
 local function runner(fc, id)
     local qa = DIR[id]
     qa.f = fc
+    local debugFlags = { color = true }
+
     if not createEnvironment(id) then return end
     local env = qa.env
     if not files.loadFiles(id) then return end
 
     local errfun = env.fibaro.error
-    local debugFlags = env.fibaro.debugFlags
+    debugFlags = env.fibaro.debugFlags
 
     local function log(fmt, ...) util.debug(debugFlags, env.__TAG, format(fmt, ...), "SYS") end
     local function logerr(fmt, ...) env.fibaro.error(env.__TAG, format("Error : %s", format(fmt, ...))) end
@@ -181,10 +188,10 @@ local function runner(fc, id)
 
     collectgarbage("collect")
     for _, qf in pairs(qa.files) do
-        log("Running %s", qf.name)
+        log("Running '%s'", qf.name)
         local stat, err = pcall(qf.qa) -- Start QA
         if not stat then
-            logerr("Running %s - %s - restarting in 5s", qf.fname, err)
+            logerr("Running '%s' - %s - restarting in 5s", qf.name, err)
             QA.restart(id, RESTART_TIME)
         end
     end

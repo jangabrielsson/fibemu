@@ -29,7 +29,8 @@ local function installFQA(fqa, id)
     end
     dev.interfaces = merge(dev.interfaces,fqa.initialInterfaces or {})
     dev.parentId = 0
-    DIR[dev.id] = { fname = "", dev = dev, files = fqa.files, name = dev.name }
+    local tag = "QUICKAPP" .. dev.id
+    DIR[dev.id] = { fname = "", dev = dev, files = fqa.files, name = dev.name, tag = tag }
     resources.createDevice(dev)
     return DIR[dev.id]
 end
@@ -90,8 +91,9 @@ local function installQA(fname, id)
     dev.properties.quickAppVariables = {}
     dev.interfaces = {}
     dev.parentId = 0
+    local tag = "QUICKAPP" .. dev.id
 
-    DIR[id] = { fname = fname, dev = dev, files = vars.files, name = dev.name }
+    DIR[id] = { fname = fname, dev = dev, files = vars.files, name = dev.name, tag = tag }
     resources.createDevice(dev)
     return DIR[id]
 end
@@ -106,10 +108,10 @@ local function loadFiles(id)
             qf.content = file:read("*all")
             file:close()
         end
-        QA.syslog("Loading","User file %s",qf.fname or qf.name)
+        QA.syslog(qa.tag,"Loading user file %s",qf.fname or qf.name)
         local qa, res = load(qf.content, qf.fname, "t", env) -- Load QA
         if not qa then
-            QA.syslogerr("Loading","%s - %s", qf.fname or qf.nam, res)
+            QA.syslogerr(qa.tag,"%s - %s", qf.fname or qf.nam, res)
             return false
         end
         qf.qa = qa

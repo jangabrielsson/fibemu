@@ -32,7 +32,7 @@ if __name__ == "__main__":
     parser.add_argument('-p', "--port", help='HC3 port', default=80, type=int)
     parser.add_argument('-e', '--emulator', help='emulator file', default='emu.lua')
     parser.add_argument('-b', "--stop", help='debuger break on load file', action='store_true')
-    parser.add_argument('-wp', '--wport', default=5001, help='port for web/api interface', type=int)
+    parser.add_argument('-wp', '--wport', default=5002, help='port for web/api interface', type=int)
     parser.add_argument('-wh', '--whost', default='127.0.0.1', help='host for webserver')
     parser.add_argument('-wlv', '--web_log_level', default='warning', help='log level for webserver',choices=['debug', 'info', 'trace', 'warning', 'error', 'critical'])
 
