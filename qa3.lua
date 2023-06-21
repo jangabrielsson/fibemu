@@ -33,6 +33,14 @@ end
 function QuickApp:testQA_fun(a,b) self:debug("testQA_fun",a,b) end
 function QuickApp:testQA_button(a,b) self:debug("testQA_button pressed") end
 
+local testContent = [[
+    function QuickApp:hello()
+        local str = "Hello from file 'new'"
+        self:debug(str)
+        return str
+    end
+]]
+
 function QuickApp:testQA()
     print("Calling testQA")
     local res,code = api.post("/devices/"..self.id.."/action/testQA_fun",{args={ "A",  "B" }})
@@ -43,4 +51,14 @@ function QuickApp:testQA()
     self:setVariable("test",{42})
     local val = self:getVariable("test")
     printf("Variable 'test' = %s",json.encode(val))
+
+    res,code = api.get("/quickApp/"..self.id.."/files/main")
+    print("file",res.name,"found")
+    res,code = api.get("/quickApp/"..self.id.."/files/new")
+    if code ~= 200 then
+        print("file 'new' not found, code",code)
+        local file = {isMain=false,type='lua',isOpen=false,name="new",content=testContent}
+        res,code = api.post("/quickApp/"..self.id.."/files",file)
+        print("Adding file 'new', code",code)
+    end
 end

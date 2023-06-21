@@ -145,33 +145,46 @@ async def callUIEvent(args: UpdateViewParams):
 
 ''' QuickApp methods '''
 @app.get("/api/quickApp/{id}/files", tags=["QuickApp methods"])
-async def getQuickAppFiles(id: int):
-    f = fibenv.get('fe').remoteCall("getQAfiles",id)
+async def getQuickAppFiles(id: int, response: Response):
+    f,code = fibenv.get('fe').remoteCall("getQAfiles",id)
+    response.status_code = code
     return f
+
+class QAFileParam(BaseModel):
+    name: str
+    isMain: bool
+    content: str
+    isOpen: bool | None = False
+    type: str | None = "lua"
 
 @app.post("/api/quickApp/{id}/files", tags=["QuickApp methods"])
-async def postQuickAppFiles(id: int):
-    f = fibenv.get('fe').remoteCall("setQAfiles",id)
+async def postQuickAppFiles(id: int, file: QAFileParam, response: Response):
+    f,code = fibenv.get('fe').remoteCall("setQAfiles",id,json.dumps(file.__dict__))
+    response.status_code = code
     return f
 
-@app.get("/api/quickApp/{id}/files/{name}}", tags=["QuickApp methods"])
-async def getQuickAppFile(id: int, name: str):
-    f = fibenv.get('fe').remoteCall("getQAfiles",id,name)
+@app.get("/api/quickApp/{id}/files/{name}", tags=["QuickApp methods"])
+async def getQuickAppFile(id: int, name: str, response: Response):
+    f,code = fibenv.get('fe').remoteCall("getQAfiles",id,name)
+    response.status_code = code
     return f
 
 @app.put("/api/quickApp/{id}/files/{name}", tags=["QuickApp methods"])
-async def setQuickAppFile(id: int, name: str):
-    f = fibenv.get('fe').remoteCall("setQAfiles",id,name)
+async def setQuickAppFile(id: int, name: str,response: Response):
+    f,code = fibenv.get('fe').remoteCall("setQAfiles",id,name)
+    response.status_code = code
     return f
 
 @app.put("/api/quickApp/{id}/files", tags=["QuickApp methods"])
-async def setQuickAppFiles(id: int):
-    f = fibenv.get('fe').remoteCall("setQAfiles",id)
+async def setQuickAppFiles(id: int, response: Response):
+    f,code = fibenv.get('fe').remoteCall("setQAfiles",id)
+    response.status_code = code
     return f
 
 @app.get("/api/quickApp/export/{id}", tags=["QuickApp methods"])
-async def getQuickAppFQA(id: int):
-    fqa = fibenv.get('fe').remoteCall("exportFQA",id)
+async def getQuickAppFQA(id: int, response: Response):
+    fqa,code = fibenv.get('fe').remoteCall("exportFQA",id)
+    response.status_code = code
     return fqa
 
 @app.post("/api/quickApp/", tags=["QuickApp methods"])
@@ -180,7 +193,8 @@ async def installQuickApp():
     fibenv.get('fe').postEvent({"type":"importQA","file":""})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
-@app.delete("/api/quickApp/{id}/files/{name}}", tags=["QuickApp methods"])
-async def deleteQuickAppFile(id: int, name: str):
-    f = fibenv.get('fe').remoteCall("deleteQAfile",id,name)
+@app.delete("/api/quickApp/{id}/files/{name}", tags=["QuickApp methods"])
+async def deleteQuickAppFile(id: int, name: str, response: Response):
+    f,code = fibenv.get('fe').remoteCall("deleteQAfile",id,name)
+    response.status_code = code
     return f

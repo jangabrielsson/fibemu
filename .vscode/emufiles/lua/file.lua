@@ -33,7 +33,7 @@ local function installQA(fname, id)
     function chandler.id(var, val, dev) dev.id = tonumber(id) end
     function chandler.file(var, val, dev)
         local fn, qn = table.unpack(val:sub(1, -2):split(","))
-        dev.files[#dev.files + 1] = { fname = fn, qaname = qn }
+        dev.files[#dev.files + 1] = { fname = fn, name = qn, isMain=false, content = nil }
     end
 
     local vars = { files = {} }
@@ -44,7 +44,7 @@ local function installQA(fname, id)
             QA.syslogerr("Install","%s - Unknown header variable '%s'", fname, var)
         end
     end)
-    table.insert(vars.files, { code = code, fname = fname, qaname = 'main' })
+    table.insert(vars.files, { name='main', isMain=true, content = code, fname = fname })
 
     if vars.id == nil then
         vars.id = gID; gID = gID + 1
@@ -76,21 +76,20 @@ local function loadFiles(id)
     local qa = DIR[id]
     local env = qa.env
     for _, qf in ipairs(qa.files) do
-        if qf.code == nil then
+        if qf.content == nil then
             local file = io.open(qf.fname, "r")
             assert(file, "File not found:" .. qf.fname)
-            qf.code = file:read("*all")
+            qf.content = file:read("*all")
             file:close()
         end
         QA.syslog("Loading","User file %s",qf.fname)
-        local qa, res = load(qf.code, qf.fname, "t", env) -- Load QA
+        local qa, res = load(qf.content, qf.fname, "t", env) -- Load QA
         if not qa then
             QA.syslogerr("Loading","%s - %s", qf.fname, res)
             return false
         end
         qf.qa = qa
-        qf.code = nil
-        if qf.qaname == "main" and config['break'] and lldebugger then
+        if qf.name == "main" and config['break'] and lldebugger then
             qf.qa = function() lldebugger.call(qa, true) end
         end
     end
@@ -102,20 +101,24 @@ local function getQAfiles(id,name)
     if name == nil then
         local res
         for f in ipairs(DIR[id].files) do
-            res[#res+1]={name=f.qaname,content=f.content,type='lua',isOpen=false,isMain=f.isMain}
+            res[#res+1]={name=f.name,content=nil,type='lua',isOpen=false,isMain=f.isMain}
         end
         return res,200
     end
-    for f in ipairs(DIR[id].files) do
-        if f.qaname == name then
-            return {name=f.qaname,content=f.content,type='lua',isOpen=false,isMain=f.isMain},200
+    for _,f in ipairs(DIR[id].files) do
+        if f.name == name then
+            return {name=f.name,content=f.content,type='lua',isOpen=false,isMain=f.isMain==true},200
         end
     end
+    return nil,404
 end
 
-local function setQAfiles(id,name,files)
+local function setQAfiles(id,files)
     if not DIR[id] then return nil,404 end
+    local qa = DIR[id]
+    files = type(files)=="string" and json.decode(files) or files
     QA.restart(id)
+    return nil,200
 end
 
 local function exportFQA(id)
@@ -129,7 +132,7 @@ local function deleteQAfile(id,name)
     if not DIR[id] then return nil,404 end
     local files = DIR[id].files
     for i = 1, #files do
-        if files[i].qaname == name then
+        if files[i].name == name then
             table.remove(files, i)
             QA.restart(id)
             return name,200
