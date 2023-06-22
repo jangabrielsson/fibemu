@@ -30,7 +30,7 @@ local function installFQA(fqa, id)
     dev.interfaces = merge(dev.interfaces,fqa.initialInterfaces or {})
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id
-    DIR[dev.id] = { fname = "", dev = dev, files = fqa.files, name = dev.name, tag = tag }
+    DIR[dev.id] = { fname = "", dev = dev, files = fqa.files, name = dev.name, tag = tag, debug = {} }
     resources.createDevice(dev)
     return DIR[dev.id]
 end
@@ -51,13 +51,20 @@ local function installQA(fname, id)
         return
     end
 
+    local function eval(str)
+        local stat,res = pcall(function() return load("return " .. str)() end)
+        if stat then return res end
+        QA.syslogerr("Install","Bad lua expr '%s' - %s", str, fname)
+    end
+
     local chandler = {}
-    function chandler.name(var, val, dev) dev.name = val end
-    function chandler.type(var, val, dev) dev.type = val end
-    function chandler.id(var, val, dev) dev.id = tonumber(id) end
-    function chandler.file(var, val, dev)
+    function chandler.name(var, val, vars) vars.name = val end
+    function chandler.type(var, val, vars) vars.type = val end
+    function chandler.id(var, val, vars) vars.id = tonumber(val) end
+    function chandler.debug(var, val, vars) vars.debug = eval(val) end
+    function chandler.file(var, val, vars)
         local fn, qn = table.unpack(val:sub(1, -2):split(","))
-        dev.files[#dev.files + 1] = { fname = fn, name = qn, isMain=false, content = nil }
+        vars.files[#vars.files + 1] = { fname = fn, name = qn, isMain=false, content = nil }
     end
 
     local vars = { files = {} }
@@ -93,7 +100,7 @@ local function installQA(fname, id)
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id
 
-    DIR[id] = { fname = fname, dev = dev, files = vars.files, name = dev.name, tag = tag }
+    DIR[id] = { fname = fname, dev = dev, files = vars.files, name = dev.name, tag = tag, debug = vars.debug or {}}
     resources.createDevice(dev)
     return DIR[id]
 end
@@ -108,7 +115,9 @@ local function loadFiles(id)
             qf.content = file:read("*all")
             file:close()
         end
-        QA.syslog(qa.tag,"Loading user file %s",qf.fname or qf.name)
+        if qa.debug.userfiles then
+            QA.syslog(qa.tag,"Loading user file %s",qf.fname or qf.name)
+        end
         local qa, res = load(qf.content, qf.fname, "t", env) -- Load QA
         if not qa then
             QA.syslogerr(qa.tag,"%s - %s", qf.fname or qf.nam, res)

@@ -7,7 +7,7 @@ import json
 import requests_async
 import requests
 import asyncio
-import time
+import time, sys
 from datetime import datetime
 import fibapi
 
@@ -55,7 +55,7 @@ class FibaroEnvironment:
             res,code = tofun(fun)(*args)
             res = convertTable(res)
         except Exception as e:
-            print(f"Remote Call Error: {e}")
+            print(f"Remote Call Error: {e}",file=sys.stderr)
         return res,code
 
     def refreshStates(self,start,url,options):

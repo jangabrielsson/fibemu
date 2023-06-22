@@ -19,6 +19,7 @@ tags_metadata = [
     {"name": "GlobalVariabes methods", "description": "managing global variables"},
     {"name": "Rooms methods", "description": "managing rooms"},
     {"name": "Section methods", "description": "managing sections"},
+    {"name": "CustomEvents methods", "description": "managing custom events"},
     {"name": "RefreshStates methods", "description": "getting events"},
     {"name": "Plugins methods", "description": "plugin methods"},
     {"name": "QuickApp methods", "description": "managing QuickApps"},
@@ -43,74 +44,155 @@ class ActionParams(BaseModel):
 @app.post("/api/devices/{id}/action/{name}", tags=["Device methods"])
 async def callOnAction(id: int, name: str, args: ActionParams):
     t = time.time()
-    fibenv.get('fe').postEvent({"type":"onAction","deviceId":id,"actionName":name,"args":args.args})
+    fibenv.get('fe').postEvent({"type":"onAction","deviceId":id,"actionName":name,"args":json.dumps(args.args)})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
 ''' GlobalVariables methods '''
-@app.get("/api/globalVariables", tags=["GlobalVariabes methods"])
-async def getGlobalVariables():
-    vars,code = fibenv.get('fe').remoteCall("getResource","globalVariables")
-    return list(vars.items())
-
-@app.get("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
-async def getGlobalVariable(name: str, response: Response):
-    var,code = fibenv.get('fe').remoteCall("getResource","globalVariables",name)
-    if code == 404:
-        response.status_code = status.HTTP_404_NOT_FOUND
-    return var
-
-class GlobalVarParams(BaseModel):
+class GlobalVarSpec(BaseModel):
     name: str | None = None
     value: str | None = None
     isEnum: bool | None = False
     readOnly: bool | None = False
     invokeScenes: bool | None = True
 
+@app.get("/api/globalVariables", tags=["GlobalVariabes methods"])
+async def getGlobalVariables(response: Response):
+    vars,code = fibenv.get('fe').remoteCall("getResource","globalVariables")
+    response.status_code = code
+    return list(vars.items()) if code < 300 else None
+
+@app.get("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
+async def getGlobalVariable(name: str, response: Response):
+    var,code = fibenv.get('fe').remoteCall("getResource","globalVariables",name)
+    response.status_code = code
+    return var if code < 300 else None
+
 @app.post("/api/globalVariables", tags=["GlobalVariabes methods"])
-async def createGlobalVariable(data: GlobalVarParams):
-    var,code = fibenv.get('fe').remoteCall("createGlobalVariable",json.dumps(data.__dict__))
-    if code == 409: 
-       return JSONResponse(
-        status_code=409,
-        content={"type": "ERROR","reason": "CONFLICT","message": "Resource already exists in the system"},
-        )
-    return var
+async def createGlobalVariable(data: GlobalVarSpec, response: Response):
+    var,code = fibenv.get('fe').remoteCall("createResource","globalVariables",data.json())
+    response.status_code = code
+    return var if code < 300 else None
 
 @app.put("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
-async def createGlobalVariable(name: str, data: GlobalVarParams):
-    var,code = fibenv.get('fe').remoteCall("updateGlobalVariable",name,json.dumps(data.__dict__))
-    if code == 404:
-        response.status_code = status.HTTP_404_NOT_FOUND
-    return var
+async def modifyGlobalVariable(name: str, data: GlobalVarSpec, response: Response):
+    var,code = fibenv.get('fe').remoteCall("modifyResource","globalVariables",name,data.json())
+    response.status_code = code
+    return var if code < 300 else None
 
 @app.delete("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
-async def createGlobalVariable(name: str):
-    var,code = fibenv.get('fe').remoteCall("removeGlobalVariable",name)
-    if code == 404:
-        response.status_code = status.HTTP_404_NOT_FOUND
-    return var
+async def deleteGlobalVariable(name: str, response: Response):
+    var,code = fibenv.get('fe').remoteCall("deleteResource","globalVariables",name)
+    response.status_code = code
+    return var if code < 300 else None
 
 ''' Rooms methods '''
+class RoomSpec(BaseModel):
+    id : int | None = None
+    name: str | None = None
+    sectionID: int | None = None
+    category: str | None = None
+    icon: str | None = None
+    visible: bool | None = True
+
 @app.get("/api/rooms", tags=["Rooms methods"])
-async def getRooms():
-    vars = fibenv.get('fe').remoteCall("getResource","rooms")
-    return list(vars.items())
+async def getRoom(response: Response):
+    vars,code = fibenv.get('fe').remoteCall("getResource","rooms")
+    response.status_code = code
+    return list(vars.items()) if code < 300 else None
 
 @app.get("/api/rooms/{id}", tags=["Rooms methods"])
-async def getRooms(id: int):
-    var = fibenv.get('fe').remoteCall("getResource","rooms",id)
-    return var
+async def getRooms(id: int, response: Response):
+    var,code = fibenv.get('fe').remoteCall("getResource","rooms",id)
+    response.status_code = code
+    return var if code < 300 else None
+
+@app.post("/api/rooms", tags=["Rooms methods"])
+async def createRoom(room: RoomSpec, response: Response):
+    var,code = fibenv.get('fe').remoteCall("createResource","rooms",room.json())
+    response.status_code = code
+    return var if code < 300 else None
+
+@app.put("/api/rooms/{id}", tags=["Rooms methods"])
+async def modifyRoom(id: int, room: RoomSpec, response: Response):
+    var,code = fibenv.get('fe').remoteCall("modifyResource","rooms",id,room.json())
+    response.status_code = code
+    return var if code < 300 else None
+
+@app.delete("/api/rooms/{id}", tags=["Rooms methods"])
+async def deleteRoom(id: int, response: Response):
+    var,code = fibenv.get('fe').remoteCall("deleteResource","rooms",id)
+    response.status_code = code
+    return var if code < 300 else None
 
 ''' Sections methods '''
+class SectionSpec(BaseModel):
+    name: str | None = None
+    id: int | None = None
+
 @app.get("/api/sections", tags=["Sections methods"])
-async def getSections():
-    vars = fibenv.get('fe').remoteCall("getResource","sections")
-    return list(vars.items())
+async def getSection(response: Response):
+    vars,code = fibenv.get('fe').remoteCall("getResource","sections")
+    response.status_code = code
+    return list(vars.items()) if code < 300 else None
 
 @app.get("/api/sections/{id}", tags=["Sections methods"])
-async def getSections(id: int):
-    var = fibenv.get('fe').remoteCall("getResource","sections",id)
-    return var
+async def getSections(id: int, response: Response):
+    var,code = fibenv.get('fe').remoteCall("getResource","sections",id)
+    response.status_code = code
+    return var if code < 300 else None
+
+@app.post("/api/sections", tags=["Sections methods"])
+async def createSection(section: SectionSpec, response: Response):
+    var,code = fibenv.get('fe').remoteCall("createResource","sections",section.json())
+    response.status_code = code
+    return var if code < 300 else None
+
+@app.put("/api/sections/{id}", tags=["Sections methods"])
+async def modifySection(id: int, section: SectionSpec, response: Response):
+    var,code = fibenv.get('fe').remoteCall("modifyResource","sections",id,section.json())
+    response.status_code = code
+    return var if code < 300 else None
+
+@app.delete("/api/sections/{id}", tags=["Sections methods"])
+async def deleteSection(id: int, response: Response):
+    var,code = fibenv.get('fe').remoteCall("deleteResource","sections",id)
+    response.status_code = code
+    return var if code < 300 else None
+
+''' CustomEvent methods '''
+class CustomEventSpec(BaseModel):
+    name: str
+    userDescription: str | None = ""
+
+@app.get("/api/customEvents", tags=["CustomEvents methods"])
+async def getCustomEvent(response: Response):
+    vars,code = fibenv.get('fe').remoteCall("getResource","customEvents")
+    response.status_code = code
+    return list(vars.items()) if code < 300 else None
+
+@app.get("/api/customEvents/{name}", tags=["CustomEvents methods"])
+async def getCustomEvents(name: str, response: Response):
+    var,code = fibenv.get('fe').remoteCall("getResource","customEvents",name)
+    response.status_code = code
+    return var if code < 300 else None
+
+@app.post("/api/customEvents", tags=["CustomEvents methods"])
+async def createCustomEvent(customEvent: CustomEventSpec, response: Response):
+    var,code = fibenv.get('fe').remoteCall("createResource","customEvents",customEvent.json())
+    response.status_code = code
+    return var if code < 300 else None
+
+@app.put("/api/customEvents/{name}", tags=["CustomEvents methods"])
+async def modifyCustomEvent(name: str, customEvent: CustomEventSpec, response: Response):
+    var,code = fibenv.get('fe').remoteCall("modifyResource","customEvents",name,customEvent.json())
+    response.status_code = code
+    return var if code < 300 else None
+
+@app.delete("/api/customEvents/{name}", tags=["CustomEvents methods"])
+async def deleteCustomEvent(name: str, response: Response):
+    var,code = fibenv.get('fe').remoteCall("deleteResource","customEvents",name)
+    response.status_code = code
+    return var if code < 300 else None
 
 ''' Plugins methods '''
 @app.get("/api/plugins/callUIEvent", tags=["Plugins methods"])
@@ -135,6 +217,7 @@ class UpdateViewParams(BaseModel):
     componentName: str
     propertyName: str
     newValue: str
+
 @app.post("/api/plugins/updateView", tags=["Plugins methods"])
 async def callUIEvent(args: UpdateViewParams):
     t = time.time()

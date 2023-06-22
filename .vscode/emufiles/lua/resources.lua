@@ -13,6 +13,7 @@ local keys = {
     devices = "id",
     rooms = "id",
     sections = "id",
+    customEvents = "name",
 }
 
 local rsrcs = {
@@ -20,6 +21,7 @@ local rsrcs = {
     devices = nil,
     rooms = nil,
     sections = nil,
+    customEvents = nil,
 }
 
 function r.refresh(flag)
@@ -28,6 +30,7 @@ function r.refresh(flag)
         r.refresh_resource("devices", "id")
         r.refresh_resource("rooms", "id")
         r.refresh_resource("sections", "id")
+        r.refresh_resource("customEvents", "name")
     end
 end
 
@@ -73,77 +76,77 @@ function r.getResource(typ, id)
     return res, res and 200 or 404
 end
 
+local CE,DE,ME = {},{},{}
+function CE.globalVariables(d) return "GlobalVariableAddedEvent",{variableName=d.name,value=d.value} end
+function CE.rooms(d) return "RoomCreatedEvent", {id = d.id} end
+function CE.sections(d) return "SectionCreatedEvent", {id = d.id} end
+function CE.devices(d) return "DeviceCreatedEvent", d end
+function CE.customEvents(d) return "CustomEventCreatedEvent", d end
+function DE.globalVariables(d) return "GlobalVariableRemovedEvent", {variableName=d.name,value=d.value} end
+function DE.rooms(d) return "RoomRemovedEvent", {id = d.id} end
+function DE.sections(d) return "SectionRemovedEvent", {id = d.id} end
+function DE.devices(d) return "DeviceRemovedEvent", {id = d.id} end
+function DE.customEvents(d) return "CustomEventRemovedEvent", {id = d.name} end
+function ME.globalVariables(d,ov) return "GlobalVariableChangedEvent", {variableName=d.name, value=d.value, oldValue=ov} end
+function ME.rooms(d) return "RoomModifiedEvent", {id = d.id} end
+function ME.sections(d) return "SectionModifiedEvent", {id = d.id} end
+function ME.devices(d) return "DeviceModifiedEvent", d end
+function ME.customEvents(d) return "CustomEventModifiedEvent", d end
+local UA = {
+    globalVariables = {name=true, value=true},
+    rooms = {name=true},
+    customEvents = {name=true, userDescription=true},
+    sections = {name=true},
+    devices = {name=true, roomID=true, sectionID=true, enabled=true, visible=true},
+}
+
+local rsrcID = 8000
 function r.createResource(typ, d)
     d = type(d) == 'string' and json.decode(d) or d
     initr(typ)
     local rs = rsrcs[typ] or {}
-    local id = d[keys[typ]]
-    if rs[id] then return nil, 404 end
+    local id = d[keys[typ]] 
+    if id == nil then id = rsrcID; d[keys[typ]] = id; rsrcID = rsrcID + 1 end -- generate id
+    if rs[id] then return nil, 409 end
     rs[id] = d
+    d.modified = os.time() d.created = d.modified
+    if CE[typ] then postEvent(CE[typ](d)) end
     return d, 200
 end
 
-function r.createGlobalVariable(d, sync)
-    initr("globalVariables")
-    d = type(d) == 'string' and json.decode(d) or d
-    if sync then r.refresh_resource("globalVariables", nil, d.name) return end
-    local name = d.name
-    if rsrcs.globalVariables[name] then return nil, 409 end
-    local gv,code = copy(d)
-    gv.modified = os.time()
-    gv.created = gv.modified
-    gv,code = r.createResource("globalVariables", gv)
-    if code ~= 200 then return nil, code end
-    postEvent("GlobalVariableAddedEvent", { variableName = name, value = gv.value })
-    return gv, 200
+function r.deleteResource(typ, id)
+    initr(typ)
+    local rs = rsrcs[typ] or {}
+    local d = rs[id]
+    if d==nil then return nil, 404 end
+    rs[id] =nil
+    if DE[typ] then postEvent(DE[typ](d)) end
+    return d, 200
 end
 
-function r.removeGlobalVariable(name, sync)
-    initr("globalVariables")
-    if sync then rsrcs.globalVariables[name] = nil return end
-    if rsrcs.globalVariables[name] == nil then return nil, 404 end
-    rsrcs.globalVariables[name] = nil
-    postEvent("GlobalVariableRemovedEvent", { variableName = name })
-    return nil, 200
-end
-
-function r.updateGlobalVariable(name, d, sync)
-    initr("globalVariables")
-    d = type(d) == 'string' and json.decode(d) or d
-    if sync then r.refresh_resource("globalVariables", nil, name) return end -- optimize
-    if rsrcs.globalVariables[name] == nil then return nil, 404 end
-    local gv = rsrcs.globalVariables[name]
+function r.modifyResource(typ, id, nd)
+    nd = type(nd) == 'string' and json.decode(nd) or nd
+    initr(typ)
+    local key = keys[typ]
+    local rs = rsrcs[typ] or {}
+    local ed, oldValue = rs[id]
+    rs[id] = nil
+    if ed==nil then return nil, 404 end
     local flag = false
-    if gv.value ~= d.value then
-        gv.modified = os.time()
-        local oldValue = gv.value
-        gv.value = d.value
-        postEvent("GlobalVariableChangedEvent", { variableName = name, value = gv.value, oldValue = oldValue })
+    for k,v in pairs(nd) do
+        if UA[typ][k] and ed[k] ~= v then
+            oldValue = ed[k]
+            ed[k] = v
+            flag = true
+        end
     end
-    return gv, 200
+    rs[ed[key]] = ed
+    if flag then ed.modified = os.time() end
+    if flag and ME[typ] then postEvent(ME[typ](ed,oldValue)) end
+    return ed, 200
 end
 
-function r.createDevice(d, sync)
-    d = type(d) == 'string' and json.decode(d) or d
-    if sync then r.refresh_resource("devices", nil, d.id) return end
-    local id = d.id
-    if rsrcs.devices[id] then return nil, 409 end
-    local dv,code = copy(d)
-    dv.modified = os.time()
-    dv.created = dv.modified
-    dv,code = r.createResource("devices", dv)
-    if code ~= 200 then return nil, code end
-    postEvent("DeviceCreatedEvent", { id = id })
-    return dv, 200
-end
-
-function r.removeDevice(id, sync)
-    if sync then rsrcs.devices[id] = nil return end
-    if rsrcs.devices[id] == nil then return nil, 404 end
-    rsrcs.devices[id] = nil
-    postEvent("DeviceRemovedEvent", { id = id })
-    return nil, 200
-end
+function r.createDevice(d) return r.createResource("devices", d) end
 
 function r.updateDeviceProp(d, sync)
     d = type(d) == 'string' and json.decode(d) or d
@@ -157,45 +160,6 @@ function r.updateDeviceProp(d, sync)
     local oldValue = dv.properties[prop]
     dv.properties[prop] = value
     postEvent("DevicePropertyUpdatedEvent", { id = id, property = prop, newValue = value, oldValue = oldValue })
-    return nil, 200
-end
-
-function r.createRoom(d, sync)
-    d = type(d) == 'string' and json.decode(d) or d
-    if sync then r.refresh_resource("rooms", nil, d.id) return end
-    return nil, 200
-end
-
-function r.removeRoom(id, sync)
-    initr("rooms")
-    if sync then rsrcs.rooms[id]=nil return end
-    if rsrcs.rooms[id] == nil then return nil, 404 end
-    rsrcs.rooms[id] = nil
-    return nil, 200
-end
-
-function r.updateRoom(id, d, sync)
-    d = type(d) == 'string' and json.decode(d) or d
-    if sync then r.refresh_resource("rooms", nil, d.id) return end
-    return nil, 200
-end
-
-function r.createSection(d, sync)
-    d = type(d) == 'string' and json.decode(d) or d
-    if sync then r.refresh_resource("sections", nil, d.id) return end
-    return nil, 200
-end
-
-function r.removeSection(id, sync)
-    initr("sections")
-    if rsrcs.sections[id] == nil then return nil, 404 end
-    rsrcs.sections[id] = nil
-    return nil, 200
-end
-
-function r.updateSection(id, d, sync)
-    d = type(d) == 'string' and json.decode(d) or d
-    if sync then r.refresh_resource("sections", nil, d.id) return end
     return nil, 200
 end
 

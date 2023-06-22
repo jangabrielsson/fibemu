@@ -91,7 +91,7 @@ end
 local function createEnvironment(id)
     local qa = DIR[id]
     local env,dev = {},qa.dev
-    local debugFlags, fmt = {}, string.format
+    local debugFlags, fmt = qa.debug, string.format
     debugFlags.color = true
     qa.env = env
 
@@ -150,7 +150,9 @@ local function createEnvironment(id)
 
     for _, l in ipairs({ "json.lua", "class.lua", "net.lua", "fibaro.lua", "quickApp.lua" }) do
         local fn = luapath .. l
-        QA.syslog(qa.tag,"Loading library " .. fn)
+        if qa.debug.libraryfiles then
+            QA.syslog(qa.tag,"Loading library " .. fn)
+        end
         local stat, res = pcall(function() loadfile(fn, "t", env)() end)
         if not stat then
             QA.syslogerr(qa.tag,"%s - %s", fn, res)
@@ -266,6 +268,7 @@ local eventHandler = {}
 
 function eventHandler.onAction(event)
     local id = event.deviceId
+    local args = json.decode(event.args)
     if not DIR[id] then
         local d = resources.getResource("devices", id)
         if d then
@@ -273,7 +276,7 @@ function eventHandler.onAction(event)
         return
     end
     timers.add(id, 0, DIR[id].f,
-        { type = 'onAction', deviceId = id, actionName = event.actionName, args = event.args })
+        { type = 'onAction', deviceId = id, actionName = event.actionName, args = args })
 end
 
 function eventHandler.uiEvent(event)

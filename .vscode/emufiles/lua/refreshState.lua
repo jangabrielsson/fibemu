@@ -147,41 +147,54 @@ local EventTypes = { -- There are more, but these are what I seen so far...
 
     NotificationCreatedEvent = {
         f=function(d,e) end,
-        l=function(d,e) return fmt("%s",e.type) end
+        l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
     NotificationRemovedEvent = {
         f=function(d,e) end,
-        l=function(d,e) return fmt("%s",e.type) end
+        l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
     NotificationUpdatedEvent = {
         f=function(d,e) end,
-        l=function(d,e) return fmt("%s",e.type) end
+        l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
 
     RoomCreatedEvent = {
         f=function(d,e) end,
-        l=function(d,e) return fmt("%s",e.type) end
+        l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
     RoomRemovedEvent = {
         f=function(d,e) end,
-        l=function(d,e) return fmt("%s",e.type) end
+        l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
     RoomModifiedEvent = {
         f=function(d,e) end,
-        l=function(d,e) return fmt("%s",e.type) end
+        l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end
+    },
+
+    CustomEventCreatedEvent = {
+        f=function(d,e) end,
+        l=function(d,e) return fmt("%s ID:%s",e.type,d.name) end
+    },
+    CustomEventRemovedEvent = {
+        f=function(d,e) end,
+        l=function(d,e) return fmt("%s ID:%s",e.type,d.name) end
+    },
+    CustomEventModifiedEvent = {
+        f=function(d,e) end,
+        l=function(d,e) return fmt("%s ID:%s",e.type,d.name) end
     },
 
     SectionCreatedEvent = {
         f=function(d,e) end,
-        l=function(d,e) return fmt("%s",e.type) end
+        l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
     SectionRemovedEvent = {
         f=function(d,e) end,
-        l=function(d,e) return fmt("%s",e.type) end
+        l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
     SectionModifiedEvent = {
         f=function(d,e) end,
-        l=function(d,e) return fmt("%s",e.type) end
+        l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end
     },
 
     QuickAppFilesChangedEvent = {
