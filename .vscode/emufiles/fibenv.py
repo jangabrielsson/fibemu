@@ -95,6 +95,7 @@ class FibaroEnvironment:
             f = self.lua.eval(f'function(config) loadfile("{emulator}")(config) end')
             f(self.lua.table_from(config))
             QA = globals.QA
+            self.DIR =globals.DIR
             self.QA = QA
             if config['file1']:
                 QA.install(config['file1'])

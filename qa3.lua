@@ -61,6 +61,7 @@ function QuickApp:testCustomEvents()
     ce,code = api.put("/customEvents/"..ce.name,{ name = "eventB" })
     val,code = api.get("/customEvents/eventB")
     print(val.name)
+    api.post("/customEvents/eventB")
     api.delete("/customEvents/"..ce.name)
 end
 
@@ -100,6 +101,7 @@ function QuickApp:testQA()
     else
         print("file 'new' found, code",code)
         self:hello()
+        return
     end
 
     local rid = 1090

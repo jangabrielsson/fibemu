@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 from fastapi.responses import Response
-from fastapi import status
+from fastapi import status 
+from fastapi import Request
 from pydantic import BaseModel
 from pydantic import typing
 import time,json
@@ -27,10 +30,21 @@ tags_metadata = [
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory=".vscode/emufiles/static"), name="static")
+templates = Jinja2Templates(directory=".vscode/emufiles/templates")
 
 fibenv = dict()
 fibenv['fe']=42
 fibenv['app']=app
+
+@app.get("/info", response_class=HTMLResponse)
+async def read_item(request: Request):
+    return templates.TemplateResponse("info.html", {"request": request, "emu": fibenv.get('fe')})
+
+@app.get("/info/qa/{id}", response_class=HTMLResponse)
+async def read_item(id: int, request: Request):
+    emu = fibenv.get('fe')
+    qa = emu.DIR[id]
+    return templates.TemplateResponse("infoQA.html", {"request": request, "emu": emu, "qa": qa})
 
 ''' Emulator methods '''
 @app.get("/", tags=["Emulator methods"])
@@ -194,6 +208,12 @@ async def deleteCustomEvent(name: str, response: Response):
     response.status_code = code
     return var if code < 300 else None
 
+@app.post("/api/customEvents/{name}", tags=["CustomEvents methods"])
+async def deleteCustomEvent(name: str, response: Response):
+    var,code = fibenv.get('fe').remoteCall("emitCustomEvent",name)
+    response.status_code = code
+    return {},code
+
 ''' Plugins methods '''
 @app.get("/api/plugins/callUIEvent", tags=["Plugins methods"])
 async def callUIEvent(deviceID: int, eventType: str, elementName: str, value: str):
@@ -209,7 +229,7 @@ class UpdatePropertyParams(BaseModel):
 @app.post("/api/plugins/updateProperty", tags=["Plugins methods"])
 async def callUIEvent(args: UpdatePropertyParams):
     t = time.time()
-    fibenv.get('fe').remoteCall("updateDeviceProp",json.dumps(args.__dict__))
+    fibenv.get('fe').remoteCall("updateDeviceProp",args.json())
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
 class UpdateViewParams(BaseModel):
@@ -225,6 +245,13 @@ async def callUIEvent(args: UpdateViewParams):
     event['type'] = 'updateView'
     fibenv.get('fe').postEvent(event)
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
+
+class RestartDTO(BaseModel):
+    deviceId: int
+    
+@app.post("/api/plugins/restart", tags=["Plugins methods"])
+async def callUIEvent(args: RestartDTO):
+    fibenv.get('fe').remoteCall("restartDevice",args.json())
 
 ''' QuickApp methods '''
 @app.get("/api/quickApp/{id}/files", tags=["QuickApp methods"])

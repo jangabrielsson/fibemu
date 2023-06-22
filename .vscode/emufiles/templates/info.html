@@ -1,0 +1,11 @@
+<html>
+<body>
+<h2>Fibemu emulator v{{emu.config.version}}</h2>
+<h4>Installed QAs</h4>
+<ul>
+{% for id,qa in emu.DIR.items() -%}
+    <li><a href="info/qa/{{ qa.dev.id }}">{{ qa.name }} DeviceID:{{ qa.dev.id }}</a> </li>
+{% endfor %}
+</ul>
+</body>
+</html>

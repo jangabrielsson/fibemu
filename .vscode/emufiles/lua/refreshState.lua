@@ -58,7 +58,7 @@ local EventTypes = { -- There are more, but these are what I seen so far...
     },
     CustomEvent = {
         f=function(d,e) end,
-        l=function(d,e) return fmt("%s '%s'",e.type,d.name) end
+        l=function(d,e) return fmt("%s '%s'",e.type,d.name,d.userDescription) end
     },
     PluginChangedViewEvent = {
         f=function(d,e) end,

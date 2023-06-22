@@ -163,4 +163,10 @@ function r.updateDeviceProp(d, sync)
     return nil, 200
 end
 
+function r.emitCustomEvent(name)
+    if rsrcs.customEvents[name] == nil then return {}, 404 end
+    postEvent("CustomEvent",rsrcs.customEvents[name])
+    return {},204
+end
+
 return r

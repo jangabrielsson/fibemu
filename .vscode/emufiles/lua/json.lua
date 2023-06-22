@@ -104,7 +104,7 @@ function json.encode(val,...)
   local res = {pcall(encode,val)}
   if res[1] then return select(2,table.unpack(res))
   else 
-    local info = debug.getinfo(2)
+    local info = os.debug.getinfo(2)
     error(string.format("json.encode, %s, called from %s line:%s",res[2],info.short_src,info.currentline))
   end
 end
@@ -280,7 +280,7 @@ function json.decode(str)
       end)}
   if res[1] then return select(2,table.unpack(res))
   else 
-    local info = debug.getinfo(2)
+    local info = os.debug.getinfo(2)
     error(string.format("json.encode, %s, called from %s line:%s",res[2],info.short_src,info.currentline))
   end
 end

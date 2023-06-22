@@ -36,7 +36,7 @@ local function callHC3(method, path, data, hc3)
         return nil,status
         --error(fmt("HTTP error %d: %s", status, res))
     end
-    return res and type(res)=='string' and json.decode(res) or nil,status
+    return res and type(res)=='string' and res~="" and json.decode(res) or nil,status
 end
 
 api = {
