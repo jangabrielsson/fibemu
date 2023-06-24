@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Index{% endblock %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+    <div class="p-3 bg-light border border-primary shadow">
+        <h2>Events</h2>
+        <table class="table">
+            <thead>
+              <tr>
+                <th class="col-1">Time</th>
+                <th class="col">Type</th>
+                <th class="col">Data</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for event in emu.events %}
+              <tr>
+                <td>{{ event.created | ctime }}</td>
+                <td>{{event.type}}</td>
+                <td>{{event.data}}</td>
+              </tr>
+                {% endfor %}
+            </tbody>
+          </table>
+    </div>
+{% endblock %}

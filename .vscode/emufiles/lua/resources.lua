@@ -41,6 +41,7 @@ local function postEvent(typ, data)
         data = data,
         created = os.time(),
     }
+    QA.addEvent(json.encode(e))
     refreshStates.newEvent(e)
 end
 

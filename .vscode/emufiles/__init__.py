@@ -3,6 +3,7 @@ import sys
 import os
 import argparse
 import fibapi
+import json
 from fibenv import FibaroEnvironment
 
 app = fibapi.app
@@ -10,17 +11,25 @@ app = fibapi.app
 # main startup
 if __name__ == "__main__":
     global config
-    version = "0.0.1"
+    version = "0.0.2"
     parser = argparse.ArgumentParser(
                     prog='fibemu',
                     description='QA/HC3 emulator for HC3',
                     epilog='jan@gabrielsson.com')
 
     try:
-        with open(os.path.expanduser('~') + '/.fibemu') as f:
+        with open(os.path.expanduser('~') + '/.fibemu.json') as f:
             config = json.load(f)
     except Exception:
         config = {}
+
+    try:
+        with open('config.json') as f:
+            config_d = json.load(f)
+            for key, value in config_d.items():
+                config[key] = value
+    except Exception as e:
+        print(e)
 
     parser.add_argument('-f', "--file", help='initial QA to load')
     parser.add_argument('-f2', "--file2", help='second QA to load')

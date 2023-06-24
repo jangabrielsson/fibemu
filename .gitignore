@@ -2,3 +2,5 @@
 *.pyc
 /.vscode/emufules/__pycache__
 config.json
+/test
+/dev

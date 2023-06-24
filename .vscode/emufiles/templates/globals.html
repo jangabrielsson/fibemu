@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Index{% endblock %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+    <div class="p-3 bg-light border border-primary shadow">
+        <h2>Globals</h2>
+        <table class="table">
+            <thead>
+              <tr>
+                <th class="col-2">Name</th>
+                <th class="col">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for key,val in emu.remoteCall("getResource","globalVariables")[0].items() %}
+              <tr>
+                <td>{{key}}</td>
+                <td>{{val.value}}</td>
+              </tr>
+                {% endfor %}
+            </tbody>
+          </table>
+    </div>
+{% endblock %}

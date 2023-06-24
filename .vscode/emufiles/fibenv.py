@@ -29,8 +29,11 @@ def httpCall(method, url, options, data, local):
 def convertTable(obj):
     if lupa.lua_type(obj) == 'table':
         d = dict()
+        flag = False
         for k,v in obj.items():
-            d[k] = convertTable(v)
+            if k == 1:
+                flag = True
+            d[k-1 if flag and type(k)==int else k] = convertTable(v)
         return d
     else:
         return obj
@@ -61,6 +64,7 @@ class FibaroEnvironment:
     def refreshStates(self,start,url,options):
         if self.config.get('local'):
             return
+        self.events = list()
         options = convertTable(options)
         def refreshRunner():
             last = 0
@@ -73,6 +77,7 @@ class FibaroEnvironment:
                         last = data['last'] if data['last'] else last
                         if data['events']:
                             for event in data['events']:
+                                self.events.append(event)
                                 self.postEvent({"type":"refreshStates","event":event})
                 except Exception as e:
                     print(f"Error: {e}")
@@ -97,6 +102,7 @@ class FibaroEnvironment:
             QA = globals.QA
             self.DIR =globals.DIR
             self.QA = QA
+            self.QA.addEvent = lambda e: self.events.append(json.loads(e))
             if config['file1']:
                 QA.install(config['file1'])
             if config['file2']:

@@ -33,24 +33,15 @@ else
     print("Not waiting for debugger")
 end
 
-local config
-do
-    local f = io.open("config.json", "r")
-    if not f then
-        print("No config.json")
-        config = {}
-    else
-        config = json.decode(f:read("*all"))
-        f:close()
-    end
-    for k, v in pairs(pconfig) do if config[k] == nil then config[k] = v end end
-    config.creds = util.basicAuthorization(config.user or "", config.password or "")
-end
+local config = pconfig
+config.creds = util.basicAuthorization(config.user or "", config.password or "")
 
 config.lcl = config['local'] or false
 os.milliclock = config.hooks.clock
 local clock = config.hooks.clock
 os.http = config.hooks.http
+local hooks = config.hooks
+config.hooks = nil
 
 QA, DIR = { config = config, fun = {} }, {}
 
@@ -58,8 +49,7 @@ local libs = {
     devices = devices, resources = resources, files = files, refreshStates = refreshStates, lldebugger = lldebugger,
     emu = QA, util = util,
 }
-os.refreshStates = config.hooks.refreshStates
-config.hooks = nil
+os.refreshStates = hooks.refreshStates
 devices.init(config, luapath.."devices.json", libs)
 resources.init(config, libs)
 refreshStates.init(config, libs)

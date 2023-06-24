@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Index{% endblock %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+    <div class="p-3 bg-light border border-primary shadow">
+        <h2>QuickApps</h2>
+        <table class="table">
+            <thead>
+              <tr>
+                <th class="col-1">ID</th>
+                <th class="col">Name</th>
+                <th class="col">Type</th>
+              </tr>
+            </thead>
+            <tbody>
+                {% for id,qa in emu.DIR.items() %}
+              <tr>
+                <td><a href="/info/qa/{{qa.dev.id}}">{{qa.dev.id}}</a></td>
+                <td>{{qa.name}}</td>
+                <td>{{qa.dev.type}}</td>
+              </tr>
+                {% endfor %}
+            </tbody>
+          </table>
+    </div>
+{% endblock %}

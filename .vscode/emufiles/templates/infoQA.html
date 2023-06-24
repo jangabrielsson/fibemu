@@ -1,5 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Index{% endblock %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+    <div class="p-3 bg-light border border-primary shadow">
+        <h2>QuickApp {{qa.name}}</h2>
+        <pre>
+        {{emu.remoteCall("getResource","devices",qa.dev.id)[0] | tojson(indent=2) }}
+        </pre>
+    </div>
+{% endblock %}
+
 <html>
 <body>
-<h2>QuickApp {{qa.name}}</h2>
-</body>
-</html>

@@ -8,6 +8,7 @@ from fastapi import Request
 from pydantic import BaseModel
 from pydantic import typing
 import time,json
+from datetime import datetime
 
 from fastapi.openapi.docs import (
     get_redoc_html,
@@ -31,20 +32,39 @@ tags_metadata = [
 app = FastAPI()
 app.mount("/static", StaticFiles(directory=".vscode/emufiles/static"), name="static")
 templates = Jinja2Templates(directory=".vscode/emufiles/templates")
+def timectime(s):
+    return datetime.fromtimestamp(s).strftime("%m/%d/%Y/%H:%M:%S") # datetime.datetime.fromtimestamp(s)
+templates.env.filters['ctime'] = timectime
 
 fibenv = dict()
 fibenv['fe']=42
 fibenv['app']=app
 
-@app.get("/info", response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse)
 async def read_item(request: Request):
-    return templates.TemplateResponse("info.html", {"request": request, "emu": fibenv.get('fe')})
+    return templates.TemplateResponse("main.html", {"request": request, "emu": fibenv.get('fe')})
+
+@app.get("/events", response_class=HTMLResponse)
+async def read_item(request: Request):
+    return templates.TemplateResponse("events.html", {"request": request, "emu": fibenv.get('fe')})
+
+@app.get("/globals", response_class=HTMLResponse)
+async def read_item(request: Request):
+    return templates.TemplateResponse("globals.html", {"request": request, "emu": fibenv.get('fe')})
+
+@app.get("/config", response_class=HTMLResponse)
+async def read_item(request: Request):
+    return templates.TemplateResponse("config.html", {"request": request, "emu": fibenv.get('fe')})
+
+@app.get("/about", response_class=HTMLResponse)
+async def read_item(request: Request):
+    return templates.TemplateResponse("about.html", {"request": request, "emu": fibenv.get('fe')})
 
 @app.get("/info/qa/{id}", response_class=HTMLResponse)
 async def read_item(id: int, request: Request):
     emu = fibenv.get('fe')
     qa = emu.DIR[id]
-    return templates.TemplateResponse("infoQA.html", {"request": request, "emu": emu, "qa": qa})
+    return templates.TemplateResponse("infoqa.html", {"request": request, "emu": emu, "qa": qa})
 
 ''' Emulator methods '''
 @app.get("/", tags=["Emulator methods"])

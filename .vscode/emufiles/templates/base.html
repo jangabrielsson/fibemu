@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% block head %}
+    <link rel="stylesheet" href="/static/bootstrap.min.css" />
+    <title>{% block title %}{% endblock %}</title>
+    {% endblock %}
+</head>
+<body>
+    <!-- Color Variant -->
+    <nav class="navbar navbar-expand-md bg-primary navbar-dark">
+        <div class="container">
+          <a href="#" class="navbar-brand">Fibemu v{{emu.config.version}}</a>
+          <button
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarNav"
+            class="navbar-toggler"
+          >
+            <span class="navbar-toggler-icon"></span>
+          </button>
+  
+          <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+              <li class="nav-item">
+                <a href="/" class="nav-link active">Home</a>
+              </li>
+              <li class="nav-item">
+                <a href="/events" class="nav-link">Events</a>
+              </li>
+              <li class="nav-item">
+                <a href="/globals" class="nav-link">Globals</a>
+              </li>
+              <li class="nav-item">
+                <a href="/config" class="nav-link">Config</a>
+              </li>
+              <li class="nav-item">
+                <a href="/about" class="nav-link">About</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+    <div id="content">{% block content %}{% endblock %}</div>
+    <div id="footer">
+        {% block footer %}
+        &copy; Copyleft 2023 by <a href="http://domain.invalid/">Jan Gabrielsson</a>.
+        {% endblock %}
+    </div>
+    <script src="/static/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Index{% endblock %}
+{% block head %}
+    {{ super() }}
+{% endblock %}
+{% block content %}
+    <div class="p-3 bg-light border border-primary shadow">
+        <h2>Config</h2>
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th class="col-1">Parameter</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for key,value in emu.config.items() %}
+            <tr>
+              <td>{{key}}</td>
+              <td>{{value}}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+{% endblock %}
