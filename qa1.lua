@@ -1,6 +1,5 @@
 --%%write=globalVariables["A","B","C"]
---%%write=devices[1000,763]
---%%write=deviceNames["AB","B"]
+--%%write=devices[763]
 
 function QuickApp:onInit()
     QuickApp:debug("Started",self.id)

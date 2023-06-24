@@ -130,7 +130,7 @@ function r.modifyResource(typ, id, nd)
     initr(typ)
     local key = keys[typ]
     local rs = rsrcs[typ] or {}
-    local ed, oldValue = rs[id]
+    local ed, oldValue = rs[id],nil
     rs[id] = nil
     if ed==nil then return nil, 404 end
     local flag = false

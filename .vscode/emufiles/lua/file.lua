@@ -132,12 +132,12 @@ local function loadFiles(id)
         if qa.debug.userfiles then
             QA.syslog(qa.tag,"Loading user file %s",qf.fname or qf.name)
         end
-        local qa, res = load(qf.content, qf.fname, "t", env) -- Load QA
-        if not qa then
+        local qa2, res = load(qf.content, qf.fname, "t", env) -- Load QA
+        if not qa2 then
             QA.syslogerr(qa.tag,"%s - %s", qf.fname or qf.nam, res)
             return false
         end
-        qf.qa = qa
+        qf.qa = qa2
         if qf.name == "main" and config['break'] and lldebugger then
             qf.qa = function() lldebugger.call(qa, true) end
         end
