@@ -36,6 +36,10 @@ def timectime(s):
     return datetime.fromtimestamp(s).strftime("%m/%d/%Y/%H:%M:%S") # datetime.datetime.fromtimestamp(s)
 templates.env.filters['ctime'] = timectime
 
+def prettyjson(s):
+    return fibenv.get('fe').QA.prettyJson(json.dumps(s))
+templates.env.filters['prettyjson'] = prettyjson
+
 fibenv = dict()
 fibenv['fe']=42
 fibenv['app']=app

@@ -6,9 +6,9 @@
 {% block content %}
     <div class="p-3 bg-light border border-primary shadow">
         <h2>QuickApp {{qa.name}}</h2>
-        <pre>
-        {{emu.remoteCall("getResource","devices",qa.dev.id)[0] | tojson(indent=2) }}
-        </pre>
+<pre>
+{{emu.remoteCall("getResource","devices",qa.dev.id)[0] | prettyjson}}
+</pre>
     </div>
 {% endblock %}
 

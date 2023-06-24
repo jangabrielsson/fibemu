@@ -1,6 +1,6 @@
 local config, resources, devices, lldebugger = nil, nil, nil, nil
 local libs,exports = nil, nil
-local copy,merge
+local copy,merge,append
 local gID = 5000
 
 local function init(conf, libs2)
@@ -9,7 +9,7 @@ local function init(conf, libs2)
     resources = libs.resources
     devices = libs.devices
     lldebugger = libs.lldebugger
-    copy,merge = libs.util.copy,libs.util.merge
+    copy,merge,append = libs.util.copy,libs.util.merge,libs.util.append
     for name, fun in pairs(exports) do QA.fun[name] = fun end -- export file functions
 end
 
@@ -30,7 +30,11 @@ local function installFQA(fqa, id)
     dev.interfaces = merge(dev.interfaces,fqa.initialInterfaces or {})
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id
-    DIR[dev.id] = { fname = "", dev = dev, files = fqa.files, name = dev.name, tag = tag, debug = {} }
+    DIR[dev.id] = { 
+        fname = "", dev = dev, files = fqa.files, name = dev.name, 
+        tag = tag, debug = {},
+        permissions = {}
+     }
     resources.createDevice(dev)
     return DIR[dev.id]
 end
@@ -66,8 +70,14 @@ local function installQA(fname, id)
         local fn, qn = table.unpack(val:sub(1, -2):split(","))
         vars.files[#vars.files + 1] = { fname = fn, name = qn, isMain=false, content = nil }
     end
+    function chandler.write(var, val, vars)
+        local typ,list = val:match("([%w_]+)%[(.+)%]")
+        val = eval("{"..list.."}")
+        vars.writes[typ] = vars.writes[typ] or {}
+        vars.writes[typ] = append(vars.writes[typ], val)
+    end
 
-    local vars = { files = {} }
+    local vars = { files = {}, writes = {} }
     code:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
         if chandler[var] then
             chandler[var](var, val, vars)
@@ -100,7 +110,11 @@ local function installQA(fname, id)
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id
 
-    DIR[id] = { fname = fname, dev = dev, files = vars.files, name = dev.name, tag = tag, debug = vars.debug or {}}
+    DIR[id] = { 
+        fname = fname, dev = dev, files = vars.files, name = dev.name, 
+        tag = tag, debug = vars.debug or {},
+        permissions = vars.writes
+    }
     resources.createDevice(dev)
     return DIR[id]
 end

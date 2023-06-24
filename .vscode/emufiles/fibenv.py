@@ -28,13 +28,14 @@ def httpCall(method, url, options, data, local):
 
 def convertTable(obj):
     if lupa.lua_type(obj) == 'table':
-        d = dict()
-        flag = False
-        for k,v in obj.items():
-            if k == 1:
-                flag = True
-            d[k-1 if flag and type(k)==int else k] = convertTable(v)
-        return d
+        if obj[1]:
+            b = [convertTable(v) for k,v in obj.items()]
+            return b
+        else:
+            d = dict()
+            for k,v in obj.items():
+                d[k] = convertTable(v)
+            return d
     else:
         return obj
 

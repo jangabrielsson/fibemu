@@ -55,6 +55,7 @@ resources.init(config, libs)
 refreshStates.init(config, libs)
 files.init(config, libs)
 fakes.init(config, libs)
+util.init(config, libs)
 
 resources.refresh(true)
 if not config.lcl then refreshStates.start() end
@@ -159,11 +160,42 @@ local function createEnvironment(id)
     return env
 end
 
+local permissions = {}
+
+local function addPermissions(perms)
+    for typ,vals in pairs(perms) do
+        permissions[typ] = permissions[typ] or {patterns={},ids={}}
+        local ep = permissions[typ]
+        if ep == true then break end
+        for _,v in ipairs(vals) do
+            if v == '*' then permissions[typ] = true break end
+            if type(v)=='string' and v:sub(1,1)=="$" then
+                ep.patterns[#ep.patterns+1] = v:sub(2)
+            else
+                ep.ids[v] = true
+            end
+        end
+    end
+end
+
+local function hasPermission(typ,id)
+    local p = permissions[typ]
+    if p == true then return true end
+    if #p.patterns > 0 then
+        local id2 = tostring(id)
+        for _,v in ipairs(p.patterns) do
+            if id2:match(v) then return true end
+        end
+    end
+    if permissions[typ].ids[id] then return true end
+end
+
 local function runner(fc, id)
     local qa = DIR[id]
     qa.f = fc
     local debugFlags = { color = true }
 
+    addPermissions(qa.permissions)
     if not createEnvironment(id) then return end
     local env = qa.env
     if not files.loadFiles(id) then return end
@@ -261,8 +293,10 @@ function eventHandler.onAction(event)
     local id = event.deviceId
     local args = json.decode(event.args)
     if not DIR[id] then
-        local d = resources.getResource("devices", id)
-        if d then
+        if hasPermission("devices", id) then
+            api.post("/devices/" .. id .. "/action/"..event.actionName, {args=args}, "hc3")
+        else
+            QA.syslogerr("onAction","No permissions to call QA ID:%s", id)
         end
         return
     end
