@@ -1,7 +1,7 @@
 --%%name=FibEmuTester
 --%%type=com.fibaro.binarySwitch
 --%%file=qa3_1.lua,extra;
---%%debug={libraryfiles=false,userfilefiles=false}
+--%%debug=libraryfiles:false,userfilefiles:false
 
 local function printf(fmt,...) print(string.format(fmt,...)) end
 function QuickApp:onInit()
@@ -16,12 +16,12 @@ function QuickApp:onInit()
     end
 
     self:testGlobalVariables()
-    -- self:testRooms()
-    -- self:testSections()
-    -- self:testCustomEvents()
-    --self:testDevices()
+    self:testRooms()
+    self:testSections()
+    self:testCustomEvents()
+    self:testDevices()
 
-    -- self:testQA()
+    self:testQA()
 end
 
 function QuickApp:testGlobalVariables()

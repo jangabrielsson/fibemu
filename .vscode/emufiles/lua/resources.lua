@@ -168,7 +168,7 @@ local function createResource_local(typ, d)
     local key = keys[typ]
     local rs = rsrcs[typ] or {}
     d._local = true
-    local id = d.id or r.nextRsrcId(); d[key] = id  -- generate id
+    local id = d[key] or r.nextRsrcId(); d[key] = id  -- generate id
     if rs[id] then return nil, 409 end -- already exsists
     rs[id] = d
     d.modified = os.time() d.created = d.modified
