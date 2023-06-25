@@ -50,7 +50,7 @@
       "program": "${workspaceFolder}/.vscode/emufiles/__init__.py",
       "args": [
         "-f",
-        "${workspaceFolder}/qa3.lua"
+        "${workspaceFolder}/qa1.lua"
       ],
       "console": "integratedTerminal",
       "justMyCode": true,
@@ -66,7 +66,7 @@
       "args": [
         "-l",
         "-f",
-        "${workspaceFolder}/qa3.lua"
+        "${workspaceFolder}/qa1.lua"
       ],
       "console": "integratedTerminal",
       "justMyCode": true,

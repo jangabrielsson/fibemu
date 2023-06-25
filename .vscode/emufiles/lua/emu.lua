@@ -43,12 +43,17 @@ os.http = config.hooks.http
 local hooks = config.hooks
 config.hooks = nil
 
-QA, DIR = { config = config, fun = {} }, {}
+QA, DIR = { config = config, fun = {}, debug={} }, {}
+local debugFlags = QA.debug
+debugFlags.color = true
+debugFlags.refresh = true
+debugFlags.permission = true
 
 local libs = { 
     devices = devices, resources = resources, files = files, refreshStates = refreshStates, lldebugger = lldebugger,
     emu = QA, util = util,
 }
+
 os.refreshStates = hooks.refreshStates
 devices.init(config, luapath.."devices.json", libs)
 resources.init(config, libs)
@@ -57,7 +62,7 @@ files.init(config, libs)
 fakes.init(config, libs)
 util.init(config, libs)
 
-resources.refresh(true)
+--resources.refresh(true)
 if not config.lcl then refreshStates.start() end
 
 function QA.syslog(typ, fmt, ...)
@@ -83,17 +88,17 @@ local function createEnvironment(id)
     local qa = DIR[id]
     local env,dev = {},qa.dev
     local debugFlags, fmt = qa.debug, string.format
-    debugFlags.color = true
+    if debugFlags.color == nil then debugFlags.color = true end
     qa.env = env
 
     local function setTimer(f, ms, log)
-        assert(type(f) == 'function', "setTimeout first arg need to be function")
-        assert(type(ms) == 'number', "setTimeout second arg need to be a number")
+        assert(type(f) == 'function', "setTimeout first arg must be function")
+        assert(type(ms) == 'number', "setTimeout second arg must be a number")
         local t = clock() + ms / 1000
         return timers.add(id, t, DIR[id].f, { type = 'timer', fun = f, ms = t, log = log or "" })
     end
     local function clearTimer(ref)
-        assert(type(ref) == 'number', "clearTimeout ref need to be number")
+        assert(type(ref) == 'number', "clearTimeout arg must be number")
         timers.remove(ref)
     end
 
@@ -161,7 +166,6 @@ local function createEnvironment(id)
 end
 
 local permissions = {}
-
 local function addPermissions(perms)
     for typ,vals in pairs(perms) do
         permissions[typ] = permissions[typ] or {patterns={},ids={}}
@@ -180,6 +184,9 @@ end
 
 local function hasPermission(typ,id)
     local p = permissions[typ]
+    local r = resources.getResource(typ,id)
+    if r and r._local then return true end
+    if p == nil then return false end
     if p == true then return true end
     if #p.patterns > 0 then
         local id2 = tostring(id)
@@ -189,6 +196,7 @@ local function hasPermission(typ,id)
     end
     if permissions[typ].ids[id] then return true end
 end
+QA.hasPermission = hasPermission
 
 local function runner(fc, id)
     local qa = DIR[id]
@@ -357,4 +365,4 @@ function QA.loop()
     return 0.5
 end
 
-QA.syslog("BOOT","Lua loader started")
+QA.syslog("boot","Lua loader started")

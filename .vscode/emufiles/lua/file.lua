@@ -1,5 +1,5 @@
 local config, resources, devices, lldebugger = nil, nil, nil, nil
-local libs,exports = nil, nil
+local libs,exports,emu = nil, nil,nil
 local copy,merge,append
 local gID = 5000
 
@@ -9,15 +9,16 @@ local function init(conf, libs2)
     resources = libs.resources
     devices = libs.devices
     lldebugger = libs.lldebugger
+    emu = libs.emu
     copy,merge,append = libs.util.copy,libs.util.merge,libs.util.append
     for name, fun in pairs(exports) do QA.fun[name] = fun end -- export file functions
 end
 
 local function installFQA(fqa, id)
-    QA.syslog("Install","FQA '%s'", fqa.name)
+    QA.syslog("install","FQA '%s'", fqa.name)
     local dev = devices.getDeviceStruct(fqa.type)
     if dev == nil then
-        QA.syslogerr("Install","%s - Unknown device type '%s'", fqa.name, fqa.type)
+        QA.syslogerr("install","%s - Unknown device type '%s'", fqa.name, fqa.type)
         return
     end
     dev = copy(dev)
@@ -40,10 +41,10 @@ local function installFQA(fqa, id)
 end
 
 local function installQA(fname, id)
-    QA.syslog("Install","QA '%s'", fname)
+    QA.syslog("install","QA '%s'", fname)
     local f = io.open(fname, "r")
     if not f then
-        QA.syslogerr("Install","File not found - %s", fname)
+        QA.syslogerr("install","File not found - %s", fname)
         return
     end
     local code = f:read("*all")
@@ -51,55 +52,69 @@ local function installQA(fname, id)
 
     local name, ftype = fname:match("([%w_]+)%.([luafq]+)$")
     if ftype ~= "lua" then
-        QA.syslogerr("Install"," Unsupported file type - %s", tostring(ftype))
+        QA.syslogerr("install"," Unsupported file type - %s", tostring(fname))
         return
     end
 
     local function eval(str)
         local stat,res = pcall(function() return load("return " .. str)() end)
-        if stat then return res end
-        QA.syslogerr("Install","Bad lua expr '%s' - %s", str, fname)
+        if stat then return true,res else return false,nil end
     end
 
     local chandler = {}
     function chandler.name(var, val, vars) vars.name = val end
     function chandler.type(var, val, vars) vars.type = val end
     function chandler.id(var, val, vars) vars.id = tonumber(val) end
-    function chandler.debug(var, val, vars) vars.debug = eval(val) end
+    function chandler.debug(var, val, vars)
+        local dbs = {}
+        vars.debug._init = true
+        val:gsub("([^,]+)", function(d) dbs[#dbs + 1] = d end)
+        for _,d in ipairs(dbs) do
+            local var,val,stat = d:match("([%w_]+):(.+)")
+            stat,val = eval(val)
+            if stat==false or not var then
+                QA.syslogerr("install","Bad debug expr '%s'", d)
+            else
+                vars.debug[var] = val
+                if emu.debug.debugFlags then
+                    QA.syslog("install","Debugflag %s=%s",var,val)
+                end
+            end
+        end
+    end
     function chandler.file(var, val, vars)
         local fn, qn = table.unpack(val:sub(1, -2):split(","))
         vars.files[#vars.files + 1] = { fname = fn, name = qn, isMain=false, content = nil }
     end
     function chandler.write(var, val, vars)
-        local typ,list = val:match("([%w_]+)%[(.+)%]")
-        val = eval("{"..list.."}")
+        local typ,list = val:match("([%w_]-):(.+)")
+        local items = {}
+        list:gsub("([^,]+)", function(item) items[#items + 1] = tonumber(item) or item end)
         vars.writes[typ] = vars.writes[typ] or {}
-        vars.writes[typ] = append(vars.writes[typ], val)
+        vars.writes[typ] = append(vars.writes[typ], items)
     end
 
-    local vars = { files = {}, writes = {} }
+    local vars = { files = {}, writes = {}, debug = {} }
     code:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
         if chandler[var] then
             chandler[var](var, val, vars)
         else
-            QA.syslogerr("Install","%s - Unknown header variable '%s'", fname, var)
+            QA.syslogerr("install","%s - Unknown header variable '%s'", fname, var)
         end
     end)
     table.insert(vars.files, { name='main', isMain=true, content = code, fname = fname })
 
-    if vars.id == nil then
-        vars.id = gID; gID = gID + 1
-    end
+    if vars.id == nil then vars.id = resources.nextRsrcId() end
     id = vars.id
 
     if DIR[id] then
-        QA.syslogerr("Install","ID:%s already installed (%s)", id, fname)
+        QA.syslogerr("install","ID:%s already installed (%s)", id, fname)
         return
     end
 
     local dev = devices.getDeviceStruct(vars.type or "com.fibaro.binarySwitch")
     if dev == nil then
-        QA.syslogerr("Install","%s - Unknown device type '%s'", fname, vars.type)
+        QA.syslogerr("install","%s - Unknown device type '%s'", fname, vars.type)
         dev = devices.getDeviceStruct("com.fibaro.binarySwitch")
     end
     dev = copy(dev)
@@ -112,9 +127,12 @@ local function installQA(fname, id)
 
     DIR[id] = { 
         fname = fname, dev = dev, files = vars.files, name = dev.name, 
-        tag = tag, debug = vars.debug or {},
+        tag = tag, debug = vars.debug,
         permissions = vars.writes
     }
+
+    for k,v in pairs(vars.debug) do emu.debug[k] = v end
+
     resources.createDevice(dev)
     return DIR[id]
 end

@@ -27,6 +27,24 @@ tags_metadata = [
     {"name": "RefreshStates methods", "description": "getting events"},
     {"name": "Plugins methods", "description": "plugin methods"},
     {"name": "QuickApp methods", "description": "managing QuickApps"},
+    {"name": "Weather methods", "description": "weather status"},
+    {"name": "iosDevices methods", "description": "iosDevices info"},
+    {"name": "Home methods", "description": "home info"},
+    {"name": "DebugMessages methods", "description": "debugMessages info"},
+    {"name": "Settings methods", "description": "settings info"},
+    {"name": "Partition methods", "description": "partitions management"},
+    {"name": "Alarm devices methods", "description": "alarm device management"},
+    {"name": "NotificationCenter methods", "description": "notification management"},
+    {"name": "Profiles methods", "description": "profiles management"},
+    {"name": "Icons methods", "description": "icons management"},
+    {"name": "Users methods", "description": "users management"},
+    {"name": "Panels location methods", "description": "location management"},
+    {"name": "Panels notifications methods", "description": "notifications management"},
+    {"name": "Panels family methods", "description": "family management"},
+    {"name": "Panels sprinklers methods", "description": "sprinklers management"},
+    {"name": "Panels humidity methods", "description": "humidity management"},
+    {"name": "Panels favoriteColors methods", "description": "favoriteColors management"},
+   {"name": "Panels favoriteColors/V2 methods", "description": "favoriteColors/v2 management"},
 ]
 
 app = FastAPI()
@@ -341,3 +359,175 @@ async def deleteQuickAppFile(id: int, name: str, response: Response):
     f,code = fibenv.get('fe').remoteCall("deleteQAfile",id,name)
     response.status_code = code
     return f
+
+''' Weather methods '''
+@app.get("/api/weather", tags=["Weather methods"])
+async def getWeather(response: Response):
+    var,code = fibenv.get('fe').remoteCall("getResource","weather")
+    response.status_code = code
+    return var if code < 300 else None
+
+''' iosDevices methods '''
+@app.get("/api/iosDevices", tags=["iosDevices methods"])
+async def getiosDevices(response: Response):
+    var,code = fibenv.get('fe').remoteCall("getResource","iosDevices")
+    response.status_code = code
+    return var if code < 300 else None
+
+''' home methods '''
+@app.get("/api/home", tags=["Home methods"])
+async def getHome(response: Response):
+    var,code = fibenv.get('fe').remoteCall("getResource","home")
+    response.status_code = code
+    return var if code < 300 else None
+
+class DefaultSensorModel(BaseModel):
+    light: int | None
+    temperature: int | None
+    humidity: int | None
+
+class HomeParams(BaseModel):
+    defaultSensors: DefaultSensorModel
+    #meters	HomeDto_meters{...}
+    #example: OrderedMap { "energy": List [ 11, 12, 13 ] }
+    #notificationClient	HomeDto_notificationClient{...}
+    #example: OrderedMap { "marketingNotificationAllowed": true }
+    hcName:	str
+    weatherProvider: int
+    currency: str
+    fireAlarmTemperature: int
+    freezeAlarmTemperature: int
+    timeFormat: int
+    dateFormat: str
+    firstRunAfterUpdate: bool
+
+@app.put("/api/home", tags=["Home methods"])
+async def putHome(args: HomeParams, response: Response):
+    var,code = fibenv.get('fe').remoteCall("modifyResource","home",args.json())
+    response.status_code = code
+    return var if code < 300 else None
+
+''' debugMessages methods '''
+@app.get("/api/debugMessages", tags=["debugMessage methods"])
+async def getdebugMessages(response: Response):
+    var,code = fibenv.get('fe').remoteCall("getResource","debugMessages")
+    response.status_code = code
+    return var if code < 300 else None
+
+''' settings methods '''
+@app.get("/api/settings/{name}", tags=["Settings methods"])
+async def getSettings(name: str, response: Response):
+    var,code = fibenv.get('fe').remoteCall("getResource","settings/"+name)
+    response.status_code = code
+    return var if code < 300 else None
+
+''' partition methods '''
+@app.get("/api/alarms/v1/partitions", tags=["Partition methods"])
+async def getPartitions(response: Response):
+    items,code = fibenv.get('fe').remoteCall("getResource","alarms/v1/partitions")
+    response.status_code = code
+    return list(items.items()) if code < 300 else None
+
+@app.get("/api/alarms/v1/partitions/{id}", tags=["Partition methods"])
+async def getPartitions(id: int, response: Response):
+    item,code = fibenv.get('fe').remoteCall("getResource","alarms/v1/partitions",id)
+    response.status_code = code
+    return item if code < 300 else None
+
+''' alarm devices methods '''
+@app.get("/api/alarms/v1/devices/", tags=["Alarm devices methods"])
+async def getPartitions(response: Response):
+    items,code = fibenv.get('fe').remoteCall("getResource","alarms/v1/devices")
+    response.status_code = code
+    return list(items.items()) if code < 300 else None
+
+''' notificationCenter methods '''
+@app.get("/api/notificationCenter", tags=["NotificationCenter methods"])
+async def getNotificationCenter(response: Response):
+    items,code = fibenv.get('fe').remoteCall("getResource","notificationCenter")
+    response.status_code = code
+    return list(items.items()) if code < 300 else None
+
+''' profiles methods '''
+@app.get("/api/profiles", tags=["Profiles methods"])
+async def getProfiles(response: Response):
+    var,code = fibenv.get('fe').remoteCall("getResource","profiles")
+    response.status_code = code
+    return var if code < 300 else None
+
+''' icons methods '''
+@app.get("/api/icons", tags=["Icons methods"])
+async def getIcons(response: Response):
+    items,code = fibenv.get('fe').remoteCall("getResource","icons")
+    response.status_code = code
+    return list(items.items()) if code < 300 else None
+
+''' users methods '''
+@app.get("/api/users", tags=["Users methods"])
+async def getUsers(response: Response):
+    items,code = fibenv.get('fe').remoteCall("getResource","users")
+    response.status_code = code
+    return list(items.items()) if code < 300 else None
+
+''' energy devices methods '''
+@app.get("/api/energy/devices", tags=["Energy devices methods"])
+async def getEnergyDevices(response: Response):
+    items,code = fibenv.get('fe').remoteCall("getResource","energy/devices")
+    response.status_code = code
+    return list(items.items()) if code < 300 else None
+
+''' panels/location methods '''
+@app.get("/api/panels/location", tags=["Panels location methods"])
+async def getPanelsLocation(response: Response):
+    items,code = fibenv.get('fe').remoteCall("getResource","panels/location")
+    response.status_code = code
+    return list(items.items()) if code < 300 else None
+
+''' panels/notification methods '''
+@app.get("/api/panels/notifications", tags=["Panels notifications methods"])
+async def getPanelsNotifications(response: Response):
+    items,code = fibenv.get('fe').remoteCall("getResource","panels/notifications")
+    response.status_code = code
+    return list(items.items()) if code < 300 else None
+
+''' panels/family methods '''
+@app.get("/api/panels/family", tags=["Panels family methods"])
+async def getPanelsFamily(response: Response):
+    items,code = fibenv.get('fe').remoteCall("getResource","panels/family")
+    response.status_code = code
+    return list(items.items()) if code < 300 else None
+
+''' panels/sprinklers methods '''
+@app.get("/api/panels/sprinklers", tags=["Panels sprinklers methods"])
+async def getPanelsSprinklers(response: Response):
+    items,code = fibenv.get('fe').remoteCall("getResource","panels/sprinklers")
+    response.status_code = code
+    return list(items.items()) if code < 300 else None
+
+''' panels/humidity methods '''
+@app.get("/api/panels/humidity", tags=["Panels humidity methods"])
+async def getPanelsHumidity(response: Response):
+    items,code = fibenv.get('fe').remoteCall("getResource","panels/humidity")
+    response.status_code = code
+    return list(items.items()) if code < 300 else None
+
+''' panels/favoriteColors methods '''
+@app.get("/api/panels/favoriteColors", tags=["Panels favoriteColors methods"])
+async def getFavoriteColors(response: Response):
+    items,code = fibenv.get('fe').remoteCall("getResource","panels/favoriteColors")
+    response.status_code = code
+    return list(items.items()) if code < 300 else None
+
+''' panels/favoriteColors/v2 methods '''
+@app.get("/api/panels/favoriteColors/v2", tags=["Panels favoriteColors/v2 methods"])
+async def getFavoriteColorsV2(response: Response):
+    items,code = fibenv.get('fe').remoteCall("getResource","panels/favoriteColors/v2")
+    response.status_code = code
+    return list(items.items()) if code < 300 else None
+
+''' diagnostics methods '''
+@app.get("/api/diagnostics", tags=["Diagnostics methods"])
+async def getDiagnostics(response: Response):
+    items,code = fibenv.get('fe').remoteCall("getResource","diagnostics")
+    response.status_code = code
+    return list(items.items()) if code < 300 else None

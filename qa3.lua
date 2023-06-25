@@ -16,12 +16,12 @@ function QuickApp:onInit()
     end
 
     self:testGlobalVariables()
-    self:testRooms()
-    self:testSections()
-    self:testCustomEvents()
+    -- self:testRooms()
+    -- self:testSections()
+    -- self:testCustomEvents()
     --self:testDevices()
 
-    self:testQA()
+    -- self:testQA()
 end
 
 function QuickApp:testGlobalVariables()

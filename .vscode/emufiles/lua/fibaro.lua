@@ -222,7 +222,7 @@ end
 function fibaro.setGlobalVariable(name, value)
     __assert_type(name, 'string')
     __assert_type(value, 'string')
-    api.put("/globalVariables/" .. name, {
+    return api.put("/globalVariables/" .. name, {
         ["value"] = tostring(value),
         ["invokeScenes"] = true
     })

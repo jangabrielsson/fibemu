@@ -28,13 +28,14 @@ def httpCall(method, url, options, data, local):
 
 def convertTable(obj):
     if lupa.lua_type(obj) == 'table':
-        if obj[1]:
+        if obj[1] and not obj['_dict']:
             b = [convertTable(v) for k,v in obj.items()]
             return b
         else:
             d = dict()
             for k,v in obj.items():
-                d[k] = convertTable(v)
+                if k != '_dict':
+                    d[k] = convertTable(v)
             return d
     else:
         return obj
@@ -78,7 +79,6 @@ class FibaroEnvironment:
                         last = data['last'] if data['last'] else last
                         if data['events']:
                             for event in data['events']:
-                                self.events.append(event)
                                 self.postEvent({"type":"refreshStates","event":event})
                 except Exception as e:
                     print(f"Error: {e}")
