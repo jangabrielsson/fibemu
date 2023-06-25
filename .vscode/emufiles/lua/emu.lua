@@ -166,13 +166,15 @@ local function createEnvironment(id)
 end
 
 local permissions = {}
-local function addPermissions(perms)
+local shadows = {}
+
+local function addFlags(perms,flags)
     for typ,vals in pairs(perms) do
-        permissions[typ] = permissions[typ] or {patterns={},ids={}}
-        local ep = permissions[typ]
+        flags[typ] = flags[typ] or {patterns={},ids={}}
+        local ep = flags[typ]
         if ep == true then break end
         for _,v in ipairs(vals) do
-            if v == '*' then permissions[typ] = true break end
+            if v == '*' then flags[typ] = true break end
             if type(v)=='string' and v:sub(1,1)=="$" then
                 ep.patterns[#ep.patterns+1] = v:sub(2)
             else
@@ -182,8 +184,8 @@ local function addPermissions(perms)
     end
 end
 
-local function hasPermission(typ,id)
-    local p = permissions[typ]
+local function checkRsrcFlag(typ,id, flags)
+    local p = flags[typ]
     local r = resources.getResource(typ,id)
     if r and r._local then return true end
     if p == nil then return false end
@@ -194,16 +196,20 @@ local function hasPermission(typ,id)
             if id2:match(v) then return true end
         end
     end
-    if permissions[typ].ids[id] then return true end
+    if flags[typ].ids[id] then return true end
 end
-QA.hasPermission = hasPermission
+
+QA.hasPermission = function(typ,id) return checkRsrcFlag(typ,id,permissions) end
+QA.isShadow = function(typ,id) return checkRsrcFlag(typ,id,shadows) end
 
 local function runner(fc, id)
     local qa = DIR[id]
     qa.f = fc
     local debugFlags = { color = true }
 
-    addPermissions(qa.permissions)
+    addFlags(qa.permissions,permissions)
+    addFlags(qa.shadows,shadows)
+
     if not createEnvironment(id) then return end
     local env = qa.env
     if not files.loadFiles(id) then return end

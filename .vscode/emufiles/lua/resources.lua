@@ -94,9 +94,12 @@ function r.refresh_resource(typ, key, id)
         if not config.lcl then rss = api.get("/" .. typ, "hc3") or {} end
         if key == nil then 
             rsrcs[typ] = rss
+            rss._local = emu.isShadow(typ,id)
         else
             for _, rs in ipairs(rss) do
-                rsrcs[typ][rs[key]] = rs
+                local id = rs[key]
+                rsrcs[typ][id] = rs
+                rsrcs[typ][id]._local = emu.isShadow(typ,id)
             end
             rsrcs[typ]._dict = true
         end
@@ -131,7 +134,11 @@ function DE.customEvents(d) return "CustomEventRemovedEvent", {id = d.name} end
 function ME.globalVariables(d,ov) return "GlobalVariableChangedEvent", {variableName=d.name, newValue=d.value, oldValue=ov} end
 function ME.rooms(d) return "RoomModifiedEvent", {id = d.id} end
 function ME.sections(d) return "SectionModifiedEvent", {id = d.id} end
-function ME.devices(d) return "DeviceModifiedEvent", d end
+function ME.devices(d) return "DeviceModifiedEvent", {id = d.id} end
+function ME.weather(d,ov)
+    local p,v = next(d)
+    return "WeatherChangedEvent", {change=p,newValue=v,oldValue=ov} 
+end
 function ME.customEvents(d) return "CustomEventModifiedEvent", d end
 local UA = { -- properties we can modify
     globalVariables = {name=true, value=true},
@@ -139,6 +146,10 @@ local UA = { -- properties we can modify
     customEvents = {name=true, userDescription=true},
     sections = {name=true},
     devices = {name=true, roomID=true, sectionID=true, enabled=true, visible=true},
+    weather = {
+        Temperature = true, Humidity=true,ConditionCode=true,TemperatureUnit=true, WeatherCondition=true,
+        WeatherConditionConverted=true, Wind=true, WindUnit=true
+    }
 }
 
 local rsrcID = 8000
@@ -214,11 +225,11 @@ local function modifyResource_local(typ, id, nd)
     initr(typ)
     local key = keys[typ]
     local rs = rsrcs[typ] or {}
-    local ed, oldValue = rs[id],nil
-    rs[id] = nil
+    local ed, oldValue = key==nil and rs or rs[id],nil
+    if key then rs[id] = nil end
     if ed==nil then return nil, 404 end
     if not ed._local and not emu.hasPermission(typ,id) then
-        rs[id] = ed
+        if key then rs[id] = ed end
         return nil, 403
     end
     local flag = false
@@ -231,14 +242,14 @@ local function modifyResource_local(typ, id, nd)
             flag = true
         end
     end
-    rs[ed[key]] = ed
+    if key then rs[ed[key]] = ed end
     if not flag then return ed,200 end
     ed.modified = os.time() 
     if not ed._local then       -- sync back to HC3
         local r,c = api.put("/" .. typ .. "/" .. id, props, "hc3")
         return r,c
     end
-    if ME[typ] then postEvent(ME[typ](ed,oldValue)) end
+    if ME[typ] then postEvent(ME[typ](props,oldValue)) end
     return ed, 200
 end
 

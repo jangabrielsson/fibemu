@@ -61,7 +61,7 @@ class FibaroEnvironment:
             res = convertTable(res)
         except Exception as e:
             print(f"Remote Call Error: {e}",file=sys.stderr)
-        return res,code
+        return res,code or 501
 
     def refreshStates(self,start,url,options):
         if self.config.get('local'):

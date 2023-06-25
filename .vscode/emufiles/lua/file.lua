@@ -34,7 +34,7 @@ local function installFQA(fqa, id)
     DIR[dev.id] = { 
         fname = "", dev = dev, files = fqa.files, name = dev.name, 
         tag = tag, debug = {},
-        permissions = {}
+        permissions = {}, shadows = {},
      }
     resources.createDevice(dev)
     return DIR[dev.id]
@@ -93,8 +93,15 @@ local function installQA(fname, id)
         vars.writes[typ] = vars.writes[typ] or {}
         vars.writes[typ] = append(vars.writes[typ], items)
     end
+    function chandler.shadow(var, val, vars)
+        local typ,list = val:match("([%w_]-):(.+)")
+        local items = {}
+        list:gsub("([^,]+)", function(item) items[#items + 1] = tonumber(item) or item end)
+        vars.shadow[typ] = vars.shadow[typ] or {}
+        vars.shadow[typ] = append(vars.shadow[typ], items)
+    end
 
-    local vars = { files = {}, writes = {}, debug = {} }
+    local vars = { files = {}, writes = {}, debug = {}, shadow={} }
     code:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
         if chandler[var] then
             chandler[var](var, val, vars)
@@ -128,7 +135,7 @@ local function installQA(fname, id)
     DIR[id] = { 
         fname = fname, dev = dev, files = vars.files, name = dev.name, 
         tag = tag, debug = vars.debug,
-        permissions = vars.writes
+        permissions = vars.writes, shadows = vars.shadow
     }
 
     for k,v in pairs(vars.debug) do emu.debug[k] = v end

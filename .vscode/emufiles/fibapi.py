@@ -44,8 +44,9 @@ tags_metadata = [
     {"name": "Panels sprinklers methods", "description": "sprinklers management"},
     {"name": "Panels humidity methods", "description": "humidity management"},
     {"name": "Panels favoriteColors methods", "description": "favoriteColors management"},
-   {"name": "Panels favoriteColors/V2 methods", "description": "favoriteColors/v2 management"},
-]
+    {"name": "Panels favoriteColors/V2 methods", "description": "favoriteColors/v2 management"},
+    {"name": "Diagnostics methods", "description": "diagnostics info"},
+ ]
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory=".vscode/emufiles/static"), name="static")
@@ -367,6 +368,22 @@ async def getWeather(response: Response):
     response.status_code = code
     return var if code < 300 else None
 
+class WeatherParams(BaseModel):
+    ConditionCode: float | None = None
+    Humidity: float | None = None
+    Temperature: float | None = None
+    TemperatureUnit: str | None = None
+    WeatherCondition: str | None = None
+    WeatherConditionConverted: str | None = None
+    Wind: float | None = None
+    WindUnit: str | None = None
+
+@app.put("/api/weather", tags=["Weather methods"])
+async def putWeather(args: WeatherParams, response: Response):
+    var,code = fibenv.get('fe').remoteCall("modifyResource","weather",None,args.json())
+    response.status_code = code
+    return var if code < 300 else None
+
 ''' iosDevices methods '''
 @app.get("/api/iosDevices", tags=["iosDevices methods"])
 async def getiosDevices(response: Response):
@@ -403,7 +420,7 @@ class HomeParams(BaseModel):
 
 @app.put("/api/home", tags=["Home methods"])
 async def putHome(args: HomeParams, response: Response):
-    var,code = fibenv.get('fe').remoteCall("modifyResource","home",args.json())
+    var,code = fibenv.get('fe').remoteCall("modifyResource","home",None,args.json())
     response.status_code = code
     return var if code < 300 else None
 
