@@ -69,6 +69,11 @@ function QA.syslog(typ, fmt, ...)
     util.debug({ color = true }, typ, format(fmt, ...), "SYS")
 end
 
+QA.syslog('boot',"Fibemu v%s",config.version)
+QA.syslog('boot',"Web UI : %s",config.apiURL)
+QA.syslog('boot',"API Doc: %s",config.apiDocURL)
+QA.syslog('boot',"API EP : %s",config.webURL)
+
 function QA.syslogerr(typ, fmt, ...)
     util.debug({ color = true }, typ, format(fmt, ...), "SYSERR")
 end
@@ -258,6 +263,17 @@ local function runner(fc, id)
     end
 end
 
+function QA.runFile(fname)
+    local env = {}
+    for k,v in pairs(_G) do if v ~= _G then env[k] = v end end
+    for _, l in ipairs({ "json.lua", "class.lua", "net.lua", "fibaro.lua"}) do
+        local fn = luapath .. l
+        local stat, res = pcall(function() loadfile(fn, "t", env)() end)
+    end
+    local stat, res = pcall(function() loadfile(fname, "t", env)() end)
+    if not stat then QA.syslogerr("initfile","Error: %s", res) end
+end
+
 local function createQArunner(runner, id)
     local c = coroutine.create(runner)
     local function t(task)
@@ -335,6 +351,11 @@ function eventHandler.updateView(event)
     print("UV", json.encode(event))
 end
 
+function eventHandler.installQA(event)
+    local file = event.file
+    QA.install(file)
+end
+
 function eventHandler.importFQA(event)
     local file = event.file
     file = json.decode(file)
@@ -371,4 +392,4 @@ function QA.loop()
     return 0.5
 end
 
-QA.syslog("boot","Lua loader started")
+QA.syslog("boot","QA emulator started")

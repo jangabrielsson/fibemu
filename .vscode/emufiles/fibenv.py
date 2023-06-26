@@ -104,12 +104,14 @@ class FibaroEnvironment:
             self.DIR =globals.DIR
             self.QA = QA
             self.QA.addEvent = lambda e: self.events.append(json.loads(e))
+            if config['init']:
+                QA.runFile(config['init'])
             if config['file1']:
-                QA.install(config['file1'])
+                self.postEvent({"type":"installQA","file":config['file1']})
             if config['file2']:
-                QA.install(config['file2'])
+                self.postEvent({"type":"installQA","file":config['file2']})
             if config['file2']:
-                QA.install(config['file3'])
+                self.postEvent({"type":"installQA","file":config['file3']})
             while True:
                 delay = QA.loop()
                 # print(f"event: {delay}s", end='')

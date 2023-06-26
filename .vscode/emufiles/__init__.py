@@ -39,6 +39,7 @@ if __name__ == "__main__":
     parser.add_argument('-u', "--user", help='HC3 user name')
     parser.add_argument('-pwd', "--password", help='HC3 user password')
     parser.add_argument('-p', "--port", help='HC3 port', default=80, type=int)
+    parser.add_argument('-i', '--init', help='init file')
     parser.add_argument('-e', '--emulator', help='emulator file', default='emu.lua')
     parser.add_argument('-b', "--stop", help='debuger break on load file', action='store_true')
     parser.add_argument('-wp', '--wport', default=5004, help='port for web/api interface', type=int)
@@ -55,6 +56,7 @@ if __name__ == "__main__":
     config['whost'] = args.whost or config.get('whost') or os.environ.get('FIBEMU_HOST')
     config['wlog'] = args.web_log_level
     config['emulator'] = args.emulator
+    config['init'] = args.init
     config['break'] = args.stop
     config['file1'] = args.file or "qa2.lua"
     config['file2'] = args.file2 or None
@@ -62,10 +64,9 @@ if __name__ == "__main__":
     config['version'] = version
     config['path'] = ".vscode/emufiles/"
 
-    print(f"Starting FibEmu v.{version}")
-    print(f"API: http://{config['whost']}:{config['wport']}/api")
-    print(f"Docs: http://{config['whost']}:{config['wport']}/docs")
-    sys.stdout.flush()
+    config['apiURL'] =  f"http://{config['whost']}:{config['wport']}/api"
+    config['apiDocURL'] =  f"http://{config['whost']}:{config['wport']}/docs"
+    config['webURL'] =  f"http://{config['whost']}:{config['wport']}/"
     
     f = FibaroEnvironment(config)
     fibapi.fibenv['fe'] = f
