@@ -66,7 +66,6 @@ class FibaroEnvironment:
     def refreshStates(self,start,url,options):
         if self.config.get('local'):
             return
-        self.events = list()
         options = convertTable(options)
         def refreshRunner():
             last = 0
@@ -91,6 +90,7 @@ class FibaroEnvironment:
         def runner():
             config = self.config
             globals = self.lua.globals()
+            self.events = list()
             hooks = {
                 'clock':time.time,
                 'http':httpCall,
