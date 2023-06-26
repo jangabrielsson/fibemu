@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import Response
+from fastapi.openapi.utils import get_openapi
 from typing import Any, Dict, Optional, Tuple
 from fastapi  import Depends
 from fastapi import status 
@@ -50,7 +51,35 @@ tags_metadata = [
     {"name": "Diagnostics methods", "description": "diagnostics info"},
  ]
 
-app = FastAPI()
+app = FastAPI(openapi_tags=tags_metadata, swagger_ui_parameters = {"docExpansion":"none"})
+def my_schema():
+   DOCS_TITLE = "Fibemu API"
+   DOCS_VERSION = "0.2"
+   openapi_schema = get_openapi(
+       title=DOCS_TITLE,
+       version=DOCS_VERSION,
+       routes=app.routes,
+   )
+   openapi_schema["info"] = {
+       "title" : DOCS_TITLE,
+       "version" : DOCS_VERSION,
+       "description" : "HC3 compatible API for Fibaro Home Center 3 emulator",
+       "termsOfService": "http://programming-languages.com/terms/",
+       "contact": {
+           "name": "Get Help with this API",
+           "url": "http://www.programming-languages.com/help",
+          ## "email": "support@programming-languages.com"
+       },
+       "license": {
+           "name": "Apache 2.0",
+           "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+       },
+   }
+   app.openapi_schema = openapi_schema
+   return app.openapi_schema
+
+app.openapi = my_schema
+
 app.mount("/static", StaticFiles(directory=".vscode/emufiles/static"), name="static")
 templates = Jinja2Templates(directory=".vscode/emufiles/templates")
 def timectime(s):
@@ -97,13 +126,13 @@ async def root():
     return {"message": "Hello from FibEmu!"}
 
 @app.post("/emu/dump", tags=["Emulator methods"])
-async def emuDump(response: Response, fname: str = Body(...)):
+async def dump_emulator_resources(response: Response, fname: str = Body(...)):
     res,code = fibenv.get('fe').remoteCall("dumpResources",fname)
     response.status_code = code
     return res
 
 @app.post("/emu/load", tags=["Emulator methods"])
-async def emuLoad(response: Response, fname: str = Body(...)):
+async def load_emulator_resources(response: Response, fname: str = Body(...)):
     res,code = fibenv.get('fe').remoteCall("loadResources",fname)
     response.status_code = code
     return res
@@ -130,6 +159,7 @@ def filterQuery(query: dict, d: dict):
 
 @app.get("/api/devices", tags=["Device methods"])
 async def getDevices(response: Response, query: DeviceQueryParams = Depends()):
+    ''' Get devices'''
     vars,code = fibenv.get('fe').remoteCall("getResource","devices")
     query = query.dict(exclude_none=True)
     if len(query) > 0:
@@ -266,7 +296,7 @@ async def deleteSection(id: int, response: Response):
 ''' CustomEvent methods '''
 class CustomEventSpec(BaseModel):
     name: str
-    userDescription: str | None = ""
+    userdescription: str | None = ""
 
 @app.get("/api/customEvents", tags=["CustomEvents methods"])
 async def getCustomEvent(response: Response):
