@@ -51,7 +51,7 @@ debugFlags.permission = true
 
 local libs = { 
     devices = devices, resources = resources, files = files, refreshStates = refreshStates, lldebugger = lldebugger,
-    emu = QA, util = util,
+    emu = QA, util = util, binser = doload("binser.lua"),
 }
 
 os.refreshStates = hooks.refreshStates

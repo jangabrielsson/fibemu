@@ -1,8 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Body
 from fastapi.responses import JSONResponse
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import Response
+from typing import Any, Dict, Optional, Tuple
+from fastapi  import Depends
 from fastapi import status 
 from fastapi import Request
 from pydantic import BaseModel
@@ -94,6 +96,18 @@ async def read_item(id: int, request: Request):
 async def root():
     return {"message": "Hello from FibEmu!"}
 
+@app.post("/emu/dump", tags=["Emulator methods"])
+async def emuDump(response: Response, fname: str = Body(...)):
+    res,code = fibenv.get('fe').remoteCall("dumpResources",fname)
+    response.status_code = code
+    return res
+
+@app.post("/emu/load", tags=["Emulator methods"])
+async def emuLoad(response: Response, fname: str = Body(...)):
+    res,code = fibenv.get('fe').remoteCall("loadResources",fname)
+    response.status_code = code
+    return res
+
 ''' Device methods '''
 class ActionParams(BaseModel):
     args: list
@@ -104,15 +118,22 @@ async def callOnAction(id: int, name: str, args: ActionParams):
     fibenv.get('fe').postEvent({"type":"onAction","deviceId":id,"actionName":name,"args":json.dumps(args.args)})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
+class DeviceQueryModel(BaseModel):
+    id: int | None = None
+    parentId: int | None = None
+
+def filterQuery(query: dict, d: dict):
+    for k,v in query.items():
+        if d[k] != v:
+            return False
+    return True
+
 @app.get("/api/devices", tags=["Device methods"])
-async def getDevices(request: Request, response: Response):
+async def getDevices(response: Response, query: DeviceQueryModel = Depends()):
     vars,code = fibenv.get('fe').remoteCall("getResource","devices")
-    if len(request.query_params) > 0:
-        res = []
-        for k,v in request.query_params.items():
-            for d in vars.values():
-                if d[k] == v:
-                    res.append(d)
+    query = query.dict(exclude_none=True)
+    if len(query) > 0:
+        res = [d for d in vars.values() if filterQuery(query,d)]
         response.status_code = 200
         return res
     response.status_code = code
