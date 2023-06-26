@@ -65,34 +65,34 @@ fibenv = dict()
 fibenv['fe']=42
 fibenv['app']=app
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse,include_in_schema=False)
 async def read_item(request: Request):
     return templates.TemplateResponse("main.html", {"request": request, "emu": fibenv.get('fe')})
 
-@app.get("/events", response_class=HTMLResponse)
+@app.get("/events", response_class=HTMLResponse,include_in_schema=False)
 async def read_item(request: Request):
     return templates.TemplateResponse("events.html", {"request": request, "emu": fibenv.get('fe')})
 
-@app.get("/globals", response_class=HTMLResponse)
+@app.get("/globals", response_class=HTMLResponse,include_in_schema=False)
 async def read_item(request: Request):
     return templates.TemplateResponse("globals.html", {"request": request, "emu": fibenv.get('fe')})
 
-@app.get("/config", response_class=HTMLResponse)
+@app.get("/config", response_class=HTMLResponse,include_in_schema=False)
 async def read_item(request: Request):
     return templates.TemplateResponse("config.html", {"request": request, "emu": fibenv.get('fe')})
 
-@app.get("/about", response_class=HTMLResponse)
+@app.get("/about", response_class=HTMLResponse,include_in_schema=False)
 async def read_item(request: Request):
     return templates.TemplateResponse("about.html", {"request": request, "emu": fibenv.get('fe')})
 
-@app.get("/info/qa/{id}", response_class=HTMLResponse)
+@app.get("/info/qa/{id}", response_class=HTMLResponse,include_in_schema=False)
 async def read_item(id: int, request: Request):
     emu = fibenv.get('fe')
     qa = emu.DIR[id]
     return templates.TemplateResponse("infoqa.html", {"request": request, "emu": emu, "qa": qa})
 
 ''' Emulator methods '''
-@app.get("/", tags=["Emulator methods"])
+@app.get("emu/info", tags=["Emulator methods"])
 async def root():
     return {"message": "Hello from FibEmu!"}
 
@@ -118,7 +118,7 @@ async def callOnAction(id: int, name: str, args: ActionParams):
     fibenv.get('fe').postEvent({"type":"onAction","deviceId":id,"actionName":name,"args":json.dumps(args.args)})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
-class DeviceQueryModel(BaseModel):
+class DeviceQueryParams(BaseModel):
     id: int | None = None
     parentId: int | None = None
 
@@ -129,7 +129,7 @@ def filterQuery(query: dict, d: dict):
     return True
 
 @app.get("/api/devices", tags=["Device methods"])
-async def getDevices(response: Response, query: DeviceQueryModel = Depends()):
+async def getDevices(response: Response, query: DeviceQueryParams = Depends()):
     vars,code = fibenv.get('fe').remoteCall("getResource","devices")
     query = query.dict(exclude_none=True)
     if len(query) > 0:
@@ -336,16 +336,16 @@ async def callUIEvent(args: UpdateViewParams):
     fibenv.get('fe').postEvent(event)
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
-class RestartDTO(BaseModel):
+class RestartParams(BaseModel):
     deviceId: int
     
 @app.post("/api/plugins/restart", tags=["Plugins methods"])
-async def callUIEvent(args: RestartDTO, response: Response):
+async def callUIEvent(args: RestartParams, response: Response):
     var,code = fibenv.get('fe').remoteCall("restartDevice",args.json())
     response.status_code = code
     return var if code < 300 else None
 
-class ChildModel(BaseModel):
+class ChildParams(BaseModel):
     deviceId: int
     childId: int
     childName: str
@@ -353,7 +353,7 @@ class ChildModel(BaseModel):
     childProperties: dict
 
 @app.post("/api/plugins/createChildDevice", tags=["Plugins methods"])
-async def createChildDevice(args: ChildModel, response: Response):
+async def createChildDevice(args: ChildParams, response: Response):
     var,code = fibenv.get('fe').remoteCall("createChildDevice",args.json())
     response.status_code = code
     return var if code < 300 else None
@@ -364,7 +364,7 @@ async def deleteChildDevice(id: int, response: Response):
     response.status_code = code
     return var if code < 300 else None
 
-class EventModel(BaseModel):
+class EventParams(BaseModel):
     deviceId: int
     childId: int
     childName: str
@@ -372,19 +372,19 @@ class EventModel(BaseModel):
     childProperties: dict
 
 @app.post("/api/plugins/publishEvent", tags=["Plugins methods"])
-async def callUIEvent(args: EventModel, response: Response):
+async def callUIEvent(args: EventParams, response: Response):
     var,code = fibenv.get('fe').remoteCall("publishEvent",args.json())
     response.status_code = code
     return var if code < 300 else None
 
-class DebugMessageModel(BaseModel):
+class DebugMessageSpec(BaseModel):
     deviceId: int
     childId: int
     childName: str
     childType: str
     childProperties: dict
 @app.post("/api/debugMessages", tags=["DebugMessages methods"])
-async def callUIEvent(args: DebugMessageModel, response: Response):
+async def callUIEvent(args: DebugMessageSpec, response: Response):
     var,code = fibenv.get('fe').remoteCall("debugMessages",args.json())
     response.status_code = code
     return var if code < 300 else None
@@ -396,7 +396,7 @@ async def getQuickAppFiles(id: int, response: Response):
     response.status_code = code
     return f if code < 300 else None
 
-class QAFileParam(BaseModel):
+class QAFileSpec(BaseModel):
     name: str
     isMain: bool
     content: str
@@ -404,7 +404,7 @@ class QAFileParam(BaseModel):
     type: str | None = "lua"
 
 @app.post("/api/quickApp/{id}/files", tags=["QuickApp methods"])
-async def postQuickAppFiles(id: int, file: QAFileParam, response: Response):
+async def postQuickAppFiles(id: int, file: QAFileSpec, response: Response):
     f,code = fibenv.get('fe').remoteCall("setQAfiles",id,json.dumps(file.__dict__))
     response.status_code = code
     return f if code < 300 else None
@@ -439,11 +439,11 @@ async def installQuickApp():
     fibenv.get('fe').postEvent({"type":"importFQA","file":""})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
-class QAImportData(BaseModel):
+class QAImportParams(BaseModel):
     file: str
     roomId : int | None = None
 @app.post("/api/quickApp/import", tags=["QuickApp methods"])
-async def installQuickApp(file: QAImportData, response: Response):
+async def installQuickApp(file: QAImportParams, response: Response):
     t = time.time()
     fibenv.get('fe').postEvent({"type":"importFQA","file":file.file,"roomId":file.roomId})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
@@ -461,7 +461,7 @@ async def getWeather(response: Response):
     response.status_code = code
     return var if code < 300 else None
 
-class WeatherParams(BaseModel):
+class WeatherSpec(BaseModel):
     ConditionCode: float | None = None
     Humidity: float | None = None
     Temperature: float | None = None
@@ -472,7 +472,7 @@ class WeatherParams(BaseModel):
     WindUnit: str | None = None
 
 @app.put("/api/weather", tags=["Weather methods"])
-async def putWeather(args: WeatherParams, response: Response):
+async def putWeather(args: WeatherSpec, response: Response):
     var,code = fibenv.get('fe').remoteCall("modifyResource","weather",None,args.json())
     response.status_code = code
     return var if code < 300 else None
@@ -491,13 +491,13 @@ async def getHome(response: Response):
     response.status_code = code
     return var if code < 300 else None
 
-class DefaultSensorModel(BaseModel):
+class DefaultSensorParams(BaseModel):
     light: int | None
     temperature: int | None
     humidity: int | None
 
 class HomeParams(BaseModel):
-    defaultSensors: DefaultSensorModel
+    defaultSensors: DefaultSensorParams
     #meters	HomeDto_meters{...}
     #example: OrderedMap { "energy": List [ 11, 12, 13 ] }
     #notificationClient	HomeDto_notificationClient{...}
