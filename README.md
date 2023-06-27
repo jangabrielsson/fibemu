@@ -1,14 +1,14 @@
 # fibemu
 
 Steps to run
--Have pyton3 installed on your machine. 
--pip install the needed python libraries from requirements.txt
+* Have pyton3 installed on your machine. 
+* pip install the needed python libraries from requirements.txt
  >pip install -r requirements.txt
--Create a config.json file with the credentials to access the HC3. 
+* Create a config.json file with the credentials to access the HC3. 
  See  config.json.example
--Install the vscode extension "Local Lua Debugger" by Tom Blind
--Create a QA file in the directory, select launcher "Fibenv QA file (remote)" and run debug F5
--See files in the examples/ directory
+* Install the vscode extension "Local Lua Debugger" by Tom Blind
+* Create a QA file in the directory, select launcher "Fibenv QA file (remote)" and run debug F5
+* See files in the examples/ directory
          
 The trick here is that we have a python wrapper for the lua runtime so we solve dependencies on luasocket etc. and we don't need any special headers in the QA lua file to invoke/include the emulator/apis to make the QA being able to execute.
 To give some hints to the emulator what type of QA we have etc. we can give directive similar to TQAE (but a bit different)
