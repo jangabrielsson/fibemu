@@ -408,11 +408,10 @@ async def callUIEvent(args: EventParams, response: Response):
     return var if code < 300 else None
 
 class DebugMessageSpec(BaseModel):
-    deviceId: int
-    childId: int
-    childName: str
-    childType: str
-    childProperties: dict
+    message: str
+    messageType: str
+    tag: str
+
 @app.post("/api/debugMessages", tags=["DebugMessages methods"])
 async def callUIEvent(args: DebugMessageSpec, response: Response):
     var,code = fibenv.get('fe').remoteCall("debugMessages",args.json())

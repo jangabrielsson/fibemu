@@ -25,7 +25,7 @@ function QuickApp:onInit()
         fooo()
     end,2000)
     
-    net.HTTPCall():request("http://worldtimeapi.org/api/timezone/Europe/Stockholm",{
+    net.HTTPClient():request("http://worldtimeapi.org/api/timezone/Europe/Stockholm",{
         options = {
             method = "GET",
             headers = {

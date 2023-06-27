@@ -62,10 +62,15 @@ local function installQA(fname, id)
     end
 
     local chandler = {}
+    for i=1,20 do
+        local u = "u"..i
+        chandler[u]=function(var, val, vars) vars[u] = val end
+    end
     function chandler.name(var, val, vars) vars.name = val end
     function chandler.type(var, val, vars) vars.type = val end
     function chandler.allRemote(var, val, vars) vars.allRemote = eval(val) end
     function chandler.id(var, val, vars) vars.id = tonumber(val) end
+    function chandler.proxy(var, val, vars) vars.proxy = tonumber(val) end
     function chandler.debug(var, val, vars)
         local dbs = {}
         vars.debug._init = true

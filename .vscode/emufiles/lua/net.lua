@@ -2,7 +2,7 @@ local fmt = string.format
 
 net = {}
 
-function net.HTTPCall()
+function net.HTTPClient()
     return {
         request = function(_, url, opts)
             local options = (opts or {}).options or {}

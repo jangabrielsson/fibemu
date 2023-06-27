@@ -323,6 +323,12 @@ function QA.delete(id)
     resources.removeDevice(id)
 end
 
+function QA.fun.debugMessages(arg)
+    arg = json.decode(arg)
+    util.debug({ color = true }, arg.messageType, arg.message, arg.tag)
+    return "OK",200
+end
+
 local eventHandler = {}
 
 function eventHandler.onAction(event)
