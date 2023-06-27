@@ -65,11 +65,11 @@ def my_schema():
        "title" : DOCS_TITLE,
        "version" : DOCS_VERSION,
        "description" : "HC3 compatible API for Fibaro Home Center 3 emulator",
-       "termsOfService": "http://programming-languages.com/terms/",
+       "termsOfService": "https://forum.fibaro.com/topic/66394-visual-studio-code-vscode-for-quickapp-development/",
        "contact": {
            "name": "Get Help with this API",
-           "url": "http://www.programming-languages.com/help",
-          ## "email": "support@programming-languages.com"
+           "url": "https://forum.fibaro.com/topic/66394-visual-studio-code-vscode-for-quickapp-development/",
+          ## "email": 
        },
        "license": {
            "name": "Apache 2.0",
