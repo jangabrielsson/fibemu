@@ -91,6 +91,7 @@ class FibaroEnvironment:
             config = self.config
             globals = self.lua.globals()
             self.events = list()
+            self.httpCall = httpCall ## used from fibapi
             hooks = {
                 'clock':time.time,
                 'http':httpCall,

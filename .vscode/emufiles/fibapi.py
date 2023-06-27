@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Body
 from fastapi.responses import JSONResponse
 from fastapi.responses import HTMLResponse
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import Response
 from fastapi.openapi.utils import get_openapi
@@ -670,3 +671,15 @@ async def getDiagnostics(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","diagnostics")
     response.status_code = code
     return list(items.values()) if code < 300 else None
+
+''' proxy methods '''
+class ProxyParams(BaseModel):
+    url: str
+@app.get("/api/proxy", tags=["Proxy method"])
+async def getDiagnostics(response: Response, query: ProxyParams = Depends()):
+    fe = fibenv.get('fe')
+    query = query.dict(exclude_none=True)
+    url = query['url']
+    url = url[url.index('/api'):]
+    response = RedirectResponse(url=url)
+    return response

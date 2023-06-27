@@ -1,12 +1,114 @@
 local r, config, refreshStates = {}, nil, nil
 local copy, emu, binser
+local defaultRsrcs = {}
 
 function r.init(conf, libs)
     config = conf
     refreshStates = libs.refreshStates
     copy, emu, binser = libs.util.copy, libs.emu, libs.binser
     for name, fun in pairs(r) do QA.fun[name] = fun end -- export resource functions
+    defaultRsrcs['settings/network'].networkConfig.wlan0.ipConfig.ip = emu.config.whost
 end
+
+defaultRsrcs['settings/location'] = {
+    city = "Berlin",
+    latitude = 52.520008,
+    longitude = 13.404954,
+}
+
+defaultRsrcs['settings/info'] = {
+    serialNumber = "HC3-00000999",
+    platform = "HC3",
+    zwaveEngineVersion = "2.0",
+    hcName = "HC3-00000999",
+    mac = "ac:17:02:0d:35:c8",
+    zwaveVersion = "4.33",
+    timeFormat = 24,
+    zwaveRegion = "EU",
+    serverStatus = os.time(),
+    defaultLanguage = "en",
+    defaultRoomId = 219,
+    sunsetHour = "15:23",
+    sunriseHour = "07:40",
+    hotelMode = false,
+    temperatureUnit = "C",
+    batteryLowNotification = false,
+    date = "09:53 | 15.11.2021",
+    dateFormat = "dd.mm.yy",
+    decimalMark = ".",
+    timezoneOffset = 3600,
+    currency = "EUR",
+    softVersion = "5.090.17",
+    beta = false,
+    currentVersion = {
+        version = "5.090.17",
+        type = "stable"
+    },
+    installVersion = {
+        version = "",
+        type = "",
+        status = "",
+        progress = 0
+    },
+    timestamp = os.time(),
+    online = false,
+    tosAccepted = true,
+    skin = "light",
+    skinSetting = "manual",
+    updateStableAvailable = false,
+    updateBetaAvailable = false,
+    newestStableVersion = "5.090.17",
+    newestBetaVersion = "5.000.15",
+    isFTIConfigured = true,
+    isSlave = false,
+}
+
+defaultRsrcs['settings/network'] = {
+    networkConfig = {
+        wlan0 = {
+            enabled = true,
+            ipConfig = {
+                ip = "2.2.2.2",
+            }
+        }
+    }
+}
+
+defaultRsrcs.users = {
+    [2] = {
+        id = 2,
+        name = "admin",
+        type = "superuser",
+        email = "foo@bar.com",
+        deviceRights = {},
+        sceneRights = {},
+        alarmRights = {},
+        profileRights = {},
+        climateZoneRights = {},
+    }
+}
+
+defaultRsrcs['panels/location'] = {
+    [6] = {
+        id = 6,
+        name = "My Home",
+        address = "Serdeczna 3, Wysogotowo",
+        longitude = 16.791597,
+        latitude = 52.404958,
+        radius = 150,
+        home = true,
+    }
+}
+
+defaultRsrcs.weather = {
+    Temperature = 3.1,
+    TemperatureUnit = "C",
+    Humidity = 51.4,
+    Wind = 29.52,
+    WindUnit = "km/h",
+    WeatherCondition = "clear",
+    ConditionCode = 32
+}
 
 local keys = {
     globalVariables = "name",
@@ -63,6 +165,10 @@ local rsrcs = {
     RGBprograms = nil,
 }
 
+local function getDefaultResource(typ)
+    return defaultRsrcs[typ] or {}
+end
+
 local function postEvent(typ, data)
     local e = {
         type = typ,
@@ -92,8 +198,9 @@ function r.refresh_resource(typ, key, id)
             QA.syslog("resource", "refresh '%s'", typ)
         end
         rsrcs[typ] = {}
-        local rss = {}
-        if not config.lcl then rss = api.get("/" .. typ, "hc3") or {} end
+        local rss
+        if not config.lcl then rss = api.get("/" .. typ, "hc3") end
+        if rss == nil then rss = getDefaultResource(typ) end
         if key == nil then
             rsrcs[typ] = rss
             rss._local = emu.isLocal(typ, id)
@@ -117,7 +224,7 @@ end
 
 function r.dumpResources(fname)
     local stat, res = pcall(function()
-        binser.writeFile(fname,rsrcs)
+        binser.writeFile(fname, rsrcs)
         return true
     end)
     if stat and res then return true, 200 end
@@ -125,12 +232,15 @@ function r.dumpResources(fname)
 end
 
 function r.loadResources(fname)
-    local stat,res = pcall(function()
-            local rs = binser.readFile(fname)
-            rsrcs = rs
-            return true
+    local stat, res = pcall(function()
+        local rs = binser.readFile(fname)
+        rsrcs = rs
+        return true
     end)
-    if stat and res then DIR = {} return true, 200 end
+    if stat and res then
+        DIR = {}
+        return true, 200
+    end
     return false, 501
 end
 
@@ -143,25 +253,43 @@ end
 
 local CE, DE, ME = {}, {}, {}
 function CE.globalVariables(d) return "GlobalVariableAddedEvent", { variableName = d.name, value = d.value } end
+
 function CE.rooms(d) return "RoomCreatedEvent", { id = d.id } end
+
 function CE.sections(d) return "SectionCreatedEvent", { id = d.id } end
+
 function CE.devices(d) return "DeviceCreatedEvent", d end
+
 function CE.customEvents(d) return "CustomEventCreatedEvent", d end
+
 function DE.globalVariables(d) return "GlobalVariableRemovedEvent", { variableName = d.name, newValue = d.value } end
+
 function DE.rooms(d) return "RoomRemovedEvent", { id = d.id } end
+
 function DE.sections(d) return "SectionRemovedEvent", { id = d.id } end
+
 function DE.devices(d) return "DeviceRemovedEvent", { id = d.id } end
+
 function DE.customEvents(d) return "CustomEventRemovedEvent", { id = d.name } end
-function ME.globalVariables(d, ov) return "GlobalVariableChangedEvent",
-        { variableName = d.name, newValue = d.value, oldValue = ov } end
+
+function ME.globalVariables(d, ov)
+    return "GlobalVariableChangedEvent",
+        { variableName = d.name, newValue = d.value, oldValue = ov }
+end
+
 function ME.rooms(d) return "RoomModifiedEvent", { id = d.id } end
+
 function ME.sections(d) return "SectionModifiedEvent", { id = d.id } end
+
 function ME.devices(d) return "DeviceModifiedEvent", { id = d.id } end
+
 function ME.weather(d, ov)
     local p, v = next(d)
     return "WeatherChangedEvent", { change = p, newValue = v, oldValue = ov }
 end
+
 function ME.customEvents(d) return "CustomEventModifiedEvent", d end
+
 local UA = { -- properties we can modify
     globalVariables = { name = true, value = true },
     rooms = { name = true },
@@ -206,9 +334,9 @@ local function createResource_from_emu(typ, d)
 end
 
 function r.createResource(typ, d, remote)
-    if remote then 
+    if remote then
         return createResource_from_hc3(typ, d)
-    else 
+    else
         return createResource_from_emu(typ, d)
     end
 end
@@ -227,7 +355,7 @@ local function deleteResource_from_emu(typ, id)
     local d = rs[id]
     if d == nil then return nil, 404 end
     if not d._local then
-    -- sync back to hc3
+        -- sync back to hc3
         api.delete("/" .. typ .. "/" .. id, "hc3")
         rs[id] = nil
         return d, 200
@@ -238,10 +366,10 @@ local function deleteResource_from_emu(typ, id)
 end
 
 function r.deleteResource(typ, id, remote)
-    if remote then 
-        return deleteResource_from_hc3(typ, id) 
-    else 
-        return deleteResource_from_emu(typ, id) 
+    if remote then
+        return deleteResource_from_hc3(typ, id)
+    else
+        return deleteResource_from_emu(typ, id)
     end
 end
 
@@ -284,10 +412,10 @@ local function modifyResource_from_emu(typ, id, nd)
 end
 
 function r.modifyResource(typ, id, nd, remote)
-    if remote then 
-        return modifyResource_from_hc3(typ, id, nd) 
-    else 
-        return modifyResource_from_emu(typ, id, nd) 
+    if remote then
+        return modifyResource_from_hc3(typ, id, nd)
+    else
+        return modifyResource_from_emu(typ, id, nd)
     end
 end
 
@@ -307,7 +435,7 @@ function r.updateDeviceProp(arg, remote)
     local d = rsrcs.devices[id]
     if d.properties[prop] == newValue then return nil, 200 end
     if not d._local then
-    -- sync back to hc3
+        -- sync back to hc3
         api.put("/devices/" .. id, { properties = { [prop] = newValue } }, "hc3")
         d.properties[prop] = newValue
         return nil, 200

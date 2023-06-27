@@ -67,7 +67,7 @@
       "args": [
         "-l",
         "-f",
-        "${workspaceFolder}/qa1.lua"
+        "${workspaceFolder}/qa0.lua"
       ],
       "console": "integratedTerminal",
       "justMyCode": true,
