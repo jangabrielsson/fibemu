@@ -6,6 +6,7 @@ import queue
 import json
 import requests_async
 import requests
+from requests import exceptions
 import asyncio
 import time, sys
 from datetime import datetime
@@ -68,7 +69,7 @@ class FibaroEnvironment:
             return
         options = convertTable(options)
         def refreshRunner():
-            last = 0
+            last,retries = 0,0
             while True:
                 try:
                     nurl = url + str(last)
@@ -79,6 +80,10 @@ class FibaroEnvironment:
                         if data['events']:
                             for event in data['events']:
                                 self.postEvent({"type":"refreshStates","event":event})
+                except exceptions.ConnectionError as e:
+                    retries += 1
+                    if retries > 5:
+                        return
                 except Exception as e:
                     print(f"Error: {e}")
                     

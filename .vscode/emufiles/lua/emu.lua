@@ -69,9 +69,9 @@ function QA.syslog(typ, fmt, ...)
 end
 
 QA.syslog('boot',"Fibemu v%s",config.version)
-QA.syslog('boot',"Web UI : %s",config.apiURL)
+QA.syslog('boot',"Web UI : %s",config.webURL)
 QA.syslog('boot',"API Doc: %s",config.apiDocURL)
-QA.syslog('boot',"API EP : %s",config.webURL)
+QA.syslog('boot',"API EP : %s",config.apiURL)
 
 function QA.syslogerr(typ, fmt, ...)
     util.debug({ color = true }, typ, format(fmt, ...), "SYSERR")

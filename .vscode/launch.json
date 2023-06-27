@@ -5,7 +5,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Fibenv QA file (remote)",    // For debugging QA lua file
+      "name": "Fibenv QA file (remote, HC3 access)",    // For debugging QA lua file
       "type": "lua-local",
       "request": "launch",
       "program": {
@@ -24,7 +24,7 @@
       "ignorePatterns": ["lldebugger"]
     },
     {
-      "name": "Fibenv QA file (local)",    // For debugging QA lua file
+      "name": "Fibenv QA file (local, no HC3 access)",    // For debugging QA lua file
       "type": "lua-local",
       "request": "launch",
       "program": {
@@ -41,17 +41,17 @@
       "scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
       "scriptFiles": ["*.lua", "**/*.lua"],
       "stepUnmappedLines": false,
-      //"ignorePatterns": ["^emufiles","lldebugger"] // Add to skip the emufiles and focus on QA
+      //"ignorePatterns": ["^emufiles","lldebugger"] // Add to not step into emufiles and only focus on QA code
       "ignorePatterns": ["lldebugger"]
     },
     {
-      "name": "Python: __init__.py (remote)", // For debugging the python wrapper
+      "name": "Python: __init__.py (debug, remote)", // For debugging the python wrapper
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/.vscode/emufiles/__init__.py",
       "args": [
         "-f",
-        "${workspaceFolder}/qa1.lua"
+        "${file}"
       ],
       "console": "integratedTerminal",
       "justMyCode": true,
@@ -60,14 +60,14 @@
         }
     },
     {
-      "name": "Python: __init__.py (local)", // For debugging the python wrapper
+      "name": "Python: __init__.py (debug, local)", // For debugging the python wrapper
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/.vscode/emufiles/__init__.py",
       "args": [
         "-l",
         "-f",
-        "${workspaceFolder}/qa0.lua"
+        "${file}"
       ],
       "console": "integratedTerminal",
       "justMyCode": true,
