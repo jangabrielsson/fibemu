@@ -1,6 +1,6 @@
 /__pycache__
 *.pyc
-/.vscode/emufules/__pycache__
+/.vscode/emufiles/__pycache__
 config.json
 /test
 /dev

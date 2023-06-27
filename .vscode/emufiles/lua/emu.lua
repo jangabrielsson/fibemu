@@ -119,7 +119,8 @@ local function createEnvironment(id)
     env.setTimeout = setTimer
     env.clearTimeout = clearTimer
 
-    function env.__fibaroSleep(ms) end
+    function env.__fibaroSleep(ms)
+    end
 
     function env.__fibaro_get_global_variable(name) return resources.getResource("globalVariables", name) end
 
