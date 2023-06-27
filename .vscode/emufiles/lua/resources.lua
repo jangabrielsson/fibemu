@@ -96,12 +96,12 @@ function r.refresh_resource(typ, key, id)
         if not config.lcl then rss = api.get("/" .. typ, "hc3") or {} end
         if key == nil then
             rsrcs[typ] = rss
-            rss._local = emu.isShadow(typ, id)
+            rss._local = emu.isLocal(typ, id)
         else
             for _, rs in ipairs(rss) do
                 local id = rs[key]
                 rsrcs[typ][id] = rs
-                rsrcs[typ][id]._local = emu.isShadow(typ, id)
+                rsrcs[typ][id]._local = emu.isLocal(typ, id)
             end
             rsrcs[typ]._dict = true
         end
@@ -130,7 +130,7 @@ function r.loadResources(fname)
             rsrcs = rs
             return true
     end)
-    if stat and res then return true, 200 end
+    if stat and res then DIR = {} return true, 200 end
     return false, 501
 end
 
@@ -143,41 +143,25 @@ end
 
 local CE, DE, ME = {}, {}, {}
 function CE.globalVariables(d) return "GlobalVariableAddedEvent", { variableName = d.name, value = d.value } end
-
 function CE.rooms(d) return "RoomCreatedEvent", { id = d.id } end
-
 function CE.sections(d) return "SectionCreatedEvent", { id = d.id } end
-
 function CE.devices(d) return "DeviceCreatedEvent", d end
-
 function CE.customEvents(d) return "CustomEventCreatedEvent", d end
-
 function DE.globalVariables(d) return "GlobalVariableRemovedEvent", { variableName = d.name, newValue = d.value } end
-
 function DE.rooms(d) return "RoomRemovedEvent", { id = d.id } end
-
 function DE.sections(d) return "SectionRemovedEvent", { id = d.id } end
-
 function DE.devices(d) return "DeviceRemovedEvent", { id = d.id } end
-
 function DE.customEvents(d) return "CustomEventRemovedEvent", { id = d.name } end
-
 function ME.globalVariables(d, ov) return "GlobalVariableChangedEvent",
         { variableName = d.name, newValue = d.value, oldValue = ov } end
-
 function ME.rooms(d) return "RoomModifiedEvent", { id = d.id } end
-
 function ME.sections(d) return "SectionModifiedEvent", { id = d.id } end
-
 function ME.devices(d) return "DeviceModifiedEvent", { id = d.id } end
-
 function ME.weather(d, ov)
     local p, v = next(d)
     return "WeatherChangedEvent", { change = p, newValue = v, oldValue = ov }
 end
-
 function ME.customEvents(d) return "CustomEventModifiedEvent", d end
-
 local UA = { -- properties we can modify
     globalVariables = { name = true, value = true },
     rooms = { name = true },
@@ -198,7 +182,7 @@ local UA = { -- properties we can modify
 
 local rsrcID = 8000
 
-local function createResource_remote(typ, id) -- incoming trigger from HC3
+local function createResource_from_hc3(typ, id) -- incoming trigger from HC3
     initr(typ)
     local rs = rsrcs[typ] or {}
     if rs[id] and rs[id]._local then return end -- existing local, ignore
@@ -206,7 +190,7 @@ local function createResource_remote(typ, id) -- incoming trigger from HC3
     return true
 end
 
-local function createResource_local(typ, d)
+local function createResource_from_emu(typ, d)
     d = type(d) == 'string' and json.decode(d) or d
     initr(typ)
     local key = keys[typ]
@@ -222,10 +206,14 @@ local function createResource_local(typ, d)
 end
 
 function r.createResource(typ, d, remote)
-    if remote then return createResource_remote(typ, d) else return createResource_local(typ, d) end
+    if remote then 
+        return createResource_from_hc3(typ, d)
+    else 
+        return createResource_from_emu(typ, d)
+    end
 end
 
-local function deleteResource_remote(typ, id)
+local function deleteResource_from_hc3(typ, id)
     initr(typ)
     local rs = rsrcs[typ] or {}
     if rs[id] and rs[id]._local then return end
@@ -233,19 +221,16 @@ local function deleteResource_remote(typ, id)
     return true
 end
 
-local function deleteResource_local(typ, id)
+local function deleteResource_from_emu(typ, id)
     initr(typ)
     local rs = rsrcs[typ] or {}
     local d = rs[id]
     if d == nil then return nil, 404 end
     if not d._local then
-        if not emu.hasPermission(typ, id) then
-            return nil, 403
-        else -- sync back to hc3
-            api.delete("/" .. typ .. "/" .. id, "hc3")
-            rs[id] = nil
-            return d, 200
-        end
+    -- sync back to hc3
+        api.delete("/" .. typ .. "/" .. id, "hc3")
+        rs[id] = nil
+        return d, 200
     end
     rs[id] = nil
     if DE[typ] then postEvent(DE[typ](d)) end
@@ -253,10 +238,14 @@ local function deleteResource_local(typ, id)
 end
 
 function r.deleteResource(typ, id, remote)
-    if remote then return deleteResource_remote(typ, id) else return deleteResource_local(typ, id) end
+    if remote then 
+        return deleteResource_from_hc3(typ, id) 
+    else 
+        return deleteResource_from_emu(typ, id) 
+    end
 end
 
-local function modifyResource_remote(typ, id, nd)
+local function modifyResource_from_hc3(typ, id, nd)
     nd = type(nd) == 'string' and json.decode(nd) or nd
     initr(typ)
     local rs = rsrcs[typ] or {}
@@ -265,7 +254,7 @@ local function modifyResource_remote(typ, id, nd)
     return true
 end
 
-local function modifyResource_local(typ, id, nd)
+local function modifyResource_from_emu(typ, id, nd)
     nd = type(nd) == 'string' and json.decode(nd) or nd
     initr(typ)
     local key = keys[typ]
@@ -273,10 +262,6 @@ local function modifyResource_local(typ, id, nd)
     local ed, oldValue = key == nil and rs or rs[id], nil
     if key then rs[id] = nil end
     if ed == nil then return nil, 404 end
-    if not ed._local and not emu.hasPermission(typ, id) then
-        if key then rs[id] = ed end
-        return nil, 403
-    end
     local flag = false
     local props = {}
     for k, v in pairs(nd) do
@@ -299,7 +284,11 @@ local function modifyResource_local(typ, id, nd)
 end
 
 function r.modifyResource(typ, id, nd, remote)
-    if remote then return modifyResource_remote(typ, id, nd) else return modifyResource_local(typ, id, nd) end
+    if remote then 
+        return modifyResource_from_hc3(typ, id, nd) 
+    else 
+        return modifyResource_from_emu(typ, id, nd) 
+    end
 end
 
 function r.createDevice(d) return r.createResource("devices", d) end
@@ -318,13 +307,10 @@ function r.updateDeviceProp(arg, remote)
     local d = rsrcs.devices[id]
     if d.properties[prop] == newValue then return nil, 200 end
     if not d._local then
-        if not emu.hasPermission("devices", id) then
-            return nil, 403
-        else -- sync back to hc3
-            api.put("/devices/" .. id, { properties = { [prop] = newValue } }, "hc3")
-            d.properties[prop] = newValue
-            return nil, 200
-        end
+    -- sync back to hc3
+        api.put("/devices/" .. id, { properties = { [prop] = newValue } }, "hc3")
+        d.properties[prop] = newValue
+        return nil, 200
     end
     local oldValue = d.properties[prop]
     d.properties[prop] = newValue

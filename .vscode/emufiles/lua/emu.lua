@@ -47,7 +47,6 @@ QA, DIR = { config = config, fun = {}, debug={} }, {}
 local debugFlags = QA.debug
 debugFlags.color = true
 debugFlags.refresh = true
-debugFlags.permission = true
 
 local libs = { 
     devices = devices, resources = resources, files = files, refreshStates = refreshStates, lldebugger = lldebugger,
@@ -170,8 +169,7 @@ local function createEnvironment(id)
     return env
 end
 
-local permissions = {}
-local shadows = {}
+local remotes = {} -- resources that we access on the HC3
 
 local function addFlags(perms,flags)
     for typ,vals in pairs(perms) do
@@ -204,16 +202,15 @@ local function checkRsrcFlag(typ,id, flags)
     if flags[typ].ids[id] then return true end
 end
 
-QA.hasPermission = function(typ,id) return checkRsrcFlag(typ,id,permissions) end
-QA.isShadow = function(typ,id) return checkRsrcFlag(typ,id,shadows) end
+QA.isLocal = function(typ,id) return not checkRsrcFlag(typ,id,remotes) end
+QA.isRemote = function(typ,id) return checkRsrcFlag(typ,id,remotes) end
 
 local function runner(fc, id)
     local qa = DIR[id]
     qa.f = fc
     local debugFlags = { color = true }
 
-    addFlags(qa.permissions,permissions)
-    addFlags(qa.shadows,shadows)
+    addFlags(qa.remotes,remotes)
 
     if not createEnvironment(id) then return end
     local env = qa.env
@@ -270,21 +267,30 @@ function QA.runFile(fname)
         local fn = luapath .. l
         local stat, res = pcall(function() loadfile(fn, "t", env)() end)
     end
+    env.fibaro.debugFlags = debugFlags
     local stat, res = pcall(function() loadfile(fname, "t", env)() end)
     if not stat then QA.syslogerr("initfile","Error: %s", res) end
 end
 
+local function cresume(co,...)
+    local output = {coroutine.resume(co,...)}
+    if output[1] == false then
+      return false, output[2], debug.traceback(co)
+    end
+    return table.unpack(output)
+  end
+
 local function createQArunner(runner, id)
     local c = coroutine.create(runner)
     local function t(task)
-        local res, task = coroutine.resume(c, task)
+        local res, task = cresume(c, task)
         --print("X",task.type,task.log,coroutine.status(c))
         if task.type == 'timer' then
             timers.add(id, clock() + task.ms, t, task)
-            coroutine.resume(c)
+            cresume(c)
         end
     end
-    local stat, res = coroutine.resume(c, t, id) -- Start QA
+    local stat, res = cresume(c, t, id) -- Start QA
     if not stat then print(res) end
 end
 
@@ -323,10 +329,14 @@ function eventHandler.onAction(event)
     local id = event.deviceId
     local args = json.decode(event.args)
     if not DIR[id] then
-        if hasPermission("devices", id) then
+        if QA.isRemote("devices", id) then
             api.post("/devices/" .. id .. "/action/"..event.actionName, {args=args}, "hc3")
         else
-            QA.syslogerr("onAction","No permissions to call QA ID:%s", id)
+            if QA.isLocal("devices", id) then
+                QA.syslogerr("onAction","No action, QA declared local, ID:%s", id)
+            else
+                QA.syslogerr("onAction","Unknown QA, ID:%s", id)
+            end
         end
         return
     end
@@ -353,7 +363,8 @@ end
 
 function eventHandler.installQA(event)
     local file = event.file
-    QA.install(file)
+    local stat,res = pcall(QA.install,file)
+    if not stat then print(res) end
 end
 
 function eventHandler.importFQA(event)

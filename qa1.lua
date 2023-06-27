@@ -1,6 +1,5 @@
---%%write=globalVariables:A,B
---%%write=devices:763
---%%shadow=weather:*
+--%%remote=globalVariables:A,B
+--%%remote=devices:763
 --%%debug=permissions:false,refresh_resource:true
 
 function QuickApp:onInit()

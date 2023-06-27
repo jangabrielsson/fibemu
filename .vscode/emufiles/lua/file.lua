@@ -34,7 +34,7 @@ local function installFQA(fqa, id)
     DIR[dev.id] = { 
         fname = "", dev = dev, files = fqa.files, name = dev.name, 
         tag = tag, debug = {},
-        permissions = {}, shadows = {},
+        remotes = {}, allRemote = false,
      }
     resources.createDevice(dev)
     return DIR[dev.id]
@@ -64,6 +64,7 @@ local function installQA(fname, id)
     local chandler = {}
     function chandler.name(var, val, vars) vars.name = val end
     function chandler.type(var, val, vars) vars.type = val end
+    function chandler.allRemote(var, val, vars) vars.allRemote = eval(val) end
     function chandler.id(var, val, vars) vars.id = tonumber(val) end
     function chandler.debug(var, val, vars)
         local dbs = {}
@@ -86,22 +87,15 @@ local function installQA(fname, id)
         local fn, qn = table.unpack(val:sub(1, -2):split(","))
         vars.files[#vars.files + 1] = { fname = fn, name = qn, isMain=false, content = nil }
     end
-    function chandler.write(var, val, vars)
+    function chandler.remote(var, val, vars)
         local typ,list = val:match("([%w_]-):(.+)")
         local items = {}
         list:gsub("([^,]+)", function(item) items[#items + 1] = tonumber(item) or item end)
-        vars.writes[typ] = vars.writes[typ] or {}
-        vars.writes[typ] = append(vars.writes[typ], items)
-    end
-    function chandler.shadow(var, val, vars)
-        local typ,list = val:match("([%w_]-):(.+)")
-        local items = {}
-        list:gsub("([^,]+)", function(item) items[#items + 1] = tonumber(item) or item end)
-        vars.shadow[typ] = vars.shadow[typ] or {}
-        vars.shadow[typ] = append(vars.shadow[typ], items)
+        vars.remote[typ] = vars.remote[typ] or {}
+        vars.remote[typ] = append(vars.remote[typ], items)
     end
 
-    local vars = { files = {}, writes = {}, debug = {}, shadow={} }
+    local vars = { files = {}, writes = {}, remote = {}, debug= {} }
     code:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
         if chandler[var] then
             chandler[var](var, val, vars)
@@ -135,7 +129,7 @@ local function installQA(fname, id)
     DIR[id] = { 
         fname = fname, dev = dev, files = vars.files, name = dev.name, 
         tag = tag, debug = vars.debug,
-        permissions = vars.writes, shadows = vars.shadow
+        remotes = vars.remote, allRemote = vars.allRemote,
     }
 
     for k,v in pairs(vars.debug) do emu.debug[k] = v end
