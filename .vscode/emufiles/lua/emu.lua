@@ -39,7 +39,7 @@ config.creds = util.basicAuthorization(config.user or "", config.password or "")
 config.lcl = config['local'] or false
 os.milliclock = config.hooks.clock
 local clock = config.hooks.clock
-os.http = config.hooks.http
+os.http,os.httpAsync = config.hooks.http,config.hooks.httpAsync
 local hooks = config.hooks
 config.hooks = nil
 
@@ -261,18 +261,6 @@ local function runner(fc, id)
     end
 end
 
-function QA.runFile(fname)
-    local env = {}
-    for k,v in pairs(_G) do if v ~= _G then env[k] = v end end
-    for _, l in ipairs({ "json.lua", "class.lua", "net.lua", "fibaro.lua"}) do
-        local fn = luapath .. l
-        local stat, res = pcall(function() loadfile(fn, "t", env)() end)
-    end
-    env.fibaro.debugFlags = debugFlags
-    local stat, res = pcall(function() loadfile(fname, "t", env)() end)
-    if not stat then QA.syslogerr("initfile","Error: %s", res) end
-end
-
 local function cresume(co,...)
     local output = {coroutine.resume(co,...)}
     if output[1] == false then
@@ -295,6 +283,29 @@ local function createQArunner(runner, id)
     if not stat then print(res) end
 end
 
+local function killQA(id)
+    local qa = DIR[id]
+    if qa then
+        timers.removeId(id)
+        if qa.env then qa.env.fibaro.__dead = true end
+    end
+end
+
+------- QA functions called fibenv.py -------
+-- Simple call arguments so no need to encode as json
+
+function QA.runFile(fname)
+    local env = {}
+    for k,v in pairs(_G) do if v ~= _G then env[k] = v end end
+    for _, l in ipairs({ "json.lua", "class.lua", "net.lua", "fibaro.lua"}) do
+        local fn = luapath .. l
+        local stat, res = pcall(function() loadfile(fn, "t", env)() end)
+    end
+    env.fibaro.debugFlags = debugFlags
+    local stat, res = pcall(function() loadfile(fname, "t", env)() end)
+    if not stat then QA.syslogerr("initfile","Error: %s", res) end
+end
+
 function QA.install(fname, id)
     local qa = files.installQA(fname, id)
     if qa then
@@ -312,17 +323,21 @@ end
 function QA.restart(id, delay)
     if DIR[id] then
         delay = delay or 0
+        killQA(id)
         systemTimer(function() createQArunner(runner,id) end, delay, " restart:"..delay)
     end
 end
 
 function QA.delete(id)
     if DIR[id] then
-        timers.removeId(id)
+        killQA(id)
         DIR[id] = nil
     end
     resources.removeDevice(id)
 end
+
+------------ Lua functions called from fibapi.py ------------
+--- Should not throw errors and return status code
 
 function QA.fun.debugMessages(arg)
     arg = json.decode(arg)
@@ -330,9 +345,11 @@ function QA.fun.debugMessages(arg)
     return "OK",200
 end
 
-local eventHandler = {}
+------------ Events posted from fibenv.py ------------
+-- Usually carries complex data, so we use json
+local Events = {}
 
-function eventHandler.onAction(event)
+function Events.onAction(event)
     local id = event.deviceId
     local args = json.decode(event.args)
     if not DIR[id] then
@@ -351,7 +368,7 @@ function eventHandler.onAction(event)
         { type = 'onAction', deviceId = id, actionName = event.actionName, args = args })
 end
 
-function eventHandler.uiEvent(event)
+function Events.uiEvent(event)
     local id = event.deviceId
     if not DIR[id] then return end
     timers.add(id, clock(), DIR[id].f,
@@ -364,17 +381,17 @@ function eventHandler.uiEvent(event)
         })
 end
 
-function eventHandler.updateView(event)
+function Events.updateView(event)
     print("UV", json.encode(event))
 end
 
-function eventHandler.installQA(event)
+function Events.installQA(event)
     local file = event.file
     local stat,res = pcall(QA.install,file)
     if not stat then print(res) end
 end
 
-function eventHandler.importFQA(event)
+function Events.importFQA(event)
     local file = event.file
     file = json.decode(file)
     local qa = QA.installFQA(file, event.roomId)
@@ -383,17 +400,38 @@ function eventHandler.importFQA(event)
     end
 end
 
-function eventHandler.refreshStates(event)
+function Events.refreshStates(event)
     refreshStates.newEvent(event.event)
 end
 
-function QA.onEvent(event) -- dispatch to event handler
-    event = json.decode(event)
-    local h = eventHandler[event.type]
-    if h then h(event) else print("Unknown event", event.type) end
+function Events.httpResponse(event,options)
+    local status = event.status
+    local data = event.data
+    local headers = event.headers
+    local callback = options.callback
+    systemTimer(function()
+        callback(status, data, headers)
+    end,0,"httpResponse")
 end
 
-function QA.loop()
+function QA.onEvent(event,us) -- dispatch to event handler
+    event = json.decode(event)
+    local h = Events[event.type]
+    if h then h(event,us) else print("Unknown event", event.type) end
+end
+
+--[[
+    Main emulator dispatcher
+    Responsible executing (Lua) tasks added to the timers queue.
+    Called repeatedly by the main loop in Python (fibenv.py).
+    Looks at the next task in queue, if time is up calls the task,
+    otherwise returns the time to wait for the next task.
+    If queue is empty returns 0.5 seconds.
+    Ex. setTimeout adds tasks to this queue.
+    Incoming events from the "outside" like onUIevent and onAction may cause
+    the dispatcher to be called earlier the the last wait time.
+--]]
+function QA.dispatcher()
     local t, c, task = timers.peek()
     local cl = clock()
     --if t then print("loop",task.type,t-cl,task.log or "") else print("loop") end

@@ -13,6 +13,7 @@ from datetime import datetime
 import fibapi
 
 def httpCall(method, url, options, data, local):
+    ''' http called from lua, async-wait if we call our own api (local, Fast API) '''
     headers = options['headers']
     req = requests if not local else requests_async.ASGISession(fibapi.app)
     match method:
@@ -26,6 +27,17 @@ def httpCall(method, url, options, data, local):
             res = req.delete(url, headers = headers, data = data)
     res = asyncio.run(res) if local else res
     return res.status_code, res.text , res.headers
+
+def httpCallAsync(fibemu, method, url, options, data, local):
+    ''' http call in separate thread and post back to lua '''
+    def runner():
+        status, text, headers = httpCall(method, url, options, data, local)
+        headers = dict(headers)
+        fibemu.postEvent(
+            {"_unserializable":options,"type":"httpResponse","status":status,"data":text,"headers":headers}
+        )
+    rthread = Thread(target=runner, args=())
+    rthread.start()
 
 def convertTable(obj):
     if lupa.lua_type(obj) == 'table':
@@ -73,9 +85,9 @@ class FibaroEnvironment:
             while True:
                 try:
                     nurl = url + str(last)
-                    code,data,h = httpCall("GET", nurl, options, None, False)
-                    if code == 200:
-                        data = json.loads(data)
+                    resp = requests.get(nurl, headers = options['headers'])
+                    if resp.status_code == 200:
+                        data = resp.json()
                         last = data['last'] if data['last'] else last
                         if data['events']:
                             for event in data['events']:
@@ -96,10 +108,10 @@ class FibaroEnvironment:
             config = self.config
             globals = self.lua.globals()
             self.events = list()
-            self.httpCall = httpCall ## used from fibapi
             hooks = {
                 'clock':time.time,
                 'http':httpCall,
+                'httpAsync':lambda method, url, options, data, local: httpCallAsync(self, method, url, options, data, local),
                 'refreshStates':lambda start, url, options: self.refreshStates(start,url,options)
             }
             config['hooks'] = hooks
@@ -118,8 +130,8 @@ class FibaroEnvironment:
                 self.postEvent({"type":"installQA","file":config['file2']})
             if config['file2']:
                 self.postEvent({"type":"installQA","file":config['file3']})
-            while True:
-                delay = QA.loop()
+            while True: # main loop, repeatadly call QA.dispatcher with events
+                delay = QA.dispatcher()
                 # print(f"event: {delay}s", end='')
                 try:
                     event = self.queue.get(block=True, timeout=delay)
@@ -128,7 +140,11 @@ class FibaroEnvironment:
                 # print(f", {self.event}")
                 if event:
                     try:
-                        QA.onEvent(json.dumps(event))
+                        u = None
+                        if event.get('_unserializable'):
+                            u = event['_unserializable']
+                            del event['_unserializable']
+                        QA.onEvent(json.dumps(event),u)
                     except Exception as e:
                         print(f"onEvent Error: {e}")
 

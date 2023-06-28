@@ -7,12 +7,23 @@ function net.HTTPClient()
         request = function(_, url, opts)
             local options = (opts or {}).options or {}
             local data = options.data and json.encode(options.data) or nil
-            local status,res,headers = os.http(options.method or "GET", url, options, data, false )
-            if status < 303 and opts.success and type(opts.success)=='function' then
-                setTimeout(function() opts.success({status=status, data=res,headers=headers}) end,0)
-            elseif opts.error and type(opts.error)=='function' then
-                setTimeout(function() opts.error(status,headers) end,0)
+            local errH = opts.error
+            local succH = opts.success
+            local function callback(status, data, headers)
+                if fibaro.__dead then return end
+                local stat,res = pcall(function()
+                    if status < 303 and succH and type(succH)=='function' then
+                        succH({status=status, data=data ,headers=headers})
+                    elseif errH and type(errH)=='function' then
+                        errH(status, headers)
+                    end
+                end)
+                if not stat then
+                    fibaro.error(__TAG,"netClient callback:",res)
+                end
             end
+            local opts = {headers = options.headers or {}, callback = callback}
+            return os.httpAsync(options.method or "GET", url, opts, data, false )
         end
     }
 end
