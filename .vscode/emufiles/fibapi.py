@@ -11,8 +11,9 @@ from fastapi import status
 from fastapi import Request
 from pydantic import BaseModel
 from pydantic import typing
-import time,json
+import time,json,sys
 from datetime import datetime
+from fibenv import convertLuaTable
 
 from fastapi.openapi.docs import (
     get_redoc_html,
@@ -119,7 +120,12 @@ async def read_item(request: Request):
 async def read_item(id: int, request: Request):
     emu = fibenv.get('fe')
     qa = emu.DIR[id]
-    return templates.TemplateResponse("infoqa.html", {"request": request, "emu": emu, "qa": qa})
+    ui = qa.UI
+    ui = convertLuaTable(ui)
+    d = convertLuaTable(qa.dev)
+    d = d.get('properties') if d.get('properties') else dict()
+    qvs = d.get('quickAppVariables') if d.get('quickAppVariables') else dict()
+    return templates.TemplateResponse("infoqa.html", {"request": request, "emu": emu, "qa": qa, "ui": ui, "qvs":qvs})
 
 ''' Emulator methods '''
 @app.get("emu/info", tags=["Emulator methods"])
@@ -137,6 +143,13 @@ async def load_emulator_resources(response: Response, fname: str = Body(...)):
     res,code = fibenv.get('fe').remoteCall("loadResources",fname)
     response.status_code = code
     return res
+
+@app.get("/emu/button/{id}/{elm}/{val}", tags=["Emulator methods"])
+async def emulatur_ui_button(id:int, elm: str, val:int, response: Response):
+    eventType = "onReleased" if val == 0 else "onChanged"
+    value = [val] if val > 0 else []
+    fibenv.get('fe').postEvent({"type":"uiEvent","deviceId":id,"eventType":eventType,"elementName":elm,"values":value})
+    return "OK"
 
 ''' Device methods '''
 class ActionParams(BaseModel):

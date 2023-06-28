@@ -50,7 +50,7 @@ debugFlags.refresh = true
 
 local libs = { 
     devices = devices, resources = resources, files = files, refreshStates = refreshStates, lldebugger = lldebugger,
-    emu = QA, util = util, binser = doload("binser.lua"),
+    emu = QA, util = util, binser = doload("binser.lua"), ui = doload("ui.lua"),
 }
 
 os.refreshStates = hooks.refreshStates
@@ -337,7 +337,9 @@ function QA.delete(id)
 end
 
 ------------ Lua functions called from fibapi.py ------------
---- Should not throw errors and return status code
+-- Called from another thread, so be careful.
+-- Use json to encode complex data
+-- Should not throw errors and should return status code
 
 function QA.fun.debugMessages(arg)
     arg = json.decode(arg)
@@ -370,7 +372,10 @@ end
 
 function Events.uiEvent(event)
     local id = event.deviceId
-    if not DIR[id] then return end
+    if not DIR[id] then 
+        QA.syslogerr("uiEvent","Unknown QA, ID:%s", id)
+        return 
+    end
     timers.add(id, clock(), DIR[id].f,
         {
             type = 'UIEvent',

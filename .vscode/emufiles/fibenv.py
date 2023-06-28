@@ -39,16 +39,16 @@ def httpCallAsync(fibemu, method, url, options, data, local):
     rthread = Thread(target=runner, args=())
     rthread.start()
 
-def convertTable(obj):
+def convertLuaTable(obj):
     if lupa.lua_type(obj) == 'table':
         if obj[1] and not obj['_dict']:
-            b = [convertTable(v) for k,v in obj.items()]
+            b = [convertLuaTable(v) for k,v in obj.items()]
             return b
         else:
             d = dict()
             for k,v in obj.items():
                 if k != '_dict':
-                    d[k] = convertTable(v)
+                    d[k] = convertLuaTable(v)
             return d
     else:
         return obj
@@ -66,12 +66,15 @@ class FibaroEnvironment:
     def postEvent(self,event): # called from another thread
         self.queue.put(event)  # safely qeued for lua thread
 
+    def getUI(self,id): # called from another thread
+        pass
+    
     def remoteCall(self,method,*args): # called from another thread
         try:
             fun = self.QA.fun              # unsafe call to lua function in other thread
             fun = tofun(fun)[method]
             res,code = tofun(fun)(*args)
-            res = convertTable(res)
+            res = convertLuaTable(res)
         except Exception as e:
             print(f"Remote Call Error: {e}",file=sys.stderr)
         return res,code or 501
@@ -79,7 +82,7 @@ class FibaroEnvironment:
     def refreshStates(self,start,url,options):
         if self.config.get('local'):
             return
-        options = convertTable(options)
+        options = convertLuaTable(options)
         def refreshRunner():
             last,retries = 0,0
             while True:
@@ -89,7 +92,7 @@ class FibaroEnvironment:
                     if resp.status_code == 200:
                         data = resp.json()
                         last = data['last'] if data['last'] else last
-                        if data['events']:
+                        if data.get('events'):
                             for event in data['events']:
                                 self.postEvent({"type":"refreshStates","event":event})
                 except exceptions.ConnectionError as e:
@@ -97,7 +100,7 @@ class FibaroEnvironment:
                     if retries > 5:
                         return
                 except Exception as e:
-                    print(f"Error: {e}")
+                    print(f"Error: {e} {nurl}")
                     
         self.rthread = Thread(target=refreshRunner, args=())
         self.rthread.start()

@@ -421,8 +421,8 @@ end
 
 function r.createDevice(d) return r.createResource("devices", d) end
 
-function r.updateDeviceProp(arg, remote)
-    d = type(d) == 'string' and json.decode(d) or d
+function r.updateDeviceProp(d, remote)
+    arg = type(d) == 'string' and json.decode(d) or d
     initr("devices")
     local id = arg.deviceId or arg.id
     if remote then

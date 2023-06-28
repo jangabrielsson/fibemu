@@ -1,10 +1,11 @@
 local config, resources, devices, lldebugger = nil, nil, nil, nil
-local libs,exports,emu = nil, nil,nil
+local libs,exports,emu,ui = nil, nil,nil,nil
 local copy,merge,append
 local gID = 5000
 
 local function init(conf, libs2)
     libs = libs2
+    ui = libs.ui
     config = conf
     resources = libs.resources
     devices = libs.devices
@@ -12,6 +13,27 @@ local function init(conf, libs2)
     emu = libs.emu
     copy,merge,append = libs.util.copy,libs.util.merge,libs.util.append
     for name, fun in pairs(exports) do QA.fun[name] = fun end -- export file functions
+end
+
+local function annotateUI(UI)
+    local res = {}
+    for _,e in ipairs(UI) do
+        if e[1]==nil then
+            res[#res+1]= {
+                type=e.button and 'button' or e.slider and 'slider' or e.label and 'label', 
+                len = 1,
+                value = {e}
+            }
+        else
+            local ef = e[1]
+            res[#res+1] = {
+                type=ef.button and 'button' or ef.slider and 'slider' or ef.label and 'label', 
+                len = #e,
+                value = e
+            }
+        end
+    end
+    return res
 end
 
 local function installFQA(fqa, id)
@@ -31,9 +53,12 @@ local function installFQA(fqa, id)
     dev.interfaces = merge(dev.interfaces,fqa.initialInterfaces or {})
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id
+    local uiStruct = ui.view2UI(dev.properties.viewLayout,dev.properties.uiCallbacks)
+    uiStruct = annotateUI(uiStruct)
+
     DIR[dev.id] = { 
         fname = "", dev = dev, files = fqa.files, name = dev.name, 
-        tag = tag, debug = {},
+        tag = tag, debug = {}, uiStruct = uiStruct or {},
         remotes = {}, allRemote = false,
      }
     resources.createDevice(dev)
@@ -58,17 +83,26 @@ local function installQA(fname, id)
 
     local function eval(str)
         local stat,res = pcall(function() return load("return " .. str)() end)
-        if stat then return true,res else return false,nil end
+        if stat then return res,true else return nil,false end
     end
 
     local chandler = {}
     for i=1,20 do
         local u = "u"..i
-        chandler[u]=function(var, val, vars) vars[u] = val end
+        chandler[u]=chandler.u
+    end
+    function chandler.u(var, val, vars)
+        vars.ui = vars.ui or {}
+        local value,stat = eval(val)
+        if stat==false then
+            QA.syslogerr("install","Bad UI expr '%s'", val)
+        else
+            vars.ui[#vars.ui+1] = value
+        end
     end
     function chandler.name(var, val, vars) vars.name = val end
     function chandler.type(var, val, vars) vars.type = val end
-    function chandler.allRemote(var, val, vars) vars.allRemote = eval(val) end
+    function chandler.allRemote(var, val, vars) vars.allRemote = eval(val)==true end
     function chandler.id(var, val, vars) vars.id = tonumber(val) end
     function chandler.proxy(var, val, vars) vars.proxy = tonumber(val) end
     function chandler.debug(var, val, vars)
@@ -77,7 +111,7 @@ local function installQA(fname, id)
         val:gsub("([^,]+)", function(d) dbs[#dbs + 1] = d end)
         for _,d in ipairs(dbs) do
             local var,val,stat = d:match("([%w_]+):(.+)")
-            stat,val = eval(val)
+            val,stat = eval(val)
             if stat==false or not var then
                 QA.syslogerr("install","Bad debug expr '%s'", d)
             else
@@ -131,10 +165,19 @@ local function installQA(fname, id)
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id
 
+    local uiStruct = nil
+    if vars.ui then
+        ui.transformUI(vars.ui)
+        dev.properties.viewLayout = ui.mkViewLayout(vars.ui,nil,dev.id)
+        dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(vars.ui)
+        uiStruct = ui.view2UI(dev.properties.viewLayout,dev.properties.uiCallbacks)
+        uiStruct = annotateUI(uiStruct)
+    end
+
     DIR[id] = { 
         fname = fname, dev = dev, files = vars.files, name = dev.name, 
         tag = tag, debug = vars.debug,
-        remotes = vars.remote, allRemote = vars.allRemote,
+        remotes = vars.remote, allRemote = vars.allRemote, UI = uiStruct or {},
     }
 
     for k,v in pairs(vars.debug) do emu.debug[k] = v end
