@@ -115,6 +115,7 @@ local function createEnvironment(id)
 
     for _, k in ipairs(funs) do env[k] = _G[k] end
     env._G = env
+    env._ENV = env
 
     env.setTimeout = setTimer
     env.clearTimeout = clearTimer
@@ -150,7 +151,7 @@ local function createEnvironment(id)
     env.plugin = { mainDeviceId = dev.id }
     env.__TAG = "QUICKAPP" .. dev.id
 
-    for _, l in ipairs({ "json.lua", "class.lua", "net.lua", "fibaro.lua", "quickApp.lua" }) do
+    for _, l in ipairs({ "json.lua", "class.lua", "fibaro.lua", "net.lua", "quickApp.lua" }) do
         local fn = luapath .. l
         if qa.debug.libraryfiles then
             QA.syslog(qa.tag,"Loading library " .. fn)
@@ -162,6 +163,11 @@ local function createEnvironment(id)
             return
         end
     end
+    env.net._setupPatches(config)
+    env.hc3_emulator = { create = {}} -- need to do this better
+    function env.hc3_emulator.create.globalVariables() end
+    function env.hc3_emulator.create.binarySwitch() end
+    function env.hc3_emulator.create.multilevelSwitch() end
 
     env.fibaro.debugFlags = debugFlags
     env.fibaro.config = config
@@ -297,7 +303,7 @@ end
 function QA.runFile(fname)
     local env = {}
     for k,v in pairs(_G) do if v ~= _G then env[k] = v end end
-    for _, l in ipairs({ "json.lua", "class.lua", "net.lua", "fibaro.lua"}) do
+    for _, l in ipairs({ "json.lua", "class.lua", "fibaro.lua", "net.lua"}) do
         local fn = luapath .. l
         local stat, res = pcall(function() loadfile(fn, "t", env)() end)
     end
@@ -392,8 +398,24 @@ function Events.uiEvent(event)
         })
 end
 
+local function eid(t) return t.button or t.slider or t.label end
 function Events.updateView(event)
-    print("UV", json.encode(event))
+    local qa = DIR[event.deviceId]
+    if qa then
+        local UI = qa.UI
+        for _,r in ipairs(UI) do
+            for _,e in ipairs(r.value) do
+                if eid(e) == event.componentName then
+                    e[event.propertyName]=event.newValue
+                    return
+                end
+            end
+        end
+        QA.syslogerr("updateView","Unknown comonentName, QA ID:%s - %s", 
+        event.deviceId, tostring(event.componentName))
+    else
+        QA.syslogerr("updateView","Unknown QA, ID:%s", event.deviceId)
+    end
 end
 
 function Events.installQA(event)

@@ -2,9 +2,23 @@ local fmt = string.format
 
 net = {}
 
+local apiPatches = {}
+
+local function patch(url)
+    for k,v in pairs(apiPatches) do
+       url = url:gsub(k,v)
+       end
+   return url
+end
+
+function net._setupPatches(config)
+    apiPatches[':11111/api/refreshStates'] = ":"..config.wport.."/api/refreshStates"
+end
+
 function net.HTTPClient()
     return {
         request = function(_, url, opts)
+            url = patch(url)
             local options = (opts or {}).options or {}
             local data = options.data and json.encode(options.data) or nil
             local errH = opts.error
@@ -51,7 +65,7 @@ local function callHC3(method, path, data, hc3)
 end
 
 api = {
-    get = function(url,hc3) return callHC3("GET", url, nil, hc3) end,
+    get = function(url,hc3) return callHC3("GET", patch(url), nil, hc3) end,
     post = function(url, data, hc3) return callHC3("POST", url, data, hc3) end,
     put = function(url, data, hc3) return callHC3("PUT", url, data, hc3) end,
     delete = function(url, data, hc3) return callHC3("DELETE", url, data, hc3) end,

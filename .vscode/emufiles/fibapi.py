@@ -348,6 +348,20 @@ async def deleteCustomEvent(name: str, response: Response):
     response.status_code = code
     return {} if code < 300 else None
 
+''' RefreshStates methods '''
+class RefresStatesQuery(BaseModel):
+    last: int = 0
+    lang: str = "en"
+    rand: float = 0.09580020181569104
+    logs: bool = False  
+
+@app.get("/api/refreshStates", tags=["RefresStates methods"])
+async def getRefreshStates(response: Response, query: RefresStatesQuery = Depends()):
+    #var,code = fibenv.get('fe').remoteCall("emitCustomEvent",name)
+    code = 200
+    response.status_code = code
+    return {"last":0} if code < 300 else None
+
 ''' Plugins methods '''
 @app.get("/api/plugins/callUIEvent", tags=["Plugins methods"])
 async def callUIEvent(deviceID: int, eventType: str, elementName: str, value: str):
