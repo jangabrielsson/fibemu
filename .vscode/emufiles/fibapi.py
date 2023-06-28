@@ -385,9 +385,10 @@ class RestartParams(BaseModel):
     
 @app.post("/api/plugins/restart", tags=["Plugins methods"])
 async def callUIEvent(args: RestartParams, response: Response):
-    var,code = fibenv.get('fe').remoteCall("restartDevice",args.json())
+    args = dict(args)
+    var,code = fibenv.get('fe').remoteCall("restartDevice",args.get('deviceId'))
     response.status_code = code
-    return var if code < 300 else None
+    return {} if code < 300 else None
 
 class ChildParams(BaseModel):
     deviceId: int

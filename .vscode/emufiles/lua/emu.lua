@@ -347,6 +347,12 @@ function QA.fun.debugMessages(arg)
     return "OK",200
 end
 
+function QA.fun.restartDevice(id)
+    if not DIR[id] then return nil,404 end
+    QA.restart(id)
+    return "OK",200
+end
+
 ------------ Events posted from fibenv.py ------------
 -- Usually carries complex data, so we use json
 local Events = {}

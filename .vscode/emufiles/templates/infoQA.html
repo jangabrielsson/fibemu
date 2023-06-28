@@ -11,15 +11,30 @@
     </style>
     <script>
         function btnClicker(id,elm,val) {
-            fetch(`http://localhost:5004/emu/button/${id}/${elm}/${val}`)
-        }
-        </script>
+            fetch(`http://127.0.0.1:5004/emu/button/${id}/${elm}/${val}`)
+        };
+        function btnPost(id) {
+            fetch('http://127.0.0.1:5004/api/plugins/restart', {
+                method: 'POST',
+                    headers: {
+                    'Content-Type': 'application/json'
+                    },
+                body: JSON.stringify({"deviceId": id})
+                })
+        };
+    </script>
 {% endblock %}
 {% block content %}
     <div class="p-3 bg-light border border-primary shadow">
         <h2>QuickApp "{{qa.name}}"</h2>
         <h4>{{qa.dev.type}}</h4>
-        <div class="container-xs border">
+        <div class="p-1 container-xs">
+        <button type="button" class="btn btn-primary"
+               onclick='btnPost({{qa.dev.id}})'>
+               Restart QA
+              </button>
+        </div>
+        <div class="p-1 container-xs border border-2 border-primary">
         {%for l,row in qa.UI.items() %}
         <div class="row p-1">
             {% for i,e in row.value.items() %}
