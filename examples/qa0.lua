@@ -9,7 +9,7 @@
 --%%u={button='test', text='Test', onReleased='testFun'}
 --%%u={{button='test', text='A', onReleased='testA'},{button='test', text='B', onReleased='testB'}}
 --%%u={slider="slider", max="80", onChanged='sliderA'}
---%%u={label="lblA", text='THis is a text'}
+--%%u={label="lblA", text='This is a text'}
 
 function QuickApp:onInit()
     self:debug("Started",self.id)
