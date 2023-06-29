@@ -16,24 +16,16 @@ local function init(conf, libs2)
 end
 
 local function annotateUI(UI)
-    local res = {}
+    local res,map = {},{}
     for _,e in ipairs(UI) do
-        if e[1]==nil then
-            res[#res+1]= {
-                type=e.button and 'button' or e.slider and 'slider' or e.label and 'label', 
-                len = 1,
-                value = {e}
-            }
-        else
-            local ef = e[1]
-            res[#res+1] = {
-                type=ef.button and 'button' or ef.slider and 'slider' or ef.label and 'label', 
-                len = #e,
-                value = e
-            }
+        if e[1]==nil then e = {e} end
+        for _,e2 in ipairs(e) do
+            e2.type=e2.button and 'button' or e2.slider and 'slider' or e2.label and 'label'
+            map[e2[e2.type]] = e2
         end
+        res[#res+1]= e
     end
-    return res
+    return res,map
 end
 
 local function installFQA(fqa, id)
@@ -53,12 +45,12 @@ local function installFQA(fqa, id)
     dev.interfaces = merge(dev.interfaces,fqa.initialInterfaces or {})
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id
-    local uiStruct = ui.view2UI(dev.properties.viewLayout,dev.properties.uiCallbacks)
-    uiStruct = annotateUI(uiStruct)
+    local uiStruct,uiMap = ui.view2UI(dev.properties.viewLayout,dev.properties.uiCallbacks),nil
+    uiStruct,uiMap = annotateUI(uiStruct)
 
     DIR[dev.id] = { 
         fname = "", dev = dev, files = fqa.files, name = dev.name, 
-        tag = tag, debug = {}, uiStruct = uiStruct or {},
+        tag = tag, debug = {}, UI = uiStruct or {}, uiMap = uiMap or {},
         remotes = {}, allRemote = false,
      }
     resources.createDevice(dev)
@@ -165,19 +157,21 @@ local function installQA(fname, id)
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id
 
-    local uiStruct = nil
+    local uiStruct,uiMap = nil,nil
     if vars.ui then
         ui.transformUI(vars.ui)
         dev.properties.viewLayout = ui.mkViewLayout(vars.ui,nil,dev.id)
         dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(vars.ui)
         uiStruct = ui.view2UI(dev.properties.viewLayout,dev.properties.uiCallbacks)
-        uiStruct = annotateUI(uiStruct)
+        uiStruct, uiMap = annotateUI(uiStruct)
     end
 
     DIR[id] = { 
         fname = fname, dev = dev, files = vars.files, name = dev.name, 
         tag = tag, debug = vars.debug,
-        remotes = vars.remote, allRemote = vars.allRemote, UI = uiStruct or {},
+        remotes = vars.remote, allRemote = vars.allRemote, 
+        UI = uiStruct or {},
+        uiMap = uiMap or {},
     }
 
     for k,v in pairs(vars.debug) do emu.debug[k] = v end

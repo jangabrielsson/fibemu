@@ -3,6 +3,7 @@ from lupa import LuaRuntime
 from threading import Thread
 from threading import Timer
 import queue
+from collections import deque
 import json
 import requests_async
 import requests
@@ -11,6 +12,8 @@ import asyncio
 import time, sys
 from datetime import datetime
 import fibapi
+
+MAX_EVENTS = 400
 
 def httpCall(method, url, options, data, local):
     ''' http called from lua, async-wait if we call our own api (local, Fast API) '''
@@ -62,6 +65,7 @@ class FibaroEnvironment:
         self.config = config
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.queue = queue.Queue()
+        self.eventCount = 0
 
     def postEvent(self,event): # called from another thread
         self.queue.put(event)  # safely qeued for lua thread
@@ -105,12 +109,37 @@ class FibaroEnvironment:
         self.rthread = Thread(target=refreshRunner, args=())
         self.rthread.start()
 
+    def addEvent(self,event):
+        event = json.loads(event)
+        self.eventCount += 1
+        event = {'last': self.eventCount, 'event':event}
+        self.events.append(event)
+        if len(self.events) > MAX_EVENTS:
+            self.events.popleft()
+
+    def getEvents(self,counter):
+        events = self.events
+        count = events[-1]['last'] if events else 0
+        evs = [e['event'] for e in events if e['last'] > counter]
+        ts = datetime.now().timestamp()
+        tsm = time.time()
+        res = dict(
+            status='IDLE',
+            events=evs,
+            changes=[],
+            timestamp = ts,
+            timestampMillis = tsm,
+            date = datetime.fromtimestamp(ts).strftime('%H:%M | %d.%m.%Y'),
+            last=count
+            )
+        return res
+
     def run(self):
 
         def runner():
             config = self.config
             globals = self.lua.globals()
-            self.events = list()
+            self.events = deque()
             hooks = {
                 'clock':time.time,
                 'http':httpCall,
@@ -124,7 +153,7 @@ class FibaroEnvironment:
             QA = globals.QA
             self.DIR =globals.DIR
             self.QA = QA
-            self.QA.addEvent = lambda e: self.events.append(json.loads(e))
+            self.QA.addEvent = lambda e: self.addEvent(e)
             if config['init']:
                 QA.runFile(config['init'])
             if config['file1']:

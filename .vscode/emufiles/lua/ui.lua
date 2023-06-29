@@ -139,7 +139,14 @@ local function collectViewLayoutRow(u,map)
           elseif u.type=='slider' then
             local cb = map["slider"..u.name]
             if cb == u.name.."Clicked" then cb = nil end
-            row[#row+1]={slider=u.name, text=u.text, onChanged=cb}
+            row[#row+1]={
+              slider=u.name, 
+              text=u.text, 
+              onChanged=cb,
+              max = u.max,
+              min = u.min,
+              step = u.step
+            }
           end
         else
           for _,v in pairs(u) do conv(v) end

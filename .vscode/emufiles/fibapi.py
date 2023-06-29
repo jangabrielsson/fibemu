@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Body
+import logging
 from fastapi.responses import JSONResponse
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
@@ -21,6 +22,13 @@ from fastapi.openapi.docs import (
     get_swagger_ui_oauth2_redirect_html,
 )
 from fastapi.staticfiles import StaticFiles
+
+class EndpointFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return record.getMessage().find("/refreshStates") == -1
+
+# Filter out /endpoint
+logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 tags_metadata = [
     {"name": "Emulator methods", "description": "Probe the emulator"},
@@ -122,6 +130,7 @@ async def read_item(id: int, request: Request):
     qa = emu.DIR[id]
     ui = qa.UI
     ui = convertLuaTable(ui)
+    #print(ui,file=sys.stderr)
     d = convertLuaTable(qa.dev)
     d = d.get('properties') if d.get('properties') else dict()
     qvs = d.get('quickAppVariables') if d.get('quickAppVariables') else dict()
@@ -357,10 +366,10 @@ class RefresStatesQuery(BaseModel):
 
 @app.get("/api/refreshStates", tags=["RefresStates methods"])
 async def getRefreshStates(response: Response, query: RefresStatesQuery = Depends()):
-    #var,code = fibenv.get('fe').remoteCall("emitCustomEvent",name)
+    res = fibenv.get('fe').getEvents(query.last)
     code = 200
     response.status_code = code
-    return {"last":0} if code < 300 else None
+    return res if code < 300 else None
 
 ''' Plugins methods '''
 @app.get("/api/plugins/callUIEvent", tags=["Plugins methods"])

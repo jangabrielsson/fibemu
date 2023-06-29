@@ -388,6 +388,14 @@ function Events.uiEvent(event)
         QA.syslogerr("uiEvent","Unknown QA, ID:%s", id)
         return 
     end
+    if event.eventType == "onChanged" then
+        Events.updateView({
+            deviceId=id,
+            componentName=event.elementName,
+            propertyName="value",
+            newValue=tostring(event.values[1])
+        })
+    end
     timers.add(id, clock(), DIR[id].f,
         {
             type = 'UIEvent',
@@ -398,23 +406,18 @@ function Events.uiEvent(event)
         })
 end
 
-local function eid(t) return t.button or t.slider or t.label end
-function Events.updateView(event)
-    local qa = DIR[event.deviceId]
+function Events.updateView(ev)
+    local qa = DIR[ev.deviceId]
     if qa then
-        local UI = qa.UI
-        for _,r in ipairs(UI) do
-            for _,e in ipairs(r.value) do
-                if eid(e) == event.componentName then
-                    e[event.propertyName]=event.newValue
-                    return
-                end
-            end
+        local map = qa.uiMap
+        if map[ev.componentName] then
+            map[ev.componentName][ev.propertyName] = ev.newValue
+        else
+            QA.syslogerr("updateView","Unknown comonentName, QA ID:%s - %s", 
+                ev.deviceId, tostring(ev.componentName))
         end
-        QA.syslogerr("updateView","Unknown comonentName, QA ID:%s - %s", 
-        event.deviceId, tostring(event.componentName))
     else
-        QA.syslogerr("updateView","Unknown QA, ID:%s", event.deviceId)
+        QA.syslogerr("updateView","Unknown QA, ID:%s", ev.deviceId)
     end
 end
 
