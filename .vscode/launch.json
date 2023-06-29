@@ -17,10 +17,10 @@
         "-f",
         "${file}"
       ],
-      "scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
-      "scriptFiles": ["*.lua", "**/*.lua"],
+      //"scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
+      //"scriptFiles": ["*.lua", "**/*.lua"],
       "stepUnmappedLines": false,
-      "ignorePatterns": ["^emufiles","lldebugger"] // Add to skip the emufiles and focus on QA
+      "ignorePatterns": ["emufiles","lldebugger"] // Add to skip the emufiles and focus on QA
     },
     {
       "name": "Fibenv QA file (local, no HC3 access)",    // For debugging QA lua file
@@ -37,10 +37,10 @@
         "-f",
         "${file}"
       ],
-      "scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
-      "scriptFiles": ["*.lua", "**/*.lua"],
+      //"scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
+      //"scriptFiles": ["*.lua", "**/*.lua"],
       "stepUnmappedLines": false,
-      "ignorePatterns": ["^emufiles","lldebugger"] // Add to not step into emufiles and only focus on QA code
+      "ignorePatterns": ["emufiles","lldebugger"] // Add to not step into emufiles and only focus on QA code
     },
     {
       "name": "Fibenv QA file emu files (remote, HC3 access)",    // For debugging QA lua file
