@@ -39,6 +39,10 @@ config.creds = util.basicAuthorization(config.user or "", config.password or "")
 config.lcl = config['local'] or false
 os.milliclock = config.hooks.clock
 local clock = config.hooks.clock
+local luaType = function(obj)
+    local t = type(obj)
+    return t == 'table' and obj.__USERDATA and 'userdata' or t
+end
 os.http,os.httpAsync = config.hooks.http,config.hooks.httpAsync
 local hooks = config.hooks
 config.hooks = nil
@@ -116,6 +120,7 @@ local function createEnvironment(id)
     for _, k in ipairs(funs) do env[k] = _G[k] end
     env._G = env
     env._ENV = env
+    env.type = luaType
 
     env.setTimeout = setTimer
     env.clearTimeout = clearTimer
@@ -164,12 +169,10 @@ local function createEnvironment(id)
         end
     end
     env.net._setupPatches(config)
-    env.hc3_emulator = { create = {}} -- need to do this better
-    function env.hc3_emulator.create.globalVariables() end
-    function env.hc3_emulator.create.binarySwitch() end
-    function env.hc3_emulator.create.multilevelSwitch() end
 
     env.fibaro.debugFlags = debugFlags
+    env.fibaro._emulator = "fibemu"
+    env.fibaro._IPADDRESS = config.whost
     env.fibaro.config = config
     env.fibaro.createDevice = fakes.createDevice
     if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['TEXT'] or 'white' end
@@ -338,8 +341,13 @@ function QA.delete(id)
     if DIR[id] then
         killQA(id)
         DIR[id] = nil
+        resources.removeDevice(id)
+        for cid,cqa in pairs(DIR) do
+            if cqa.dev.parentId == id then
+                QA.delete(cid)
+            end
+        end
     end
-    resources.removeDevice(id)
 end
 
 ------------ Lua functions called from fibapi.py ------------
@@ -359,13 +367,25 @@ function QA.fun.restartDevice(id)
     return "OK",200
 end
 
+function QA.fun.createChildDevice(args)
+    args = json.decode(args)
+    if not tonumber(args.parentId) then return {},400 end
+    local qa = files.createChildDevice(args.parentId, args)
+    return qa.dev,200
+end
+
 ------------ Events posted from fibenv.py ------------
 -- Usually carries complex data, so we use json
 local Events = {}
 
 function Events.onAction(event)
     local id = event.deviceId
+    local cid = id
     local args = json.decode(event.args)
+    if DIR[id] and DIR[id].child then
+        cid = id
+        id = DIR[id].dev.parentId
+    end
     if not DIR[id] then
         if QA.isRemote("devices", id) then
             api.post("/devices/" .. id .. "/action/"..event.actionName, {args=args}, "hc3")
@@ -379,11 +399,14 @@ function Events.onAction(event)
         return
     end
     timers.add(id, 0, DIR[id].f,
-        { type = 'onAction', deviceId = id, actionName = event.actionName, args = args })
+        { type = 'onAction', deviceId = cid, actionName = event.actionName, args = args })
 end
 
 function Events.uiEvent(event)
     local id = event.deviceId
+    if DIR[id] and DIR[id].child then
+        id = DIR[id].dev.parentId
+    end
     if not DIR[id] then 
         QA.syslogerr("uiEvent","Unknown QA, ID:%s", id)
         return 
@@ -413,7 +436,7 @@ function Events.updateView(ev)
         if map[ev.componentName] then
             map[ev.componentName][ev.propertyName] = ev.newValue
         else
-            QA.syslogerr("updateView","Unknown comonentName, QA ID:%s - %s", 
+            QA.syslogerr("updateView","Unknown componentName, QA ID:%s - %s", 
                 ev.deviceId, tostring(ev.componentName))
         end
     else

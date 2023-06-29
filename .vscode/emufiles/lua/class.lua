@@ -29,6 +29,7 @@ function property(get,set)
       else rawset(t,k,v) end
     end
     local pname = fmt("class %s",name)
+    cl.__USERDATA = true
     function cl2.__tostring() return pname end
     function cl.__tostring(obj) return fmt("[obj:%s:%s]",name,obj.___index) end
     function cl2.__call(_,...)

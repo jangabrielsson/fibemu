@@ -6,7 +6,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import Response
 from fastapi.openapi.utils import get_openapi
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from fastapi  import Depends
 from fastapi import status 
 from fastapi import Request
@@ -414,11 +414,11 @@ async def callUIEvent(args: RestartParams, response: Response):
     return {} if code < 300 else None
 
 class ChildParams(BaseModel):
-    deviceId: int
-    childId: int
-    childName: str
-    childType: str
-    childProperties: dict
+    parentId: int
+    name: str
+    type: str
+    initialProperties: Dict[str, Any]
+    initialInterfaces: List[str]
 
 @app.post("/api/plugins/createChildDevice", tags=["Plugins methods"])
 async def createChildDevice(args: ChildParams, response: Response):
@@ -433,11 +433,7 @@ async def deleteChildDevice(id: int, response: Response):
     return var if code < 300 else None
 
 class EventParams(BaseModel):
-    deviceId: int
-    childId: int
-    childName: str
-    childType: str
-    childProperties: dict
+    type: str
 
 @app.post("/api/plugins/publishEvent", tags=["Plugins methods"])
 async def callUIEvent(args: EventParams, response: Response):

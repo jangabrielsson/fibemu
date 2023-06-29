@@ -1,7 +1,6 @@
 local config, resources, devices, lldebugger = nil, nil, nil, nil
 local libs,exports,emu,ui = nil, nil,nil,nil
 local copy,merge,append
-local gID = 5000
 
 local function init(conf, libs2)
     libs = libs2
@@ -38,7 +37,7 @@ local function installFQA(fqa, id)
     dev = copy(dev)
     dev.name = fqa.name
     dev.type = fqa.type
-    dev.id = gID; gID = gID + 1
+    dev.id = resources.nextRsrcId()
     for k,v in pairs(fqa.initialProperties or {}) do
         dev.properties[k] = v
     end
@@ -180,6 +179,38 @@ local function installQA(fname, id)
     return DIR[id]
 end
 
+local function createChildDevice(pID, cdev)
+    QA.syslog("install","Child '%s' %s", cdev.name, cdev.type)
+    local dev = devices.getDeviceStruct(cdev.type)
+    if dev == nil then
+        QA.syslogerr("install","%s - Unknown device type '%s'", cdev.name, cdev.type)
+        return
+    end
+    dev = copy(dev)
+    dev.name = cdev.name
+    dev.type = cdev.type
+    dev.id = resources.nextRsrcId()
+    for k,v in pairs(cdev.initialProperties or {}) do
+        dev.properties[k] = v
+    end
+    dev.interfaces = merge(dev.interfaces,cdev.initialInterfaces or {})
+    dev.parentId = pID
+    local tag = "QUICKAPP" .. dev.id
+    local uiStruct,uiMap = {},{}
+    if dev.properties.viewLayout then
+        uiStruct,uiMap = ui.view2UI(dev.properties.viewLayout,dev.properties.uiCallbacks),nil
+    end
+    uiStruct,uiMap = annotateUI(uiStruct)
+
+    DIR[dev.id] = { 
+        fname = "", dev = dev, files = {}, name = dev.name, 
+        tag = tag, debug = {}, UI = uiStruct or {}, uiMap = uiMap or {},
+        remotes = {}, allRemote = false, child = true,
+     }
+    resources.createDevice(dev)
+    return DIR[dev.id]
+end
+
 local function loadFiles(id)
     local qa = DIR[id]
     local env = qa.env
@@ -271,6 +302,7 @@ exports = {
     getQAfiles = getQAfiles, setQAfiles = setQAfiles,
     importQA = importFQA, exportFQA = exportFQA,
     installFQA = installFQA,
-    deleteQAfile = deleteQAfile
+    deleteQAfile = deleteQAfile,
+    createChildDevice = createChildDevice,
 }
 return exports

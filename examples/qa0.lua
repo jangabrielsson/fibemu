@@ -4,6 +4,7 @@
 
 --%%file=../TQAE/lib/fibaroExtra.lua,fibaroExtra;
 
+--%%u={{button='turnOn', text='On', onReleased='turnOn'},{button='turnOff', text='Off', onReleased='turnOff'}}
 --%%u={{button='t1', text='A', onReleased='t1'},{button='t2', text='B', onReleased='t1'},{button='t3', text='C', onReleased='t1'},{button='t4', text='D', onReleased='t1'},{button='t5', text='E', onReleased='t1'}}
 --%%u={button='test', text='Test', onReleased='testFun'}
 --%%u={{button='test', text='A', onReleased='testA'},{button='test', text='B', onReleased='testB'}}
@@ -15,8 +16,24 @@ function QuickApp:onInit()
     self:setVariable("test","HELLO")
     IP = fibaro.getIPaddress()
     print(IP)
-    self:event({type='device'},function() print("OKOKOKOK") end)
     setTimeout(function() self:updateView("lblA","text","FOO") end, 5000)
+
+    class 'MyChild'(QuickerAppChild)
+    function MyChild:__init(args)
+        QuickerAppChild.__init(self, args)
+        self:debug("Child init",self.id)
+    end
+    function MyChild:turnOn()
+        self:debug("Child turned on")
+    end
+
+    child = MyChild{
+        uid = 'x',
+        name = 'MyChild',
+        type = 'com.fibaro.binarySwitch',
+    }
+
+    setTimeout(function() fibaro.call(5001,"turnOn") end, 1000)
 end
 
 function QuickApp:testFun()
@@ -30,4 +47,12 @@ function QuickApp:testB()
 end
 function QuickApp:sliderA(ev)
     self:debug("Slide A",ev.values[1])
+end
+
+function QuickApp:turnOn()
+    self:updateProperty("value",true)
+end
+
+function QuickApp:turnOff()
+    self:updateProperty("value",false)
 end
