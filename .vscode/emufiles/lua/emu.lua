@@ -374,6 +374,13 @@ function QA.fun.createChildDevice(args)
     return qa.dev,200
 end
 
+function QA.fun.deleteChildDevice(id)
+    local qa = DIR[id]
+    if qa and not qa.child then return nil,501 end
+    QA.delete(id)
+    return qa.dev,200
+end
+
 ------------ Events posted from fibenv.py ------------
 -- Usually carries complex data, so we use json
 local Events = {}
