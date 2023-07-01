@@ -182,12 +182,12 @@ end
 
 function net.WebSocketClient()
     local self = { _callback={} }
-    function self:connect(url)
+    function self:connect(url,headers)
         local function cb(event,...)
             local f = self._callback[event]
             if f then f(...) end
         end
-        self._sock = net._createWebSocket(url,createCB(cb))
+        self._sock = net._createWebSocket(url,headers,createCB(cb))
     end
     function self:addEventListener(event, callback)
         self._callback[event] = callback
@@ -209,6 +209,8 @@ function net.WebSocketClient()
     -- self.sock:addEventListener("error", function(error) self:handleError(error) end)
     -- self.sock:addEventListener("dataReceived", function(data) self:handleDataReceived(data) end)
 end
+
+net.WebSocketClientTls = net.WebSocketClient
 
 api = {
     get = function(url, hc3) return callHC3("GET", patch(url), nil, hc3) end,

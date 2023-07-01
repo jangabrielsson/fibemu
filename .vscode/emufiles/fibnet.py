@@ -125,11 +125,12 @@ class LuaWebSocket:
     def isOpen(self):
         return self.closed
 
-    def __init__(self, fibemu, url, cb):
+    def __init__(self, fibemu, url, headers, cb):
         self.closed = True
         self.fibemu = fibemu
         self.cb = cb
-        self.ws = websocket.WebSocketApp(url,#"wss://api.gemini.com/v1/marketdata/BTCUSD",
+        self.ws = websocket.WebSocketApp(url=url,#"wss://api.gemini.com/v1/marketdata/BTCUSD",
+                              header=headers,
                               on_open=lambda ws: self.on_open(ws),
                               on_message=lambda ws,msg: self.on_message(ws,msg),
                               on_error=lambda ws,err: self.on_error(ws,err),

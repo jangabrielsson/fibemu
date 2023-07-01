@@ -123,7 +123,7 @@ class FibaroEnvironment:
                 'refreshStates':lambda start, url, options: self.refreshStates(start,url,options),
                 'createTCPSocket':lambda: fibnet.LuaTCPSocket(self),
                 'createUDPSocket':lambda: fibnet.LuaUDPSocket(self),
-                'createWebSocket':lambda url,cb: fibnet.LuaWebSocket(self,url,cb),
+                'createWebSocket':lambda url,headers,cb: fibnet.LuaWebSocket(self,url,headers,cb),
                 'setLogLevel':setLogLevel,
             }
             config['hooks'] = hooks
