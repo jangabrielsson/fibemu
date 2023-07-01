@@ -1,7 +1,8 @@
---%%name=FibEmuTester
---%%type=com.fibaro.binarySwitch
---%%file=qa3_1.lua,extra;
---%%debug=libraryfiles:false,userfilefiles:false
+--%%name=API Test
+
+--%%remote=globalVariables:A,B
+--%%remote=devices:763
+--%%debug=permissions:false,refresh_resource:true
 
 local function printf(fmt,...) print(string.format(fmt,...)) end
 function QuickApp:onInit()
@@ -15,6 +16,7 @@ function QuickApp:onInit()
         printf("   %s=%s",k,json.encode(v))
     end
 
+    self:testAPI()
     self:testGlobalVariables()
     self:testRooms()
     self:testSections()
@@ -22,6 +24,43 @@ function QuickApp:onInit()
     self:testDevices()
 
     self:testQA()
+end
+
+function QuickApp:testAPI()
+
+    api.get("/globalVariables/A")
+    api.get("/devices/99") 
+    api.get("/rooms/55")
+    api.get("/sections")
+    api.get("/customEvents")
+    api.get("/settings/location")
+    api.get("/settings/info")
+    api.get("/settings/led")
+    api.get("/settings/network")
+    api.get("/alarms/v1/partitions")
+    print(json.encode((api.get("/alarms/v1/partitions/1"))))
+    api.get("/alarms/v1/devices")
+    api.get("/notificationCenter")
+    api.get("/profiles")
+    api.get("/users")
+    api.get("/icons")
+    api.get("/weather")
+    api.get("/debugMessages")
+    api.get("/home")
+    api.get("/iosDevices")
+    api.get("/energy/devices")
+    api.get("/panels/location")
+    api.get("/panels/notifications")
+    --api.get("/panels/family")
+    api.get("/panels/sprinklers")
+    api.get("/panels/humidity']")
+    api.get("/panels/favoriteColors")
+    api.get("/diagnostics")
+    -- api.get("/sortOrder")
+    -- api.get("/loginStatus")
+    -- api.get("/RGBprograms")
+
+    api.put("/weather", { Temperature = 20.25 })
 end
 
 function QuickApp:testGlobalVariables()
