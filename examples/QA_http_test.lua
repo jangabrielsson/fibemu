@@ -1,6 +1,7 @@
 
 --%%name=HTTP Test
 --%%type=com.fibaro.binarySwitch
+--%%debug=http:true,hc3_http:true
 
 function QuickApp:onInit()
     self:debug("Started",self.id)

@@ -6,7 +6,8 @@
 --]]
 
 --%%name=QA_fibaroExtra
---%%debug=permissions:false,refresh_resource:true
+--%%debug=refresh_resource:true
+--%%debug=http:true,hc3_http:true
 
 --%%file=../TQAE/lib/fibaroExtra.lua,fibaroExtra;
 
@@ -36,4 +37,6 @@ function QuickApp:onInit()
     }
 
     setTimeout(function() fibaro.call(child.id,"turnOn") end, 1000)
+
+    self:event({type='device'},function() end)
 end

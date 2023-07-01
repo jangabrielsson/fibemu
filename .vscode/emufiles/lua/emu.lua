@@ -53,6 +53,7 @@ QA, DIR = { config = config, fun = {}, debug={} }, {}
 local debugFlags = QA.debug
 debugFlags.color = true
 debugFlags.refresh = true
+net._debugFlags = debugFlags
 
 local libs = { 
     devices = devices, resources = resources, files = files, refreshStates = refreshStates, lldebugger = lldebugger,
@@ -189,6 +190,7 @@ local function createEnvironment(id)
         end
     end
     env.net._setupPatches(config)
+    env.net._debugFlags = debugFlags
 
     env.fibaro.debugFlags = debugFlags
     env.fibaro._emulator = "fibemu"

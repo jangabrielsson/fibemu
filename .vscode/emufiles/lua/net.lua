@@ -15,9 +15,44 @@ function net._setupPatches(config)
     apiPatches[':11111/api/refreshStates'] = ":" .. config.wport .. "/api/refreshStates"
 end
 
+local function callHC3(method, path, data, hc3)
+    local lcl = hc3 ~= "hc3"
+    local conf = fibaro and fibaro.config or QA.config
+    local host = hc3 and conf.host or conf.whost
+    local port = hc3 and conf.port or conf.wport
+    local creds = hc3 and conf.creds or nil
+    local url = fmt("http://%s:%s/api%s", host, port, path)
+    if net._debugFlags.hc3_http then
+        if fibaro then 
+            fibaro.debug(__TAG,fmt("HC3 %s: %s",method,url))
+        else
+            QA.syslog("HC3", "%s: %s",method,url)
+        end
+    end
+    local options = {
+        headers = {
+            ['Authorization'] = creds,
+            ["Accept"] = '*/*',
+            ["X-Fibaro-Version"] = "2",
+            ["Fibaro-User-PIN"] = conf.pin,
+            ["Content-Type"] = "application/json",
+        }
+    }
+    local status, res, headers = os.http(method, url, options, data and json.encode(data) or nil, lcl)
+    if status >= 303 then
+        return nil, status
+        --error(fmt("HTTP error %d: %s", status, res))
+    end
+    return res and type(res) == 'string' and res ~= "" and json.decode(res) or nil, status
+end
+
 function net.HTTPClient()
+    local debugFlags = net._debugFlags or {}
     return {
         request = function(_, url, opts)
+            if debugFlags.http and not url:match("/refreshStates") then
+                fibaro.debug(__TAG,fmt("HTTPClient: %s",url))
+            end
             url = patch(url)
             local options = (opts or {}).options or {}
             local data = options.data and json.encode(options.data) or nil
@@ -44,30 +79,6 @@ function net.HTTPClient()
             return os.httpAsync(options.method or "GET", url, opts, data, false)
         end
     }
-end
-
-local function callHC3(method, path, data, hc3)
-    local lcl = hc3 ~= "hc3"
-    local conf = fibaro and fibaro.config or QA.config
-    local host = hc3 and conf.host or conf.whost
-    local port = hc3 and conf.port or conf.wport
-    local creds = hc3 and conf.creds or nil
-    local url = fmt("http://%s:%s/api%s", host, port, path)
-    local options = {
-        headers = {
-            ['Authorization'] = creds,
-            ["Accept"] = '*/*',
-            ["X-Fibaro-Version"] = "2",
-            ["Fibaro-User-PIN"] = conf.pin,
-            ["Content-Type"] = "application/json",
-        }
-    }
-    local status, res, headers = os.http(method, url, options, data and json.encode(data) or nil, lcl)
-    if status >= 303 then
-        return nil, status
-        --error(fmt("HTTP error %d: %s", status, res))
-    end
-    return res and type(res) == 'string' and res ~= "" and json.decode(res) or nil, status
 end
 
 local function createCB(cb) return { callback = cb, id = plugin.mainDeviceId or -1 } end

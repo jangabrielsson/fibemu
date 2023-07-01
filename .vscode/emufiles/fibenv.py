@@ -2,6 +2,7 @@ import lupa
 from lupa import LuaRuntime
 from threading import Thread
 from threading import Timer
+import logging
 import requests
 from requests import exceptions
 import queue
@@ -31,6 +32,13 @@ def tofun(fun):
     a = type(fun)
     return fun[1] if type(fun) == tuple else fun
 
+def setLogLevel(level: str) -> bool:
+    try:
+        logging.getLogger().setLogLevel(upper(str))
+        return True
+    except:
+        return False
+
 class FibaroEnvironment:
     def __init__(self, config):
         self.config = config
@@ -40,9 +48,6 @@ class FibaroEnvironment:
 
     def postEvent(self,event,extra=None): # called from another thread
         self.queue.put((event,extra))  # safely qeued for lua thread
-
-    def getUI(self,id): # called from another thread
-        pass
     
     def remoteCall(self,method,*args): # called from another thread
         try:
@@ -75,7 +80,7 @@ class FibaroEnvironment:
                     if retries > 5:
                         return
                 except Exception as e:
-                    print(f"Error: {e} {nurl}")
+                    print(f"Error: {e} {nurl}",file=sys.stderr)
                     
         self.rthread = Thread(target=refreshRunner, args=())
         self.rthread.start()
@@ -117,7 +122,8 @@ class FibaroEnvironment:
                 'httpAsync':lambda method, url, options, data, local: fibnet.httpCallAsync(self, method, url, options, data, local),
                 'refreshStates':lambda start, url, options: self.refreshStates(start,url,options),
                 'createTCPSocket':lambda: fibnet.LuaTCPSocket(self),
-                'createUDPSocket':lambda: fibnet.LuaUDPSocket(self)
+                'createUDPSocket':lambda: fibnet.LuaUDPSocket(self),
+                'setLogLevel':setLogLevel,
             }
             config['hooks'] = hooks
             emulator = config['path'] + "lua/" + config['emulator']
@@ -137,17 +143,17 @@ class FibaroEnvironment:
                 self.postEvent({"type":"installQA","file":config['file3']})
             while True: # main loop, repeatadly call QA.dispatcher with events
                 delay = QA.dispatcher()
-                # print(f"event: {delay}s", end='')
+                # print(f"event: {delay}s", end='',file=sys.stderr)
                 try:
                     event = self.queue.get(block=True, timeout=delay)
                 except queue.Empty:
                     event = None
-                # print(f", {self.event}")
+                # print(f", {self.event}",file=sys.stderr)
                 if event:
                     try:
                         QA.onEvent(json.dumps(event[0]),event[1])
                     except Exception as e:
-                        print(f"onEvent Error: {e}")
+                        print(f"onEvent Error: {e}",file=sys.stderr)
 
         self.thread = Thread(target=runner, args=())
         self.thread.start()
