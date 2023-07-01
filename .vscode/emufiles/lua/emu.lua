@@ -38,6 +38,8 @@ config.creds = util.basicAuthorization(config.user or "", config.password or "")
 
 config.lcl = config['local'] or false
 os.milliclock = config.hooks.clock
+net._createTCPSocket = config.hooks.createTCPSocket
+net._createUDPSocket = config.hooks.createUDPSocket
 local clock = config.hooks.clock
 local luaType = function(obj)
     local t = type(obj)
@@ -72,10 +74,12 @@ function QA.syslog(typ, fmt, ...)
     util.debug({ color = true }, typ, format(fmt, ...), "SYS")
 end
 
+------- Greeting -----------------------------
 QA.syslog('boot',"Fibemu v%s",config.version)
 QA.syslog('boot',"Web UI : %s",config.webURL)
 QA.syslog('boot',"API Doc: %s",config.apiDocURL)
 QA.syslog('boot',"API EP : %s",config.apiURL)
+----------------------------------------------
 
 function QA.syslogerr(typ, fmt, ...)
     util.debug({ color = true }, typ, format(fmt, ...), "SYSERR")
@@ -99,11 +103,18 @@ local function createEnvironment(id)
     if debugFlags.color == nil then debugFlags.color = true end
     qa.env = env
 
+    function qa.addTask(ms,task,nosleep) -- absolute time
+        return timers.add(id, clock() + ms / 1000, DIR[id].f, task, nosleep)
+    end
+    function qa.addTimer(ms,f,log,nosleep) -- relative time
+        local t = clock() + ms / 1000
+        return timers.add(id,t, DIR[id].f, { type = 'timer', fun = f, ms = t, log = log or "" }, nosleep)
+    end
+
     local function setTimer(f, ms, log)
         assert(type(f) == 'function', "setTimeout first arg must be function")
         assert(type(ms) == 'number', "setTimeout second arg must be a number")
-        local t = clock() + ms / 1000
-        return timers.add(id, t, DIR[id].f, { type = 'timer', fun = f, ms = t, log = log or "" })
+        return qa.addTimer(ms, f, log)
     end
     local function clearTimer(ref)
         assert(type(ref) == 'number', "clearTimeout arg must be number")
@@ -125,10 +136,19 @@ local function createEnvironment(id)
     env.setTimeout = setTimer
     env.clearTimeout = clearTimer
 
-    function env.__fibaroSleep(ms)
+    function env.__fibaroSleep(ms) -- Need to make sure that onAction/onUIEvent are not run...
+        local co = coroutine.running()
+        local function f() coroutine.resume(co) end
+        timers.save(id)
+        DIR[id].addTimer(ms,f,"sleep",true)
+        coroutine.yield({type='next'})
+        timers.restore(id)
     end
 
+    -- Optimizations. Instead of calling the API, we call the local function
     function env.__fibaro_get_global_variable(name) return resources.getResource("globalVariables", name) end
+ 
+    function env.__fibaro_set_global_variable(name,value) return resources.modifyResource("globalVariables", name,{name=name,value=value}) end
 
     function env.__fibaro_get_device(id) return resources.getResource("devices", id) end
 
@@ -174,6 +194,8 @@ local function createEnvironment(id)
     env.fibaro._emulator = "fibemu"
     env.fibaro._IPADDRESS = config.whost
     env.fibaro.config = config
+    env.net._createTCPSocket = net._createTCPSocket
+    env.net._createUDPSocket = net._createUDPSocket
     env.fibaro.createDevice = fakes.createDevice
     if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['TEXT'] or 'white' end
     return env
@@ -265,6 +287,7 @@ local function runner(fc, id)
         elseif task.type == 'onAction' then
             checkErr("onAction", env.onAction, id, task)
         elseif task.type == 'UIEvent' then
+            -- ToDo, update UI here
             checkErr("UIEvent", env.onUIEvent, id, task)
         end
     end
@@ -330,7 +353,7 @@ function QA.installFQA(data, roomId)
 end
 
 function QA.restart(id, delay)
-    if DIR[id] then
+    if DIR[id] and not DIR[id].child then
         delay = delay or 0
         killQA(id)
         systemTimer(function() createQArunner(runner,id) end, delay, " restart:"..delay)
@@ -362,7 +385,7 @@ function QA.fun.debugMessages(arg)
 end
 
 function QA.fun.restartDevice(id)
-    if not DIR[id] then return nil,404 end
+    if not DIR[id] or DIR[id].child then return nil,404 end
     QA.restart(id)
     return "OK",200
 end
@@ -382,31 +405,32 @@ function QA.fun.deleteChildDevice(id)
 end
 
 ------------ Events posted from fibenv.py ------------
--- Usually carries complex data, so we use json
+-- Usually carries complex data, so event.args is json encoded
 local Events = {}
 
 function Events.onAction(event)
     local id = event.deviceId
-    local cid = id
+    local target_id,arg_id = id,id
     local args = json.decode(event.args)
-    if DIR[id] and DIR[id].child then
-        cid = id
-        id = DIR[id].dev.parentId
+    if DIR[target_id] and DIR[target_id].child then
+        arg_id = target_id
+        target_id = DIR[arg_id].dev.parentId
     end
     if not DIR[id] then
-        if QA.isRemote("devices", id) then
+        if QA.isRemote("devices", id) then -- If remote, forward, call HC3
             api.post("/devices/" .. id .. "/action/"..event.actionName, {args=args}, "hc3")
         else
-            if QA.isLocal("devices", id) then
-                QA.syslogerr("onAction","No action, QA declared local, ID:%s", id)
+            if QA.isLocal("devices", target_id) then
+                QA.syslogerr("onAction","No action, QA declared local, ID:%s", target_id)
             else
                 QA.syslogerr("onAction","Unknown QA, ID:%s", id)
             end
         end
         return
     end
-    timers.add(id, 0, DIR[id].f,
-        { type = 'onAction', deviceId = cid, actionName = event.actionName, args = args })
+    DIR[target_id].addTask(0,{ 
+        type = 'onAction', deviceId = arg_id, actionName = event.actionName, args = args 
+        })
 end
 
 function Events.uiEvent(event)
@@ -418,7 +442,7 @@ function Events.uiEvent(event)
         QA.syslogerr("uiEvent","Unknown QA, ID:%s", id)
         return 
     end
-    if event.eventType == "onChanged" then
+    if event.eventType == "onChanged" then -- move to UIEvent...
         Events.updateView({
             deviceId=id,
             componentName=event.elementName,
@@ -426,7 +450,7 @@ function Events.uiEvent(event)
             newValue=tostring(event.values[1])
         })
     end
-    timers.add(id, clock(), DIR[id].f,
+    DIR[id].addTask(0,
         {
             type = 'UIEvent',
             deviceId = id,
@@ -470,20 +494,19 @@ function Events.refreshStates(event)
     refreshStates.newEvent(event.event)
 end
 
-function Events.httpResponse(event,options)
-    local status = event.status
-    local data = event.data
-    local headers = event.headers
+function Events.luaCallback(event,options)
+    local args = event.args
     local callback = options.callback
-    systemTimer(function()
-        callback(status, data, headers)
-    end,0,"httpResponse")
+    local id = options.id
+    if DIR[id] then
+        DIR[id].addTimer(0,function() callback(table.unpack(args)) end,0,"httpResponse")
+    end
 end
 
-function QA.onEvent(event,us) -- dispatch to event handler
+function QA.onEvent(event,luaData) -- dispatch to event handler
     event = json.decode(event)
     local h = Events[event.type]
-    if h then h(event,us) else print("Unknown event", event.type) end
+    if h then h(event,luaData) else print("Unknown event", event.type) end
 end
 
 --[[
@@ -495,7 +518,7 @@ end
     If queue is empty returns 0.5 seconds.
     Ex. setTimeout adds tasks to this queue.
     Incoming events from the "outside" like onUIevent and onAction may cause
-    the dispatcher to be called earlier the the last wait time.
+    the dispatcher to be called earlier then the last wait time.
 --]]
 function QA.dispatcher()
     local t, c, task = timers.peek()

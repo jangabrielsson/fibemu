@@ -36,6 +36,12 @@ function QuickApp:onInit()
     setTimeout(function() fibaro.call(5001,"turnOn") end, 1000)
 end
 
+print("TIME")
+setTimeout(function() print("TIMEOUT") end, 1000)
+print("START")
+fibaro.sleep(2000)
+print("STOP")
+
 function QuickApp:testFun()
     self:debug("Test pressed")
 end

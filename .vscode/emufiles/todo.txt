@@ -1,5 +1,6 @@
 - FIXED. make net.HTTPClient asynchronous
 - FIXED. refreshStates
 - pcall protect calls between python and lua
-- FIXED child devices
-- implement tcp,udp,websocket,MQTT
+- FIXED. child devices
+- FIXED. implement tcp,udp
+- websocket,MQTT
