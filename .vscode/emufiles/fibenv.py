@@ -2,45 +2,16 @@ import lupa
 from lupa import LuaRuntime
 from threading import Thread
 from threading import Timer
+import requests
+from requests import exceptions
 import queue
 from collections import deque
 import json
-import requests_async
-import requests
-from requests import exceptions
-import asyncio
 import time, sys
 from datetime import datetime
-import fibapi
+import fibapi, fibnet
 
 MAX_EVENTS = 400
-
-def httpCall(method, url, options, data, local):
-    ''' http called from lua, async-wait if we call our own api (local, Fast API) '''
-    headers = options['headers']
-    req = requests if not local else requests_async.ASGISession(fibapi.app)
-    match method:
-        case 'GET':
-            res = req.get(url, headers = headers)
-        case 'PUT':
-            res = req.put(url, headers = headers, data = data)
-        case 'POST':
-            res = req.post(url, headers = headers, data = data)
-        case 'DELETE':
-            res = req.delete(url, headers = headers, data = data)
-    res = asyncio.run(res) if local else res
-    return res.status_code, res.text , res.headers
-
-def httpCallAsync(fibemu, method, url, options, data, local):
-    ''' http call in separate thread and post back to lua '''
-    def runner():
-        status, text, headers = httpCall(method, url, options, data, local)
-        headers = dict(headers)
-        fibemu.postEvent(
-            {"_unserializable":options,"type":"httpResponse","status":status,"data":text,"headers":headers}
-        )
-    rthread = Thread(target=runner, args=())
-    rthread.start()
 
 def convertLuaTable(obj):
     if lupa.lua_type(obj) == 'table':
@@ -67,8 +38,8 @@ class FibaroEnvironment:
         self.queue = queue.Queue()
         self.eventCount = 0
 
-    def postEvent(self,event): # called from another thread
-        self.queue.put(event)  # safely qeued for lua thread
+    def postEvent(self,event,extra=None): # called from another thread
+        self.queue.put((event,extra))  # safely qeued for lua thread
 
     def getUI(self,id): # called from another thread
         pass
@@ -142,9 +113,11 @@ class FibaroEnvironment:
             self.events = deque()
             hooks = {
                 'clock':time.time,
-                'http':httpCall,
+                'http':fibnet.httpCall,
                 'httpAsync':lambda method, url, options, data, local: httpCallAsync(self, method, url, options, data, local),
-                'refreshStates':lambda start, url, options: self.refreshStates(start,url,options)
+                'refreshStates':lambda start, url, options: self.refreshStates(start,url,options),
+                'createTCPSocket':lambda: fibnet.LuaTCPSocket(self),
+                'createUDPSocket':lambda: fibnet.LuaUDPSocket(self)
             }
             config['hooks'] = hooks
             emulator = config['path'] + "lua/" + config['emulator']
@@ -172,11 +145,7 @@ class FibaroEnvironment:
                 # print(f", {self.event}")
                 if event:
                     try:
-                        u = None
-                        if event.get('_unserializable'):
-                            u = event['_unserializable']
-                            del event['_unserializable']
-                        QA.onEvent(json.dumps(event),u)
+                        QA.onEvent(json.dumps(event[0]),event[1])
                     except Exception as e:
                         print(f"onEvent Error: {e}")
 
