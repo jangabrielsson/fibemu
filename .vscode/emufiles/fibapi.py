@@ -27,7 +27,7 @@ class EndpointFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
         return record.getMessage().find("/refreshStates") == -1
 
-# Filter out /endpoint
+#Filter out /endpoint
 logging.getLogger("uvicorn.access").addFilter(EndpointFilter())
 
 tags_metadata = [

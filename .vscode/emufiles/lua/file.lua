@@ -179,6 +179,13 @@ local function installQA(fname, id)
     return DIR[id]
 end
 
+local childUIs = {
+    ['com.fibaro.binarySwitch'] = {
+        {button="_btnOn", text="ON", onReleased="turnOn"},
+        {button="_btnOn", text="OFF", onReleased="turnOff"}
+    },
+}
+
 local function createChildDevice(pID, cdev)
     QA.syslog("install","Child '%s' %s", cdev.name, cdev.type)
     local dev = devices.getDeviceStruct(cdev.type)
