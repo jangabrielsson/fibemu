@@ -1,3 +1,11 @@
+--[[
+   Simple echo server using net.TCPSocket()
+   On same machine (Liux/MacOS) run 
+   >nc -l 8986
+   to start a socket server to interact with this app
+--]]
+
+PORT = 8986
 --%%name=TCP Test
 
 local Event = {}
@@ -18,7 +26,7 @@ function Event:connect(ev)
     self.sock:connect(self.host,self.port,{
         success = function(message)
             self:debug("connected",message)
-            self:post{type='connected'}
+            self:post{type='prompt'}
         end,
         error = function(message)
             self:debug("connection error:%s", message)
@@ -26,13 +34,11 @@ function Event:connect(ev)
     })
 end
 
-function Event:connected(ev)
-    self.sock:write("HELLO\n",{
+function Event:prompt(ev)
+    self.sock:write("Echo:",{
         success = function(n)
             self:debug("wrote %s bytes",n)
-            --self:post{type='read'}
-            fibaro.sleep(1000)
-            self:post{type='connected'}
+            self:post{type='read'}
         end,
         error = function(message)
             self:debug("send error:%s", message)
@@ -43,7 +49,9 @@ end
 function Event:read(ev)
     self.sock:read({
         success = function(msg)
-            self:debug("read '%s'",msg)
+            self:debug("Echo '%s'",msg)
+            self.sock:write(string.format("Echo '%s'\n",msg))
+            self:post{type='prompt'}
         end,
         error = function(message)
             self:debug("read error:%s", message)
@@ -53,6 +61,6 @@ end
 
 function QuickApp:onInit()
     self:debug(self.name,self.id)
-    post({type='init'}, {host="127.0.0.1",port=8986})
+    post({type='init'}, {host="127.0.0.1",port=PORT})
 end
 

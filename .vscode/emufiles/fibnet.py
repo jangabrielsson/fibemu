@@ -6,6 +6,7 @@ from requests import exceptions
 import asyncio
 import socket, errno, os
 import websocket
+import fibapi
 
 def callCB(fibemu,cb,*args):
     fibemu.postEvent({"type":"luaCallback","args":list(args)}, extra=cb)

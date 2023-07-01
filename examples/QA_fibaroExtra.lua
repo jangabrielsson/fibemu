@@ -1,5 +1,11 @@
---%%remote=globalVariables:A,B
---%%remote=devices:763
+--[[
+    QA using fibaroExtra to create child object
+    Open browser at http://127.0.0.1:5004/ to interact with this app
+    fibaroExtra.lua is expected to be avaible in ../TQAE/lib/fibaroExtra.lua
+    relative to this project
+--]]
+
+--%%name=QA_fibaroExtra
 --%%debug=permissions:false,refresh_resource:true
 
 --%%file=../TQAE/lib/fibaroExtra.lua,fibaroExtra;
@@ -13,10 +19,6 @@
 
 function QuickApp:onInit()
     self:debug("Started",self.id)
-    self:setVariable("test","HELLO")
-    IP = fibaro.getIPaddress()
-    print(IP)
-    setTimeout(function() self:updateView("lblA","text","FOO") end, 5000)
 
     class 'MyChild'(QuickerAppChild)
     function MyChild:__init(args)
@@ -33,32 +35,5 @@ function QuickApp:onInit()
         type = 'com.fibaro.binarySwitch',
     }
 
-    setTimeout(function() fibaro.call(5001,"turnOn") end, 1000)
-end
-
-print("TIME")
-setTimeout(function() print("TIMEOUT") end, 1000)
-print("START")
-fibaro.sleep(2000)
-print("STOP")
-
-function QuickApp:testFun()
-    self:debug("Test pressed")
-end
-function QuickApp:testA()
-    self:debug("A pressed")
-end
-function QuickApp:testB()
-    self:debug("B pressed")
-end
-function QuickApp:sliderA(ev)
-    self:debug("Slide A",ev.values[1])
-end
-
-function QuickApp:turnOn()
-    self:updateProperty("value",true)
-end
-
-function QuickApp:turnOff()
-    self:updateProperty("value",false)
+    setTimeout(function() fibaro.call(child.id,"turnOn") end, 1000)
 end
