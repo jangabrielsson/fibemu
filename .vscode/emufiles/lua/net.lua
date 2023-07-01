@@ -24,7 +24,7 @@ local function callHC3(method, path, data, hc3)
     local url = fmt("http://%s:%s/api%s", host, port, path)
     if net._debugFlags.hc3_http then
         if fibaro then 
-            fibaro.debug(__TAG,fmt("HC3 %s: %s",method,url))
+            fibaro.trace(__TAG,fmt("HC3 %s: %s",method,url))
         else
             QA.syslog("HC3", "%s: %s",method,url)
         end
@@ -51,7 +51,7 @@ function net.HTTPClient()
     return {
         request = function(_, url, opts)
             if debugFlags.http and not url:match("/refreshStates") then
-                fibaro.debug(__TAG,fmt("HTTPClient: %s",url))
+                fibaro.trace(__TAG,fmt("HTTPClient: %s",url))
             end
             url = patch(url)
             local options = (opts or {}).options or {}
@@ -180,95 +180,34 @@ function net.UDPSocket(opts2)
     return self2
 end
 
-function net.WebSocketClientTls()
-    local POLLINTERVAL = 1000
-    local conn, err, lt = nil
-    local self2 = {}
-    local handlers = {}
-    local function dispatch(h, ...)
-        if handlers[h] then
-            h = handlers[h]
-            local args = { ... }
-            FB.setTimeout(function() h(table.unpack(args)) end, 0)
-        end
-    end
-    local function listen()
-        if not conn then return end
-        local function loop()
-            if lt == nil then return end
-            websocket.wsreceive(conn)
-            if lt then lt = EM.systemTimer(loop, POLLINTERVAL, "WebSocket") end
-        end
-        lt = EM.systemTimer(loop, 0, "WebSocket")
-    end
-    local function stopListen() if lt then
-            EM.clearTimeout(lt)
-            lt = nil
-        end end
-    local function disconnected()
-        websocket.wsclose(conn)
-        conn = nil; stopListen(); dispatch("disconnected")
-    end
-    local function connected()
-        self2.co = true; listen(); dispatch("connected")
-    end
-    local function dataReceived(data) dispatch("dataReceived", data) end
-    local function error(err2) dispatch("error", err2) end
-    local function message_handler(conn2, opcode, data, ...)
-        if not opcode then
-            error(data)
-            disconnected()
-        else
-            dataReceived(data)
-        end
-    end
-    function self2:addEventListener(h, f) handlers[h] = f end
-
-    function self2:connect(url, headers)
-        if conn then return false end
-        conn, err = websocket.wsopen(url, message_handler, { upgrade_headers = headers }) --options )
-        if not err then
-            connected(); return true
-        else
-            return false, err
-        end
-    end
-
-    function self2:send(data)
-        if not conn then return false end
-        if not websocket.wssend(conn, 1, data) then return disconnected() end
-        return true
-    end
-
-    function self2:isOpen() return conn and true end
-
-    function self2:close() if conn then
-            disconnected()
-            return true
-        end end
-
-    local pstr = "WebSocket object: " .. tostring(self2):match("%s(.*)")
-    setmetatable(self2, { __tostring = function(_) return pstr end })
-    return self2
-end
-
 function net.WebSocketClient()
-    local self = {}
+    local self = { _callback={} }
     function self:connect(url)
         local function cb(event,...)
             local f = self._callback[event]
             if f then f(...) end
         end
-        self._sock = net._createWebSocketClient(url,createCB(cb))
+        self._sock = net._createWebSocket(url,createCB(cb))
     end
     function self:addEventListener(event, callback)
         self._callback[event] = callback
     end
+    function self:send(data)
+        return self._sock:send(data)
+    end
+    function self:isOpen() -- bool
+        return self._sock:close()
+    end
+    function self:close()
+        self._sock:close()
+    end
+    local pstr = "WebSocket object: " .. tostring(self):match("%s(.*)")
+    setmetatable(self, { __tostring = function(_) return pstr end })
+    return self
     -- self.sock:addEventListener("connected", function() self:handleConnected() end)
     -- self.sock:addEventListener("disconnected", function() self:handleDisconnected() end)
     -- self.sock:addEventListener("error", function(error) self:handleError(error) end)
     -- self.sock:addEventListener("dataReceived", function(data) self:handleDataReceived(data) end)
- 
 end
 
 api = {

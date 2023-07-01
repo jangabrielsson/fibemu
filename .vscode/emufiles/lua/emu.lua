@@ -40,6 +40,7 @@ config.lcl = config['local'] or false
 os.milliclock = config.hooks.clock
 net._createTCPSocket = config.hooks.createTCPSocket
 net._createUDPSocket = config.hooks.createUDPSocket
+net._createWebSocket = config.hooks.createWebSocket
 local clock = config.hooks.clock
 local luaType = function(obj)
     local t = type(obj)
@@ -198,6 +199,7 @@ local function createEnvironment(id)
     env.fibaro.config = config
     env.net._createTCPSocket = net._createTCPSocket
     env.net._createUDPSocket = net._createUDPSocket
+    env.net._createWebSocket = net._createWebSocket
     env.fibaro.createDevice = fakes.createDevice
     if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['TEXT'] or 'white' end
     return env

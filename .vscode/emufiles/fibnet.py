@@ -101,21 +101,38 @@ class LuaUDPSocket:
 
 class LuaWebSocket:
     #    websocket.enableTrace(True)
-    def __init__(self, fibemu, url):
-        self.ws = websocket.WebSocketApp(url,#"wss://api.gemini.com/v1/marketdata/BTCUSD",
-                              on_open=lambda ws: on_open(self,ws),
-                              on_message=lambda ws,msg: on_message(self,ws,msg),
-                              on_error=lambda ws,err: on_error(self,ws,err),
-                              on_close=lambda ws,stat,msg: on_close(self,ws,stat,msg))
 
     def on_message(self, ws, message):
         callCB(self.fibemu,self.cb,"dataReceived",message)
 
     def on_error(self, ws, error):
-        callCB(self.fibemu,self.cb,"error",error)
+        callCB(self.fibemu,self.cb,"error",str(error))
 
     def on_close(self, ws, close_status_code, close_msg):
+        self.closed = True
+        self.close()
         callCB(self.fibemu,self.cb,"disconnected")
 
     def on_open(self, ws):
         callCB(self.fibemu,self.cb,"connected")
+
+    def send(self,msg):
+        return self.ws.send(msg)
+
+    def close(self):
+        self.ws.close()
+
+    def isOpen(self):
+        return self.closed
+
+    def __init__(self, fibemu, url, cb):
+        self.closed = True
+        self.fibemu = fibemu
+        self.cb = cb
+        self.ws = websocket.WebSocketApp(url,#"wss://api.gemini.com/v1/marketdata/BTCUSD",
+                              on_open=lambda ws: self.on_open(ws),
+                              on_message=lambda ws,msg: self.on_message(ws,msg),
+                              on_error=lambda ws,err: self.on_error(ws,err),
+                              on_close=lambda ws,stat,msg: self.on_close(ws,stat,msg))
+        self.closed = False
+        Thread(target=self.ws.run_forever).start()
