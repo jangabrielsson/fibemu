@@ -114,7 +114,7 @@ class FibaroEnvironment:
             hooks = {
                 'clock':time.time,
                 'http':fibnet.httpCall,
-                'httpAsync':lambda method, url, options, data, local: httpCallAsync(self, method, url, options, data, local),
+                'httpAsync':lambda method, url, options, data, local: fibnet.httpCallAsync(self, method, url, options, data, local),
                 'refreshStates':lambda start, url, options: self.refreshStates(start,url,options),
                 'createTCPSocket':lambda: fibnet.LuaTCPSocket(self),
                 'createUDPSocket':lambda: fibnet.LuaUDPSocket(self)
