@@ -142,9 +142,9 @@ end
 
 function net.UDPSocket(opts2)
     local self2 = { opts = opts2 or {} }
-    self2.sock = net._createTCPSocket()
+    self2.sock = net._createUDPSocket()
     if self2.opts.broadcast ~= nil then
-        self2.sock:setsockname(EM.IPAddress, 0)
+        --self2.sock:setsockname(EM.IPAddress, 0)
         self2.sock:setoption("broadcast", self2.opts.broadcast)
     end
     if tonumber(self2.opts.timeout) then
