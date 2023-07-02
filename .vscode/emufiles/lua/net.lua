@@ -144,14 +144,14 @@ function net.UDPSocket(opts2)
     local self2 = { opts = opts2 or {} }
     self2.sock = net._createUDPSocket()
     if self2.opts.broadcast ~= nil then
-        --self2.sock:setsockname(EM.IPAddress, 0)
+        --self2.sock:bind("127.0.0.1", 0)
         self2.sock:setoption("broadcast", self2.opts.broadcast)
     end
     if tonumber(self2.opts.timeout) then
         self2.sock:settimeout(self2.opts.timeout)
     end
 
-    function self2:bind(ip, port) self.sock:setsockname(ip, port) end
+    function self2:bind(ip, port) self.sock:bind(ip, port) end
 
     function self2:sendTo(datagram, ip, port, callbacks)
         local stat, res = self.sock:sendto(datagram, ip, port)
@@ -164,13 +164,13 @@ function net.UDPSocket(opts2)
 
     function self2:receive(callbacks)
         local function cb(stat, res)
-            if stat and callbacks.success then
-                pcall(callbacks.success, stat, res)
-            elseif stat == nil and callbacks.error then
+            if stat==0 and callbacks.success then
+                pcall(callbacks.success, res, stat)
+            elseif stat == 1 and callbacks.error then
                 pcall(callbacks.error, res)
             end
         end
-        self.sock:receivefrom(createCB(cb))
+        self.sock:recieve(createCB(cb))
     end
 
     function self2:close() self.sock:close() end

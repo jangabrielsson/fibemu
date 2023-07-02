@@ -76,13 +76,13 @@ class LuaUDPSocket:
         self.fibemu = fibemu
         self.sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
     def bind(self, localIP, localPort):
-        bind((localIP, localPort))
+        self.sock.bind((localIP, localPort))
     def settimeout(self,value):
         self.sock.settimeout(value/1000)
     def setoption(self, option, flag):
         if option == "broadcast":
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, flag and 1)
-    def sendto(self,msg, ip, port):
+    def sendto(self, msg, ip, port):
         try:
             self.sock.sendto(msg.encode(), (ip, port))
             return 0,len(msg)
@@ -92,12 +92,15 @@ class LuaUDPSocket:
         self.sock.close()
     def recieve(self,cb):
         def runner():
-            msgFromServer = self.socket.recvfrom(2048)
-            msg = msgFromServer[0].decode('utf-8')
-            if msg=="":
-                callCB(self.fibemu,cb,1,"End of file")
-            else:
-                callCB(self.fibemu,cb,0,msg)
+            try:
+                msgFromServer, addr = self.sock.recvfrom(4096)
+                msg = msgFromServer.decode('utf-8')
+                if msg=="":
+                    callCB(self.fibemu,cb,1,"End of file")
+                else:
+                    callCB(self.fibemu,cb,0,msg)
+            except socket.timeout:
+                callCB(self.fibemu,cb,1,"operation cancelled")
         Thread(target=runner, args=()).run()
 
 class LuaWebSocket:

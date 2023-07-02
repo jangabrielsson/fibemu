@@ -10,9 +10,9 @@ PORT = 8986
 function QuickApp:onInit()
     self.udp = net.UDPSocket({ 
         broadcast = true,
-        timeout = 1000
+        timeout = 10000
     })
- 
+    self.udp:bind("127.0.0.1",8986)
     local payload = "HELLO"
  
     self.udp:sendTo(payload, '255.255.255.255', PORT, {
@@ -26,6 +26,7 @@ function QuickApp:onInit()
 end
 
 function QuickApp:receiveData()
+    print("Waiting for data")
     self.udp:receive({
     success = function(data)
         print("Recieved",data)
@@ -34,4 +35,4 @@ function QuickApp:receiveData()
     error = function(error)
         self:debug("Error:", error)
     end})
-end 
+end
