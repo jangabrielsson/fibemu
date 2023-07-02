@@ -28,8 +28,8 @@ end
 function QuickApp:receiveData()
     print("Waiting for data")
     self.udp:receive({
-    success = function(data)
-        print("Recieved",data)
+    success = function(data, ip, port)
+        print("Recieved",data, ip, port)
         self:receiveData() -- will read next datagram
     end,
     error = function(error)

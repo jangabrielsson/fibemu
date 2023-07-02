@@ -98,7 +98,7 @@ class LuaUDPSocket:
                 if msg=="":
                     callCB(self.fibemu,cb,1,"End of file")
                 else:
-                    callCB(self.fibemu,cb,0,msg)
+                    callCB(self.fibemu,cb,0,msg,addr[0],addr[1])
             except socket.timeout:
                 callCB(self.fibemu,cb,1,"operation cancelled")
         Thread(target=runner, args=()).run()

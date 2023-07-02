@@ -163,9 +163,9 @@ function net.UDPSocket(opts2)
     end
 
     function self2:receive(callbacks)
-        local function cb(stat, res)
+        local function cb(stat, res, ip, port)
             if stat==0 and callbacks.success then
-                pcall(callbacks.success, res, stat)
+                pcall(callbacks.success, res, ip, port)
             elseif stat == 1 and callbacks.error then
                 pcall(callbacks.error, res)
             end
