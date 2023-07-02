@@ -416,7 +416,7 @@ function Events.onAction(event)
     local id = event.deviceId
     local target_id,arg_id = id,id
     local args = json.decode(event.args)
-    if DIR[target_id] and DIR[target_id].child then
+    if DIR[target_id] and DIR[target_id].child then -- children sends events to parent
         arg_id = target_id
         target_id = DIR[arg_id].dev.parentId
     end
@@ -442,11 +442,12 @@ function Events.uiEvent(event)
     if DIR[id] and DIR[id].child then
         id = DIR[id].dev.parentId
     end
-    if not DIR[id] then 
+    if not DIR[id] then -- ToDo, should forward to remote devices
         QA.syslogerr("uiEvent","Unknown QA, ID:%s", id)
         return 
     end
-    if event.eventType == "onChanged" then -- move to UIEvent...
+    if event.eventType == "onChanged" then 
+        -- If slider change value, update our own ui struct for Web UI usage
         Events.updateView({
             deviceId=id,
             componentName=event.elementName,
@@ -454,7 +455,11 @@ function Events.uiEvent(event)
             newValue=tostring(event.values[1])
         })
     end
-    DIR[id].addTask(0,
+    local target_id = id
+    if DIR[id].child then -- children sends events to parent
+        target_id = DIR[id].dev.parentId
+    end
+    DIR[target_id].addTask(0,
         {
             type = 'UIEvent',
             deviceId = id,
@@ -464,7 +469,7 @@ function Events.uiEvent(event)
         })
 end
 
-function Events.updateView(ev)
+function Events.updateView(ev) -- Used to update our own ui struct for Web UI usage
     local qa = DIR[ev.deviceId]
     if qa then
         local map = qa.uiMap
@@ -475,7 +480,7 @@ function Events.updateView(ev)
                 ev.deviceId, tostring(ev.componentName))
         end
     else
-        QA.syslogerr("updateView","Unknown QA, ID:%s", ev.deviceId)
+        QA.syslogerr("updateView","Unknown QA, ID:%s", ev.deviceId) -- ToDo, Should forward to remote devices
     end
 end
 
@@ -503,7 +508,7 @@ function Events.luaCallback(event,options)
     local callback = options.callback
     local id = options.id
     if DIR[id] then
-        DIR[id].addTimer(0,function() callback(table.unpack(args)) end,0,"httpResponse")
+        DIR[id].addTimer(0,function() callback(table.unpack(args)) end,0,"luaCallback")
     end
 end
 

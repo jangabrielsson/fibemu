@@ -138,7 +138,7 @@ async def read_item(id: int, request: Request):
 
 ''' Emulator methods '''
 @app.get("emu/info", tags=["Emulator methods"])
-async def root():
+async def get_emulator_info():
     return {"message": "Hello from FibEmu!"}
 
 @app.post("/emu/dump", tags=["Emulator methods"])
@@ -154,7 +154,7 @@ async def load_emulator_resources(response: Response, fname: str = Body(...)):
     return res
 
 @app.get("/emu/button/{id}/{elm}/{val}", tags=["Emulator methods"])
-async def emulatur_ui_button(id:int, elm: str, val:int, response: Response):
+async def invoke_ui_button(id:int, elm: str, val:int, response: Response):
     eventType = "onReleased" if val == 0 else "onChanged"
     value = [val] if val > 0 else []
     fibenv.get('fe').postEvent({"type":"uiEvent","deviceId":id,"eventType":eventType,"elementName":elm,"values":value})
@@ -165,7 +165,7 @@ class ActionParams(BaseModel):
     args: list
 
 @app.post("/api/devices/{id}/action/{name}", tags=["Device methods"])
-async def callOnAction(id: int, name: str, args: ActionParams):
+async def call_quickapp_method(id: int, name: str, args: ActionParams):
     t = time.time()
     fibenv.get('fe').postEvent({"type":"onAction","deviceId":id,"actionName":name,"args":json.dumps(args.args)})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
@@ -181,7 +181,7 @@ def filterQuery(query: dict, d: dict):
     return True
 
 @app.get("/api/devices", tags=["Device methods"])
-async def getDevices(response: Response, query: DeviceQueryParams = Depends()):
+async def get_devices(response: Response, query: DeviceQueryParams = Depends()):
     ''' Get devices'''
     vars,code = fibenv.get('fe').remoteCall("getResource","devices")
     query = query.dict(exclude_none=True)
@@ -193,13 +193,13 @@ async def getDevices(response: Response, query: DeviceQueryParams = Depends()):
     return list(vars.values()) if code < 300 else None
 
 @app.get("/api/devices/{id}", tags=["Device methods"])
-async def getDevice(id: int, response: Response):
+async def get_Device(id: int, response: Response):
     var,code = fibenv.get('fe').remoteCall("getResource","devices",id)
     response.status_code = code
     return var if code < 300 else None
 
 @app.delete("/api/devices/{id}", tags=["Device methods"])
-async def deleteDevice(id: int, response: Response):
+async def delete_Device(id: int, response: Response):
     var,code = fibenv.get('fe').remoteCall("deleteResource","devices",id)
     response.status_code = code
     return var if code < 300 else None
@@ -213,31 +213,31 @@ class GlobalVarSpec(BaseModel):
     invokeScenes: bool | None = True
 
 @app.get("/api/globalVariables", tags=["GlobalVariabes methods"])
-async def getGlobalVariables(response: Response):
+async def get_GlobalVariables(response: Response):
     vars,code = fibenv.get('fe').remoteCall("getResource","globalVariables")
     response.status_code = code
     return list(vars.values()) if code < 300 else None
 
 @app.get("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
-async def getGlobalVariable(name: str, response: Response):
+async def get_GlobalVariable(name: str, response: Response):
     var,code = fibenv.get('fe').remoteCall("getResource","globalVariables",name)
     response.status_code = code
     return var if code < 300 else None
 
 @app.post("/api/globalVariables", tags=["GlobalVariabes methods"])
-async def createGlobalVariable(data: GlobalVarSpec, response: Response):
+async def create_GlobalVariable(data: GlobalVarSpec, response: Response):
     var,code = fibenv.get('fe').remoteCall("createResource","globalVariables",data.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.put("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
-async def modifyGlobalVariable(name: str, data: GlobalVarSpec, response: Response):
+async def modify_GlobalVariable(name: str, data: GlobalVarSpec, response: Response):
     var,code = fibenv.get('fe').remoteCall("modifyResource","globalVariables",name,data.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.delete("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
-async def deleteGlobalVariable(name: str, response: Response):
+async def delete_GlobalVariable(name: str, response: Response):
     var,code = fibenv.get('fe').remoteCall("deleteResource","globalVariables",name)
     response.status_code = code
     return var if code < 300 else None
@@ -252,31 +252,31 @@ class RoomSpec(BaseModel):
     visible: bool | None = True
 
 @app.get("/api/rooms", tags=["Rooms methods"])
-async def getRoom(response: Response):
+async def get_Rooms(response: Response):
     vars,code = fibenv.get('fe').remoteCall("getResource","rooms")
     response.status_code = code
     return list(vars.values()) if code < 300 else None
 
 @app.get("/api/rooms/{id}", tags=["Rooms methods"])
-async def getRooms(id: int, response: Response):
+async def get_Room(id: int, response: Response):
     var,code = fibenv.get('fe').remoteCall("getResource","rooms",id)
     response.status_code = code
     return var if code < 300 else None
 
 @app.post("/api/rooms", tags=["Rooms methods"])
-async def createRoom(room: RoomSpec, response: Response):
+async def create_Room(room: RoomSpec, response: Response):
     var,code = fibenv.get('fe').remoteCall("createResource","rooms",room.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.put("/api/rooms/{id}", tags=["Rooms methods"])
-async def modifyRoom(id: int, room: RoomSpec, response: Response):
+async def modify_Room(id: int, room: RoomSpec, response: Response):
     var,code = fibenv.get('fe').remoteCall("modifyResource","rooms",id,room.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.delete("/api/rooms/{id}", tags=["Rooms methods"])
-async def deleteRoom(id: int, response: Response):
+async def delete_Room(id: int, response: Response):
     var,code = fibenv.get('fe').remoteCall("deleteResource","rooms",id)
     response.status_code = code
     return var if code < 300 else None
@@ -287,31 +287,31 @@ class SectionSpec(BaseModel):
     id: int | None = None
 
 @app.get("/api/sections", tags=["Sections methods"])
-async def getSection(response: Response):
+async def get_Sections(response: Response):
     vars,code = fibenv.get('fe').remoteCall("getResource","sections")
     response.status_code = code
     return list(vars.values()) if code < 300 else None
 
 @app.get("/api/sections/{id}", tags=["Sections methods"])
-async def getSections(id: int, response: Response):
+async def get_Section(id: int, response: Response):
     var,code = fibenv.get('fe').remoteCall("getResource","sections",id)
     response.status_code = code
     return var if code < 300 else None
 
 @app.post("/api/sections", tags=["Sections methods"])
-async def createSection(section: SectionSpec, response: Response):
+async def create_Section(section: SectionSpec, response: Response):
     var,code = fibenv.get('fe').remoteCall("createResource","sections",section.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.put("/api/sections/{id}", tags=["Sections methods"])
-async def modifySection(id: int, section: SectionSpec, response: Response):
+async def modify_Section(id: int, section: SectionSpec, response: Response):
     var,code = fibenv.get('fe').remoteCall("modifyResource","sections",id,section.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.delete("/api/sections/{id}", tags=["Sections methods"])
-async def deleteSection(id: int, response: Response):
+async def delete_Section(id: int, response: Response):
     var,code = fibenv.get('fe').remoteCall("deleteResource","sections",id)
     response.status_code = code
     return var if code < 300 else None
@@ -322,37 +322,37 @@ class CustomEventSpec(BaseModel):
     userdescription: str | None = ""
 
 @app.get("/api/customEvents", tags=["CustomEvents methods"])
-async def getCustomEvent(response: Response):
+async def get_CustomEvents(response: Response):
     vars,code = fibenv.get('fe').remoteCall("getResource","customEvents")
     response.status_code = code
     return list(vars.values()) if code < 300 else None
 
 @app.get("/api/customEvents/{name}", tags=["CustomEvents methods"])
-async def getCustomEvents(name: str, response: Response):
+async def get_CustomEvent(name: str, response: Response):
     var,code = fibenv.get('fe').remoteCall("getResource","customEvents",name)
     response.status_code = code
     return var if code < 300 else None
 
 @app.post("/api/customEvents", tags=["CustomEvents methods"])
-async def createCustomEvent(customEvent: CustomEventSpec, response: Response):
+async def create_CustomEvent(customEvent: CustomEventSpec, response: Response):
     var,code = fibenv.get('fe').remoteCall("createResource","customEvents",customEvent.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.put("/api/customEvents/{name}", tags=["CustomEvents methods"])
-async def modifyCustomEvent(name: str, customEvent: CustomEventSpec, response: Response):
+async def modify_CustomEvent(name: str, customEvent: CustomEventSpec, response: Response):
     var,code = fibenv.get('fe').remoteCall("modifyResource","customEvents",name,customEvent.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.delete("/api/customEvents/{name}", tags=["CustomEvents methods"])
-async def deleteCustomEvent(name: str, response: Response):
+async def delete_CustomEvent(name: str, response: Response):
     var,code = fibenv.get('fe').remoteCall("deleteResource","customEvents",name)
     response.status_code = code
     return var if code < 300 else None
 
 @app.post("/api/customEvents/{name}", tags=["CustomEvents methods"])
-async def deleteCustomEvent(name: str, response: Response):
+async def delete_CustomEvent(name: str, response: Response):
     var,code = fibenv.get('fe').remoteCall("emitCustomEvent",name)
     response.status_code = code
     return {} if code < 300 else None
@@ -365,7 +365,7 @@ class RefresStatesQuery(BaseModel):
     logs: bool = False  
 
 @app.get("/api/refreshStates", tags=["RefresStates methods"])
-async def getRefreshStates(response: Response, query: RefresStatesQuery = Depends()):
+async def get_RefreshStates_events(response: Response, query: RefresStatesQuery = Depends()):
     res = fibenv.get('fe').getEvents(query.last)
     code = 200
     response.status_code = code
@@ -373,7 +373,7 @@ async def getRefreshStates(response: Response, query: RefresStatesQuery = Depend
 
 ''' Plugins methods '''
 @app.get("/api/plugins/callUIEvent", tags=["Plugins methods"])
-async def callUIEvent(deviceID: int, eventType: str, elementName: str, value: str):
+async def call_UIEvent(deviceID: int, eventType: str, elementName: str, value: str):
     t = time.time()
     fibenv.get('fe').postEvent({"type":"uiEvent","deviceId":deviceID,"eventType":eventType,"elementName":elementName,"values":value})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
@@ -384,7 +384,7 @@ class UpdatePropertyParams(BaseModel):
     value: typing.Any
 
 @app.post("/api/plugins/updateProperty", tags=["Plugins methods"])
-async def callUIEvent(args: UpdatePropertyParams):
+async def update_qa_property(args: UpdatePropertyParams):
     t = time.time()
     fibenv.get('fe').remoteCall("updateDeviceProp",args.json())
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
@@ -396,7 +396,7 @@ class UpdateViewParams(BaseModel):
     newValue: str
 
 @app.post("/api/plugins/updateView", tags=["Plugins methods"])
-async def callUIEvent(args: UpdateViewParams):
+async def update_qa_view(args: UpdateViewParams):
     t = time.time()
     event = dict(args.__dict__)
     event['type'] = 'updateView'
@@ -407,7 +407,7 @@ class RestartParams(BaseModel):
     deviceId: int
     
 @app.post("/api/plugins/restart", tags=["Plugins methods"])
-async def callUIEvent(args: RestartParams, response: Response):
+async def restart_qa(args: RestartParams, response: Response):
     args = dict(args)
     var,code = fibenv.get('fe').remoteCall("restartDevice",args.get('deviceId'))
     response.status_code = code
@@ -421,13 +421,13 @@ class ChildParams(BaseModel):
     initialInterfaces: List[str]
 
 @app.post("/api/plugins/createChildDevice", tags=["Plugins methods"])
-async def createChildDevice(args: ChildParams, response: Response):
+async def create_Child_Device(args: ChildParams, response: Response):
     var,code = fibenv.get('fe').remoteCall("createChildDevice",args.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.delete("/api/plugins/removeChildDevice/{id}", tags=["Plugins methods"])
-async def deleteChildDevice(id: int, response: Response):
+async def delete_Child_Device(id: int, response: Response):
     var,code = fibenv.get('fe').remoteCall("deleteChildDevice",id)
     response.status_code = code
     return var if code < 300 else None
@@ -436,8 +436,48 @@ class EventParams(BaseModel):
     type: str
 
 @app.post("/api/plugins/publishEvent", tags=["Plugins methods"])
-async def callUIEvent(args: EventParams, response: Response):
+async def publish_event(args: EventParams, response: Response):
     var,code = fibenv.get('fe').remoteCall("publishEvent",args.json())
+    response.status_code = code
+    return var if code < 300 else None
+
+@app.get("/api/plugins/{id}/variables", tags=["Plugins methods"])
+async def internal_storage_set(id: int,response: Response):
+    var,code = fibenv.get('fe').remoteCall("getResource","QAkeys",id)
+    response.status_code = code
+    return var if code < 300 else None
+
+@app.get("/api/plugins/{id}/variables/{name}", tags=["Plugins methods"])
+async def internal_storage_set(id: int, name: str, response: Response):
+    var,code = fibenv.get('fe').remoteCall("getResource","QAkeys",id,name)
+    response.status_code = code
+    return var if code < 300 else None
+
+class InternalStorageParams(BaseModel):
+    name: str
+    value: str
+
+@app.post("/api/plugins/{id}/variables", tags=["Plugins methods"])
+async def internal_storage_create(id: int, args: InternalStorageParams, response: Response):
+    var,code = fibenv.get('fe').remoteCall("createResource","QAkeys",id,args.json())
+    response.status_code = code
+    return var if code < 300 else None
+
+@app.put("/api/plugins/{id}/variables/{name}", tags=["Plugins methods"])
+async def internal_storage_set(id: int, name: str, args: InternalStorageParams, response: Response):
+    var,code = fibenv.get('fe').remoteCall("modifyResource","QAkeys",name,args.json())
+    response.status_code = code
+    return var if code < 300 else None
+
+@app.delete("/api/plugins/{id}/variables/{name}", tags=["Plugins methods"])
+async def internal_storage_delete(id: int, name: str, response: Response):
+    var,code = fibenv.get('fe').remoteCall("removeResource","QAkeys",id,name)
+    response.status_code = code
+    return var if code < 300 else None
+
+@app.delete("/api/plugins/{id}/variables", tags=["Plugins methods"])
+async def internal_storage_delete(id: int, response: Response):
+    var,code = fibenv.get('fe').remoteCall("removeResource","QAkeys",id)
     response.status_code = code
     return var if code < 300 else None
 
@@ -447,14 +487,14 @@ class DebugMessageSpec(BaseModel):
     tag: str
 
 @app.post("/api/debugMessages", tags=["DebugMessages methods"])
-async def callUIEvent(args: DebugMessageSpec, response: Response):
+async def add_debug_message(args: DebugMessageSpec, response: Response):
     var,code = fibenv.get('fe').remoteCall("debugMessages",args.json())
     response.status_code = code
     return var if code < 300 else None
 
 ''' QuickApp methods '''
 @app.get("/api/quickApp/{id}/files", tags=["QuickApp methods"])
-async def getQuickAppFiles(id: int, response: Response):
+async def get_QuickApp_Files(id: int, response: Response):
     f,code = fibenv.get('fe').remoteCall("getQAfiles",id)
     response.status_code = code
     return f if code < 300 else None
@@ -467,37 +507,37 @@ class QAFileSpec(BaseModel):
     type: str | None = "lua"
 
 @app.post("/api/quickApp/{id}/files", tags=["QuickApp methods"])
-async def postQuickAppFiles(id: int, file: QAFileSpec, response: Response):
+async def create_QuickApp_Files(id: int, file: QAFileSpec, response: Response):
     f,code = fibenv.get('fe').remoteCall("setQAfiles",id,json.dumps(file.__dict__))
     response.status_code = code
     return f if code < 300 else None
 
 @app.get("/api/quickApp/{id}/files/{name}", tags=["QuickApp methods"])
-async def getQuickAppFile(id: int, name: str, response: Response):
+async def get_QuickApp_File(id: int, name: str, response: Response):
     f,code = fibenv.get('fe').remoteCall("getQAfiles",id,name)
     response.status_code = code
     return f if code < 300 else None
 
 @app.put("/api/quickApp/{id}/files/{name}", tags=["QuickApp methods"])
-async def setQuickAppFile(id: int, name: str,response: Response):
+async def modify_QuickApp_File(id: int, name: str,response: Response):
     f,code = fibenv.get('fe').remoteCall("setQAfiles",id,name)
     response.status_code = code
     return f if code < 300 else None
 
 @app.put("/api/quickApp/{id}/files", tags=["QuickApp methods"])
-async def setQuickAppFiles(id: int, response: Response):
+async def modify_QuickApp_Files(id: int, response: Response):
     f,code = fibenv.get('fe').remoteCall("setQAfiles",id)
     response.status_code = code
     return f if code < 300 else None
 
 @app.get("/api/quickApp/export/{id}", tags=["QuickApp methods"])
-async def getQuickAppFQA(id: int, response: Response):
+async def export_QuickApp_FQA(id: int, response: Response):
     fqa,code = fibenv.get('fe').remoteCall("exportFQA",id)
     response.status_code = code
     return fqa if code < 300 else None
 
 @app.post("/api/quickApp/", tags=["QuickApp methods"])
-async def installQuickApp():
+async def import_QuickApp_not_implemented():
     t = time.time()
     fibenv.get('fe').postEvent({"type":"importFQA","file":""})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
@@ -506,20 +546,20 @@ class QAImportParams(BaseModel):
     file: str
     roomId : int | None = None
 @app.post("/api/quickApp/import", tags=["QuickApp methods"])
-async def installQuickApp(file: QAImportParams, response: Response):
+async def import_QuickApp(file: QAImportParams, response: Response):
     t = time.time()
     fibenv.get('fe').postEvent({"type":"importFQA","file":file.file,"roomId":file.roomId})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
 @app.delete("/api/quickApp/{id}/files/{name}", tags=["QuickApp methods"])
-async def deleteQuickAppFile(id: int, name: str, response: Response):
+async def delete_QuickApp_File(id: int, name: str, response: Response):
     f,code = fibenv.get('fe').remoteCall("deleteQAfile",id,name)
     response.status_code = code
     return f if code < 300 else None
 
 ''' Weather methods '''
 @app.get("/api/weather", tags=["Weather methods"])
-async def getWeather(response: Response):
+async def get_Weather(response: Response):
     var,code = fibenv.get('fe').remoteCall("getResource","weather")
     response.status_code = code
     return var if code < 300 else None
@@ -535,21 +575,21 @@ class WeatherSpec(BaseModel):
     WindUnit: str | None = None
 
 @app.put("/api/weather", tags=["Weather methods"])
-async def putWeather(args: WeatherSpec, response: Response):
+async def modify_Weather(args: WeatherSpec, response: Response):
     var,code = fibenv.get('fe').remoteCall("modifyResource","weather",None,args.json())
     response.status_code = code
     return var if code < 300 else None
 
 ''' iosDevices methods '''
 @app.get("/api/iosDevices", tags=["iosDevices methods"])
-async def getiosDevices(response: Response):
+async def get_ios_Devices(response: Response):
     var,code = fibenv.get('fe').remoteCall("getResource","iosDevices")
     response.status_code = code
     return var if code < 300 else None
 
 ''' home methods '''
 @app.get("/api/home", tags=["Home methods"])
-async def getHome(response: Response):
+async def get_Home(response: Response):
     var,code = fibenv.get('fe').remoteCall("getResource","home")
     response.status_code = code
     return var if code < 300 else None
@@ -575,132 +615,132 @@ class HomeParams(BaseModel):
     firstRunAfterUpdate: bool
 
 @app.put("/api/home", tags=["Home methods"])
-async def putHome(args: HomeParams, response: Response):
+async def modify_Home(args: HomeParams, response: Response):
     var,code = fibenv.get('fe').remoteCall("modifyResource","home",None,args.json())
     response.status_code = code
     return var if code < 300 else None
 
 ''' debugMessages methods '''
 @app.get("/api/debugMessages", tags=["debugMessage methods"])
-async def getdebugMessages(response: Response):
+async def get_debug_Messages(response: Response):
     var,code = fibenv.get('fe').remoteCall("getResource","debugMessages")
     response.status_code = code
     return var if code < 300 else None
 
 ''' settings methods '''
 @app.get("/api/settings/{name}", tags=["Settings methods"])
-async def getSettings(name: str, response: Response):
+async def get_Settings(name: str, response: Response):
     var,code = fibenv.get('fe').remoteCall("getResource","settings/"+name)
     response.status_code = code
     return var if code < 300 else None
 
 ''' partition methods '''
 @app.get("/api/alarms/v1/partitions", tags=["Partition methods"])
-async def getPartitions(response: Response):
+async def get_Partitions(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","alarms/v1/partitions")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 @app.get("/api/alarms/v1/partitions/{id}", tags=["Partition methods"])
-async def getPartitions(id: int, response: Response):
+async def get_Partition(id: int, response: Response):
     item,code = fibenv.get('fe').remoteCall("getResource","alarms/v1/partitions",id)
     response.status_code = code
     return item if code < 300 else None
 
 ''' alarm devices methods '''
 @app.get("/api/alarms/v1/devices/", tags=["Alarm devices methods"])
-async def getPartitions(response: Response):
+async def get_alarm_devices(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","alarms/v1/devices")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' notificationCenter methods '''
 @app.get("/api/notificationCenter", tags=["NotificationCenter methods"])
-async def getNotificationCenter(response: Response):
+async def get_Notification_Center(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","notificationCenter")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' profiles methods '''
 @app.get("/api/profiles", tags=["Profiles methods"])
-async def getProfiles(response: Response):
+async def get_Profiles(response: Response):
     var,code = fibenv.get('fe').remoteCall("getResource","profiles")
     response.status_code = code
     return var if code < 300 else None
 
 ''' icons methods '''
 @app.get("/api/icons", tags=["Icons methods"])
-async def getIcons(response: Response):
+async def get_Icons(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","icons")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' users methods '''
 @app.get("/api/users", tags=["Users methods"])
-async def getUsers(response: Response):
+async def get_Users(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","users")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' energy devices methods '''
 @app.get("/api/energy/devices", tags=["Energy devices methods"])
-async def getEnergyDevices(response: Response):
+async def get_Energy_Devices(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","energy/devices")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' panels/location methods '''
 @app.get("/api/panels/location", tags=["Panels location methods"])
-async def getPanelsLocation(response: Response):
+async def get_Panels_Location(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","panels/location")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' panels/notification methods '''
 @app.get("/api/panels/notifications", tags=["Panels notifications methods"])
-async def getPanelsNotifications(response: Response):
+async def get_Panels_Notifications(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","panels/notifications")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' panels/family methods '''
 @app.get("/api/panels/family", tags=["Panels family methods"])
-async def getPanelsFamily(response: Response):
+async def get_Panels_Family(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","panels/family")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' panels/sprinklers methods '''
 @app.get("/api/panels/sprinklers", tags=["Panels sprinklers methods"])
-async def getPanelsSprinklers(response: Response):
+async def get_Panels_Sprinklers(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","panels/sprinklers")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' panels/humidity methods '''
 @app.get("/api/panels/humidity", tags=["Panels humidity methods"])
-async def getPanelsHumidity(response: Response):
+async def get_Panels_Humidity(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","panels/humidity")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' panels/favoriteColors methods '''
 @app.get("/api/panels/favoriteColors", tags=["Panels favoriteColors methods"])
-async def getFavoriteColors(response: Response):
+async def get_Favorite_Colors(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","panels/favoriteColors")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' panels/favoriteColors/v2 methods '''
 @app.get("/api/panels/favoriteColors/v2", tags=["Panels favoriteColors/v2 methods"])
-async def getFavoriteColorsV2(response: Response):
+async def get_Favorite_ColorsV2(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","panels/favoriteColors/v2")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' diagnostics methods '''
 @app.get("/api/diagnostics", tags=["Diagnostics methods"])
-async def getDiagnostics(response: Response):
+async def get_Diagnostics(response: Response):
     items,code = fibenv.get('fe').remoteCall("getResource","diagnostics")
     response.status_code = code
     return list(items.values()) if code < 300 else None
@@ -709,7 +749,7 @@ async def getDiagnostics(response: Response):
 class ProxyParams(BaseModel):
     url: str
 @app.get("/api/proxy", tags=["Proxy method"])
-async def getDiagnostics(response: Response, query: ProxyParams = Depends()):
+async def call_via_proxy(response: Response, query: ProxyParams = Depends()):
     fe = fibenv.get('fe')
     query = query.dict(exclude_none=True)
     url = query['url']

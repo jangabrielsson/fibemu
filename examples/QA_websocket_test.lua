@@ -3,7 +3,7 @@
 --]]
 
 --%%name=TCP Test
---%%var=url:"wss://echo.websocket.org"
+--%%var=url:"wss://echo.websocket.events/"
 
 function QuickApp:onInit()
     self:debug("onInit")
@@ -16,6 +16,8 @@ function QuickApp:onInit()
     self.sock:addEventListener("dataReceived", function(data) self:handleDataReceived(data) end)
 
     self.sock:connect(url)
+
+    setInterval(function() self:debug("interval") end, 1000)
 end
 
 function QuickApp:handleConnected()
