@@ -59,12 +59,15 @@ class LuaTCPSocket:
         self.sock.close()
     def recieve(self,cb):
         def runner():
-            msg = self.sock.recv(2048)
-            msg = msg.decode('utf-8')
-            if msg=="":
-                callCB(self.fibemu,cb,1,"End of file")
-            else:
-                callCB(self.fibemu,cb,0,msg)
+            try:
+                msg = self.sock.recv(2048)
+                msg = msg.decode('utf-8')
+                if msg=="":
+                    callCB(self.fibemu,cb,1,"End of file")
+                else:
+                    callCB(self.fibemu,cb,0,msg)
+            except socket.timeout:
+                callCB(self.fibemu,cb,1,"operation cancelled")
         Thread(target=runner, args=()).run()
     def receieveUntil(self,until,cb):
         def runner():
