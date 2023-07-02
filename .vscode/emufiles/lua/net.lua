@@ -151,13 +151,16 @@ function net.UDPSocket(opts2)
         self2.sock:settimeout(self2.opts.timeout)
     end
 
-    function self2:bind(ip, port) self.sock:bind(ip, port) end
+    function self2:bind(ip, port) 
+        local stat,err = self.sock:bind(ip, port) 
+        if stat ~= 0 then error(err,2) end
+    end
 
     function self2:sendTo(datagram, ip, port, callbacks)
         local stat, res = self.sock:sendto(datagram, ip, port)
-        if stat and callbacks.success then
-            pcall(callbacks.success, 1)
-        elseif stat == nil and callbacks.error then
+        if stat==0 and callbacks.success then
+            pcall(callbacks.success, res)
+        elseif stat == 1 and callbacks.error then
             pcall(callbacks.error, res)
         end
     end

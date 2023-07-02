@@ -76,7 +76,11 @@ class LuaUDPSocket:
         self.fibemu = fibemu
         self.sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
     def bind(self, localIP, localPort):
-        self.sock.bind((localIP, localPort))
+        try:
+            self.sock.bind((localIP, localPort))
+            return 0,""
+        except Exception as e:
+            return 1,str(e)
     def settimeout(self,value):
         self.sock.settimeout(value/1000)
     def setoption(self, option, flag):
