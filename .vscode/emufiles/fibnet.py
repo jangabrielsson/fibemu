@@ -78,8 +78,8 @@ class LuaUDPSocket:
     def bind(self, localIP, localPort):
         bind((localIP, localPort))
     def settimeout(self,value):
-        self.socket.settimeout(value/1000)
-    def setoption(option, flag):
+        self.sock.settimeout(value/1000)
+    def setoption(self, option, flag):
         if option == "broadcast":
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, flag and 1)
     def sendto(self,msg, ip, port):
