@@ -1,16 +1,13 @@
 --[[
    Simple websocket test
-   On same machine (Liux/MacOS) run 
-   >nc -l 8986
-   to start a socket server to interact with this app
 --]]
 
-PORT = 8986
 --%%name=TCP Test
+--%%var=url:"wss://echo.websocket.org"
 
 function QuickApp:onInit()
     self:debug("onInit")
-    --local url = self:getVariable("url") -- eg. wss://echo.websocket.org
+    local url = self:getVariable("url")
     self.sock = net.WebSocketClient()
 
     self.sock:addEventListener("connected", function() self:handleConnected() end)
@@ -18,11 +15,12 @@ function QuickApp:onInit()
     self.sock:addEventListener("error", function(error) self:handleError(error) end)
     self.sock:addEventListener("dataReceived", function(data) self:handleDataReceived(data) end)
 
-    self.sock:connect("ws://echo.websocket.events/")
+    self.sock:connect(url)
 end
 
 function QuickApp:handleConnected()
     self:debug("connected")
+    self.sock:send("Hello from fibemu")
 end
 
 function QuickApp:handleDisconnected()

@@ -1,6 +1,11 @@
 - FIXED. make net.HTTPClient asynchronous
 - FIXED. refreshStates
-- pcall protect calls between python and lua
 - FIXED. child devices
 - FIXED. implement tcp,udp
-- websocket,MQTT
+- FIXED. websocket
+- pcall protect calls between python and lua
+- SYSlog should always trace [SYS] [QUICKAPP500]...
+- MQTT
+- Default UI for child devices
+- Proxy?
+- Self updating QA Web UI?

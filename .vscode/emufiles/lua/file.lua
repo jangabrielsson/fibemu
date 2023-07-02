@@ -73,7 +73,7 @@ local function installQA(fname, id)
     end
 
     local function eval(str)
-        local stat,res = pcall(function() return load("return " .. str)() end)
+        local stat,res = pcall(function() return load("return " .. str,nil,"t",{config=config})() end)
         if stat then return res,true else return nil,false end
     end
 
@@ -96,7 +96,7 @@ local function installQA(fname, id)
     function chandler.allRemote(var, val, vars) vars.allRemote = eval(val)==true end
     function chandler.id(var, val, vars) vars.id = tonumber(val) end
     function chandler.proxy(var, val, vars) vars.proxy = tonumber(val) end
-    function chandler.debug(var, val, vars)
+    function chandler.debug(var, val, vars) --%%debug=flag1:val1,flag2:val2
         local dbs = {}
         vars.debug._init = true
         val:gsub("([^,]+)", function(d) dbs[#dbs + 1] = d end)
@@ -113,7 +113,19 @@ local function installQA(fname, id)
             end
         end
     end
-    function chandler.file(var, val, vars)
+    function chandler.var(var, val, vars) --%%var=varname:varvalue
+        local var,val,stat = val:match("([%w_]+):(.+)")
+        val,stat = eval(val)
+        if stat==false or not var then
+            QA.syslogerr("install","Bad quickvar expr '%s'", d)
+        else
+            vars.qvars[var] = val
+            if emu.debug.quickVars then
+                QA.syslog("install","QuickVar %s=%s",var,val)
+            end
+        end
+    end
+    function chandler.file(var, val, vars) --%%file=path,name;
         local fn, qn = table.unpack(val:sub(1, -2):split(","))
         vars.files[#vars.files + 1] = { fname = fn, name = qn, isMain=false, content = nil }
     end
@@ -125,7 +137,7 @@ local function installQA(fname, id)
         vars.remote[typ] = append(vars.remote[typ], items)
     end
 
-    local vars = { files = {}, writes = {}, remote = {}, debug= {} }
+    local vars = { files = {}, writes = {}, remote = {}, debug= {}, qvars={} }
     code:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
         if chandler[var] then
             chandler[var](var, val, vars)
@@ -151,7 +163,9 @@ local function installQA(fname, id)
     dev = copy(dev)
     dev.name = vars.name or name
     dev.id = vars.id
-    dev.properties.quickAppVariables = {}
+    local qvars = {}
+    for k,v in pairs(vars.qvars or {}) do qvars[#qvars+1] = {name=k, value=v} end
+    dev.properties.quickAppVariables = qvars
     dev.interfaces = {}
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id

@@ -23,10 +23,10 @@ local function callHC3(method, path, data, hc3)
     local creds = hc3 and conf.creds or nil
     local url = fmt("http://%s:%s/api%s", host, port, path)
     if net._debugFlags.hc3_http then
-        if fibaro then 
-            fibaro.trace(__TAG,fmt("HC3 %s: %s",method,url))
+        if fibaro then
+            fibaro.trace(__TAG, fmt("HC3 %s: %s", method, url))
         else
-            QA.syslog("HC3", "%s: %s",method,url)
+            QA.syslog("HC3", "%s: %s", method, url)
         end
     end
     local options = {
@@ -51,7 +51,7 @@ function net.HTTPClient()
     return {
         request = function(_, url, opts)
             if debugFlags.http and not url:match("/refreshStates") then
-                fibaro.trace(__TAG,fmt("HTTPClient: %s",url))
+                fibaro.trace(__TAG, fmt("HTTPClient: %s", url))
             end
             url = patch(url)
             local options = (opts or {}).options or {}
@@ -181,26 +181,31 @@ function net.UDPSocket(opts2)
 end
 
 function net.WebSocketClient()
-    local self = { _callback={} }
-    function self:connect(url,headers)
-        local function cb(event,...)
+    local self = { _callback = {} }
+    function self:connect(url, headers)
+        local function cb(event, ...)
             local f = self._callback[event]
             if f then f(...) end
         end
-        self._sock = net._createWebSocket(url,headers,createCB(cb))
+        self._sock = net._createWebSocket(url, headers, createCB(cb))
     end
+
     function self:addEventListener(event, callback)
         self._callback[event] = callback
     end
+
     function self:send(data)
         return self._sock:send(data)
     end
+
     function self:isOpen() -- bool
         return self._sock:close()
     end
+
     function self:close()
         self._sock:close()
     end
+
     local pstr = "WebSocket object: " .. tostring(self):match("%s(.*)")
     setmetatable(self, { __tostring = function(_) return pstr end })
     return self
@@ -210,7 +215,156 @@ function net.WebSocketClient()
     -- self.sock:addEventListener("dataReceived", function(data) self:handleDataReceived(data) end)
 end
 
-net.WebSocketClientTls = net.WebSocketClient
+net.WebSocketClientTls = net.WebSocketClient -- only differ on URL?
+
+local mqtt = {
+    interval = 1000,
+    Client = {},
+    QoS = { EXACTLY_ONCE = 1 }
+}
+mqtt.MSGT = {
+    CONNECT = 1,
+    CONNACK = 2,
+    PUBLISH = 3,
+    PUBACK = 4,
+    PUBREC = 5,
+    PUBREL = 6,
+    PUBCOMP = 7,
+    SUBSCRIBE = 8,
+    SUBACK = 9,
+    UNSUBSCRIBE = 10,
+    UNSUBACK = 11,
+    PINGREQ = 12,
+    PINGRESP = 13,
+    DISCONNECT = 14,
+    AUTH = 15,
+}
+mqtt.MSGMAP = {
+    [9] = 'subscribed',
+    [11] = 'unsubscribed',
+    [4] = 'published', -- Should be onpublished according to doc?
+    [14] = 'closed',
+}
+
+function mqtt.Client.connect(uri, options)
+    options = options or {}
+    local args = {}
+    args.uri = uri
+    args.uri = string.gsub(uri, "mqtt://", "")
+    args.username = options.username
+    args.password = options.password
+    args.clean = options.cleanSession
+    if args.clean == nil then args.clean = true end
+    args.will = options.lastWill
+    args.keep_alive = options.keepAlivePeriod
+    args.id = options.clientId
+
+    --cafile="...", certificate="...", key="..." (default false)
+    if options.clientCertificate then -- Not in place...
+        args.secure = {
+            certificate = options.clientCertificate,
+            cafile = options.certificateAuthority,
+            key = "",
+        }
+    end
+
+    local _client = net._mqttClient(args)
+    local client = { _client = _client, _callbacks = {} }
+    function client:addEventListener(message, handler)
+        self._callbacks[message] = handler
+    end
+
+    function client:subscribe(topic, options)
+        options = options or {}
+        local args = {}
+        args.topic = topic
+        args.qos = options.qos or 0
+        args.callback = options.callback
+        return self._client:subscribe(args)
+    end
+
+    function client:unsubscribe(topics, options)
+        if type(topics) == 'string' then
+            return self._client:unsubscribe({ topic = topics })
+        else
+            local res
+            for _, t in ipairs(topics) do res = self:unsubscribe(t) end
+            return res
+        end
+    end
+
+    function client:publish(topic, payload, options)
+        options = options or {}
+        local args = {}
+        args.topic = topic
+        args.payload = payload
+        args.qos = options.qos or 0
+        args.retain = options.retain or false
+        args.callback = options.callback
+        return self._client:publish(args)
+    end
+
+    function client:disconnect(options)
+        options = options or {}
+        local args = {}
+        args.callback = options.callback
+        return self._client:disconnect(args)
+    end
+
+    --function client:acknowledge() end
+    local function DEBUG(a,b,c) end
+    local function encode(t) return t and json.encode(t) or "nil" end
+    local function safeJson(t) return t and json.encode(t) or "nil" end
+    
+    _client:on {
+        --{"type":2,"sp":false,"rc":0}
+        connect = function(connack)
+            DEBUG("mqtt", "trace", "MQTT connect:" .. encode(connack))
+            if client._handlers['connected'] then
+                client._handlers['connected']({ sessionPresent = connack.sp, returnCode = connack.rc })
+            end
+        end,
+        subscribe = function(event)
+            DEBUG("mqtt", "trace", "MQTT subscribe:" .. encode(event))
+            if client._handlers['subscribed'] then client._handlers['subscribed'](safeJson(event)) end
+        end,
+        unsubscribe = function(event)
+            DEBUG("mqtt", "trace", "MQTT unsubscribe:" .. encode(event))
+            if client._handlers['unsubscribed'] then client._handlers['unsubscribed'](safeJson(event)) end
+        end,
+        message = function(msg)
+            DEBUG("mqtt", "trace", "MQTT message:" .. encode(msg))
+            local msgt = mqtt.MSGMAP[msg.type]
+            if msgt and client._handlers[msgt] then
+                client._handlers[msgt](msg)
+            elseif client._handlers['message'] then
+                client._handlers['message'](msg)
+            end
+        end,
+        acknowledge = function(event)
+            DEBUG("mqtt", "trace", "MQTT acknowledge:" .. encode(event))
+            if client._handlers['acknowledge'] then client._handlers['acknowledge']() end
+        end,
+        error = function(err)
+            DEBUG("mqtt", "error", "MQTT error:" .. err)
+            if client._handlers['error'] then client._handlers['error'](err) end
+        end,
+        close = function(event)
+            DEBUG("mqtt", "trace", "MQTT close:" .. encode(event))
+            event = safeJson(event)
+            if client._handlers['closed'] then client._handlers['closed'](safeJson(event)) end
+        end,
+        auth = function(event)
+            DEBUG("mqtt", "trace", "MQTT auth:" .. encode(event))
+            if client._handlers['auth'] then client._handlers['auth'](safeJson(event)) end
+        end,
+    }
+
+    local pstr = "MQTT object: " .. tostring(client):match("%s(.*)")
+    setmetatable(client, { __tostring = function(_) return pstr end })
+
+    return client
+end
 
 api = {
     get = function(url, hc3) return callHC3("GET", patch(url), nil, hc3) end,
