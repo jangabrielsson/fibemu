@@ -51,7 +51,7 @@ class LuaTCPSocket:
         Thread(target=runner, args=()).run()
     def send(self,msg):
         try:
-            self.sock.sendall(msg.encode())
+            self.sock.sendall(msg.encode('ascii'))
             return 0,len(msg)
         except Exception as e:
             return 1,"Bad file descriptor"
@@ -60,8 +60,8 @@ class LuaTCPSocket:
     def recieve(self,cb):
         def runner():
             try:
-                msg = self.sock.recv(2048)
-                msg = msg.decode('utf-8')
+                msg = self.sock.recv(4096)
+                msg = msg.decode('ascii')
                 if msg=="":
                     callCB(self.fibemu,cb,1,"End of file")
                 else:
@@ -91,7 +91,7 @@ class LuaUDPSocket:
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, flag and 1)
     def sendto(self, msg, ip, port):
         try:
-            self.sock.sendto(msg.encode(), (ip, port))
+            self.sock.sendto(msg.encode('ascii'), (ip, port))
             return 0,len(msg)
         except Exception as e:
             return 1,"Bad file descriptor"
@@ -101,7 +101,7 @@ class LuaUDPSocket:
         def runner():
             try:
                 msgFromServer, addr = self.sock.recvfrom(4096)
-                msg = msgFromServer.decode('utf-8')
+                msg = msgFromServer.decode('ascii')
                 if msg=="":
                     callCB(self.fibemu,cb,1,"End of file")
                 else:

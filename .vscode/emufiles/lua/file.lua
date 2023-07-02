@@ -113,11 +113,11 @@ local function installQA(fname, id)
             end
         end
     end
-    function chandler.var(var, val, vars) --%%var=varname:varvalue
-        local var,val,stat = val:match("([%w_]+):(.+)")
+    function chandler.var(var, val2, vars) --%%var=varname:varvalue
+        local var,val,stat = val2:match("([%w_]+):(.+)")
         val,stat = eval(val)
         if stat==false or not var then
-            QA.syslogerr("install","Bad quickvar expr '%s'", d)
+            QA.syslogerr("install","Bad quickvar expr '%s'", val2)
         else
             vars.qvars[var] = val
             if emu.debug.quickVars then

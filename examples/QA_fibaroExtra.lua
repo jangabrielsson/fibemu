@@ -30,7 +30,7 @@ function QuickApp:onInit()
         self:debug("Child turned on")
     end
 
-    child = MyChild{
+    local child = MyChild{
         uid = 'x',
         name = 'MyChild',
         type = 'com.fibaro.binarySwitch',
