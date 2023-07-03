@@ -131,6 +131,7 @@ class FibaroEnvironment:
             f = self.lua.eval(f'function(config) loadfile("{emulator}")(config) end')
             f(self.lua.table_from(config))
             QA = globals.QA
+            del config['hooks']
             self.DIR =globals.DIR
             self.QA = QA
             self.QA.addEvent = lambda e: self.addEvent(e)

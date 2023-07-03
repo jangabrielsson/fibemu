@@ -17,9 +17,9 @@
             <tbody>
               {% for event in emu.events | reverse %}
               <tr>
-                <td>{{ event.created | ctime }}</td>
-                <td>{{event.type}}</td>
-                <td>{{event.data}}</td>
+                <td>{{ event.event.created | ctime }}</td>
+                <td>{{event.event.type}}</td>
+                <td>{{event.event.data}}</td>
               </tr>
                 {% endfor %}
             </tbody>
