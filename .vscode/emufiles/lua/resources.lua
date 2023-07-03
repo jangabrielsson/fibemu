@@ -453,4 +453,28 @@ function r.emitCustomEvent(name)
     return {}, 204
 end
 
+--------- QA keys -------------
+rsrcs.keys = {}
+function r.getQAKey(id,name)
+    keys[id] = keys[id] or {}
+    return name and keys[id][name] or keys[id],200
+end
+function r.deleteQAKey(id,name)
+    if keys[id] == nil then return end
+    if name then keys[id][name] = nil else keys[id] = nil end
+    return nil,200
+end
+function r.createQAKey(id,name,value)
+    keys[id] = keys[id] or {}
+    if keys[id] ~= nil then return nil,404 end
+    keys[id][name] = value
+    return value,200
+end
+function r.setQAKey(id,name,value)
+    keys[id] = keys[id] or {}
+    if keys[id] == nil then return nil,404 end
+    keys[id][name] = value
+    return value,200
+end
+
 return r

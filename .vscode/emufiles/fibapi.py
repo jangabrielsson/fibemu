@@ -143,13 +143,13 @@ async def get_emulator_info():
 
 @app.post("/emu/dump", tags=["Emulator methods"])
 async def dump_emulator_resources(response: Response, fname: str = Body(...)):
-    res,code = fibenv.get('fe').remoteCall("dumpResources",fname)
+    res,code = fibenv.get('fe').luaCall("dumpResources",fname)
     response.status_code = code
     return res
 
 @app.post("/emu/load", tags=["Emulator methods"])
 async def load_emulator_resources(response: Response, fname: str = Body(...)):
-    res,code = fibenv.get('fe').remoteCall("loadResources",fname)
+    res,code = fibenv.get('fe').luaCall("loadResources",fname)
     response.status_code = code
     return res
 
@@ -183,7 +183,7 @@ def filterQuery(query: dict, d: dict):
 @app.get("/api/devices", tags=["Device methods"])
 async def get_devices(response: Response, query: DeviceQueryParams = Depends()):
     ''' Get devices'''
-    vars,code = fibenv.get('fe').remoteCall("getResource","devices")
+    vars,code = fibenv.get('fe').luaCall("getResource","devices")
     query = query.dict(exclude_none=True)
     if len(query) > 0:
         res = [d for d in vars.values() if filterQuery(query,d)]
@@ -194,13 +194,13 @@ async def get_devices(response: Response, query: DeviceQueryParams = Depends()):
 
 @app.get("/api/devices/{id}", tags=["Device methods"])
 async def get_Device(id: int, response: Response):
-    var,code = fibenv.get('fe').remoteCall("getResource","devices",id)
+    var,code = fibenv.get('fe').luaCall("getResource","devices",id)
     response.status_code = code
     return var if code < 300 else None
 
 @app.delete("/api/devices/{id}", tags=["Device methods"])
 async def delete_Device(id: int, response: Response):
-    var,code = fibenv.get('fe').remoteCall("deleteResource","devices",id)
+    var,code = fibenv.get('fe').luaCall("deleteResource","devices",id)
     response.status_code = code
     return var if code < 300 else None
 
@@ -214,31 +214,31 @@ class GlobalVarSpec(BaseModel):
 
 @app.get("/api/globalVariables", tags=["GlobalVariabes methods"])
 async def get_GlobalVariables(response: Response):
-    vars,code = fibenv.get('fe').remoteCall("getResource","globalVariables")
+    vars,code = fibenv.get('fe').luaCall("getResource","globalVariables")
     response.status_code = code
     return list(vars.values()) if code < 300 else None
 
 @app.get("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
 async def get_GlobalVariable(name: str, response: Response):
-    var,code = fibenv.get('fe').remoteCall("getResource","globalVariables",name)
+    var,code = fibenv.get('fe').luaCall("getResource","globalVariables",name)
     response.status_code = code
     return var if code < 300 else None
 
 @app.post("/api/globalVariables", tags=["GlobalVariabes methods"])
 async def create_GlobalVariable(data: GlobalVarSpec, response: Response):
-    var,code = fibenv.get('fe').remoteCall("createResource","globalVariables",data.json())
+    var,code = fibenv.get('fe').luaCall("createResource","globalVariables",data.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.put("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
 async def modify_GlobalVariable(name: str, data: GlobalVarSpec, response: Response):
-    var,code = fibenv.get('fe').remoteCall("modifyResource","globalVariables",name,data.json())
+    var,code = fibenv.get('fe').luaCall("modifyResource","globalVariables",name,data.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.delete("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
 async def delete_GlobalVariable(name: str, response: Response):
-    var,code = fibenv.get('fe').remoteCall("deleteResource","globalVariables",name)
+    var,code = fibenv.get('fe').luaCall("deleteResource","globalVariables",name)
     response.status_code = code
     return var if code < 300 else None
 
@@ -253,31 +253,31 @@ class RoomSpec(BaseModel):
 
 @app.get("/api/rooms", tags=["Rooms methods"])
 async def get_Rooms(response: Response):
-    vars,code = fibenv.get('fe').remoteCall("getResource","rooms")
+    vars,code = fibenv.get('fe').luaCall("getResource","rooms")
     response.status_code = code
     return list(vars.values()) if code < 300 else None
 
 @app.get("/api/rooms/{id}", tags=["Rooms methods"])
 async def get_Room(id: int, response: Response):
-    var,code = fibenv.get('fe').remoteCall("getResource","rooms",id)
+    var,code = fibenv.get('fe').luaCall("getResource","rooms",id)
     response.status_code = code
     return var if code < 300 else None
 
 @app.post("/api/rooms", tags=["Rooms methods"])
 async def create_Room(room: RoomSpec, response: Response):
-    var,code = fibenv.get('fe').remoteCall("createResource","rooms",room.json())
+    var,code = fibenv.get('fe').luaCall("createResource","rooms",room.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.put("/api/rooms/{id}", tags=["Rooms methods"])
 async def modify_Room(id: int, room: RoomSpec, response: Response):
-    var,code = fibenv.get('fe').remoteCall("modifyResource","rooms",id,room.json())
+    var,code = fibenv.get('fe').luaCall("modifyResource","rooms",id,room.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.delete("/api/rooms/{id}", tags=["Rooms methods"])
 async def delete_Room(id: int, response: Response):
-    var,code = fibenv.get('fe').remoteCall("deleteResource","rooms",id)
+    var,code = fibenv.get('fe').luaCall("deleteResource","rooms",id)
     response.status_code = code
     return var if code < 300 else None
 
@@ -288,31 +288,31 @@ class SectionSpec(BaseModel):
 
 @app.get("/api/sections", tags=["Sections methods"])
 async def get_Sections(response: Response):
-    vars,code = fibenv.get('fe').remoteCall("getResource","sections")
+    vars,code = fibenv.get('fe').luaCall("getResource","sections")
     response.status_code = code
     return list(vars.values()) if code < 300 else None
 
 @app.get("/api/sections/{id}", tags=["Sections methods"])
 async def get_Section(id: int, response: Response):
-    var,code = fibenv.get('fe').remoteCall("getResource","sections",id)
+    var,code = fibenv.get('fe').luaCall("getResource","sections",id)
     response.status_code = code
     return var if code < 300 else None
 
 @app.post("/api/sections", tags=["Sections methods"])
 async def create_Section(section: SectionSpec, response: Response):
-    var,code = fibenv.get('fe').remoteCall("createResource","sections",section.json())
+    var,code = fibenv.get('fe').luaCall("createResource","sections",section.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.put("/api/sections/{id}", tags=["Sections methods"])
 async def modify_Section(id: int, section: SectionSpec, response: Response):
-    var,code = fibenv.get('fe').remoteCall("modifyResource","sections",id,section.json())
+    var,code = fibenv.get('fe').luaCall("modifyResource","sections",id,section.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.delete("/api/sections/{id}", tags=["Sections methods"])
 async def delete_Section(id: int, response: Response):
-    var,code = fibenv.get('fe').remoteCall("deleteResource","sections",id)
+    var,code = fibenv.get('fe').luaCall("deleteResource","sections",id)
     response.status_code = code
     return var if code < 300 else None
 
@@ -323,37 +323,37 @@ class CustomEventSpec(BaseModel):
 
 @app.get("/api/customEvents", tags=["CustomEvents methods"])
 async def get_CustomEvents(response: Response):
-    vars,code = fibenv.get('fe').remoteCall("getResource","customEvents")
+    vars,code = fibenv.get('fe').luaCall("getResource","customEvents")
     response.status_code = code
     return list(vars.values()) if code < 300 else None
 
 @app.get("/api/customEvents/{name}", tags=["CustomEvents methods"])
 async def get_CustomEvent(name: str, response: Response):
-    var,code = fibenv.get('fe').remoteCall("getResource","customEvents",name)
+    var,code = fibenv.get('fe').luaCall("getResource","customEvents",name)
     response.status_code = code
     return var if code < 300 else None
 
 @app.post("/api/customEvents", tags=["CustomEvents methods"])
 async def create_CustomEvent(customEvent: CustomEventSpec, response: Response):
-    var,code = fibenv.get('fe').remoteCall("createResource","customEvents",customEvent.json())
+    var,code = fibenv.get('fe').luaCall("createResource","customEvents",customEvent.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.put("/api/customEvents/{name}", tags=["CustomEvents methods"])
 async def modify_CustomEvent(name: str, customEvent: CustomEventSpec, response: Response):
-    var,code = fibenv.get('fe').remoteCall("modifyResource","customEvents",name,customEvent.json())
+    var,code = fibenv.get('fe').luaCall("modifyResource","customEvents",name,customEvent.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.delete("/api/customEvents/{name}", tags=["CustomEvents methods"])
 async def delete_CustomEvent(name: str, response: Response):
-    var,code = fibenv.get('fe').remoteCall("deleteResource","customEvents",name)
+    var,code = fibenv.get('fe').luaCall("deleteResource","customEvents",name)
     response.status_code = code
     return var if code < 300 else None
 
 @app.post("/api/customEvents/{name}", tags=["CustomEvents methods"])
 async def delete_CustomEvent(name: str, response: Response):
-    var,code = fibenv.get('fe').remoteCall("emitCustomEvent",name)
+    var,code = fibenv.get('fe').luaCall("emitCustomEvent",name)
     response.status_code = code
     return {} if code < 300 else None
 
@@ -381,12 +381,12 @@ async def call_UIEvent(deviceID: int, eventType: str, elementName: str, value: s
 class UpdatePropertyParams(BaseModel):
     deviceId: int
     propertyName: str
-    value: typing.Any
+    value: Any
 
 @app.post("/api/plugins/updateProperty", tags=["Plugins methods"])
 async def update_qa_property(args: UpdatePropertyParams):
     t = time.time()
-    fibenv.get('fe').remoteCall("updateDeviceProp",args.json())
+    fibenv.get('fe').luaCall("updateDeviceProp",args.json())
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
 class UpdateViewParams(BaseModel):
@@ -409,7 +409,7 @@ class RestartParams(BaseModel):
 @app.post("/api/plugins/restart", tags=["Plugins methods"])
 async def restart_qa(args: RestartParams, response: Response):
     args = dict(args)
-    var,code = fibenv.get('fe').remoteCall("restartDevice",args.get('deviceId'))
+    var,code = fibenv.get('fe').luaCall("restartDevice",args.get('deviceId'))
     response.status_code = code
     return {} if code < 300 else None
 
@@ -422,13 +422,13 @@ class ChildParams(BaseModel):
 
 @app.post("/api/plugins/createChildDevice", tags=["Plugins methods"])
 async def create_Child_Device(args: ChildParams, response: Response):
-    var,code = fibenv.get('fe').remoteCall("createChildDevice",args.json())
+    var,code = fibenv.get('fe').luaCall("createChildDevice",args.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.delete("/api/plugins/removeChildDevice/{id}", tags=["Plugins methods"])
 async def delete_Child_Device(id: int, response: Response):
-    var,code = fibenv.get('fe').remoteCall("deleteChildDevice",id)
+    var,code = fibenv.get('fe').luaCall("deleteChildDevice",id)
     response.status_code = code
     return var if code < 300 else None
 
@@ -437,47 +437,56 @@ class EventParams(BaseModel):
 
 @app.post("/api/plugins/publishEvent", tags=["Plugins methods"])
 async def publish_event(args: EventParams, response: Response):
-    var,code = fibenv.get('fe').remoteCall("publishEvent",args.json())
+    var,code = fibenv.get('fe').luaCall("publishEvent",args.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.get("/api/plugins/{id}/variables", tags=["Plugins methods"])
 async def internal_storage_set(id: int,response: Response):
-    var,code = fibenv.get('fe').remoteCall("getResource","QAkeys",id)
+    var,code = fibenv.get('fe').luaCall("getQAKey",id)
     response.status_code = code
+    if code < 300:
+        var = [{'name':k,'value':v} for k,v in var.items()]
     return var if code < 300 else None
 
 @app.get("/api/plugins/{id}/variables/{name}", tags=["Plugins methods"])
 async def internal_storage_set(id: int, name: str, response: Response):
-    var,code = fibenv.get('fe').remoteCall("getResource","QAkeys",id,name)
+    var,code = fibenv.get('fe').luaCall("getQAKey",id,name)
     response.status_code = code
+    if code < 300:
+        var = {'name':name,'value':var}
     return var if code < 300 else None
 
 class InternalStorageParams(BaseModel):
     name: str
-    value: str
+    value: Any
+    isHidden: bool = False
 
 @app.post("/api/plugins/{id}/variables", tags=["Plugins methods"])
 async def internal_storage_create(id: int, args: InternalStorageParams, response: Response):
-    var,code = fibenv.get('fe').remoteCall("createResource","QAkeys",id,args.json())
+    var,code = fibenv.get('fe').luaCall("createQAKey",id,args.json())
     response.status_code = code
+    if code < 300:
+        var = {'name':args.name,'value':args.value}
     return var if code < 300 else None
 
 @app.put("/api/plugins/{id}/variables/{name}", tags=["Plugins methods"])
 async def internal_storage_set(id: int, name: str, args: InternalStorageParams, response: Response):
-    var,code = fibenv.get('fe').remoteCall("modifyResource","QAkeys",name,args.json())
+    var,code = fibenv.get('fe').luaCall("setQAKey",id,name,args.json())
     response.status_code = code
+    if code < 300:
+        var = {'name':args.name,'value':args.value}
     return var if code < 300 else None
 
 @app.delete("/api/plugins/{id}/variables/{name}", tags=["Plugins methods"])
 async def internal_storage_delete(id: int, name: str, response: Response):
-    var,code = fibenv.get('fe').remoteCall("removeResource","QAkeys",id,name)
+    var,code = fibenv.get('fe').luaCall("deleteQAKey",id,name)
     response.status_code = code
     return var if code < 300 else None
 
 @app.delete("/api/plugins/{id}/variables", tags=["Plugins methods"])
 async def internal_storage_delete(id: int, response: Response):
-    var,code = fibenv.get('fe').remoteCall("removeResource","QAkeys",id)
+    var,code = fibenv.get('fe').luaCall("deleteQAKey",id)
     response.status_code = code
     return var if code < 300 else None
 
@@ -488,14 +497,14 @@ class DebugMessageSpec(BaseModel):
 
 @app.post("/api/debugMessages", tags=["DebugMessages methods"])
 async def add_debug_message(args: DebugMessageSpec, response: Response):
-    var,code = fibenv.get('fe').remoteCall("debugMessages",args.json())
+    var,code = fibenv.get('fe').luaCall("debugMessages",args.json())
     response.status_code = code
     return var if code < 300 else None
 
 ''' QuickApp methods '''
 @app.get("/api/quickApp/{id}/files", tags=["QuickApp methods"])
 async def get_QuickApp_Files(id: int, response: Response):
-    f,code = fibenv.get('fe').remoteCall("getQAfiles",id)
+    f,code = fibenv.get('fe').luaCall("getQAfiles",id)
     response.status_code = code
     return f if code < 300 else None
 
@@ -508,31 +517,31 @@ class QAFileSpec(BaseModel):
 
 @app.post("/api/quickApp/{id}/files", tags=["QuickApp methods"])
 async def create_QuickApp_Files(id: int, file: QAFileSpec, response: Response):
-    f,code = fibenv.get('fe').remoteCall("setQAfiles",id,json.dumps(file.__dict__))
+    f,code = fibenv.get('fe').luaCall("setQAfiles",id,json.dumps(file.__dict__))
     response.status_code = code
     return f if code < 300 else None
 
 @app.get("/api/quickApp/{id}/files/{name}", tags=["QuickApp methods"])
 async def get_QuickApp_File(id: int, name: str, response: Response):
-    f,code = fibenv.get('fe').remoteCall("getQAfiles",id,name)
+    f,code = fibenv.get('fe').luaCall("getQAfiles",id,name)
     response.status_code = code
     return f if code < 300 else None
 
 @app.put("/api/quickApp/{id}/files/{name}", tags=["QuickApp methods"])
 async def modify_QuickApp_File(id: int, name: str,response: Response):
-    f,code = fibenv.get('fe').remoteCall("setQAfiles",id,name)
+    f,code = fibenv.get('fe').luaCall("setQAfiles",id,name)
     response.status_code = code
     return f if code < 300 else None
 
 @app.put("/api/quickApp/{id}/files", tags=["QuickApp methods"])
 async def modify_QuickApp_Files(id: int, response: Response):
-    f,code = fibenv.get('fe').remoteCall("setQAfiles",id)
+    f,code = fibenv.get('fe').luaCall("setQAfiles",id)
     response.status_code = code
     return f if code < 300 else None
 
 @app.get("/api/quickApp/export/{id}", tags=["QuickApp methods"])
 async def export_QuickApp_FQA(id: int, response: Response):
-    fqa,code = fibenv.get('fe').remoteCall("exportFQA",id)
+    fqa,code = fibenv.get('fe').luaCall("exportFQA",id)
     response.status_code = code
     return fqa if code < 300 else None
 
@@ -553,14 +562,14 @@ async def import_QuickApp(file: QAImportParams, response: Response):
 
 @app.delete("/api/quickApp/{id}/files/{name}", tags=["QuickApp methods"])
 async def delete_QuickApp_File(id: int, name: str, response: Response):
-    f,code = fibenv.get('fe').remoteCall("deleteQAfile",id,name)
+    f,code = fibenv.get('fe').luaCall("deleteQAfile",id,name)
     response.status_code = code
     return f if code < 300 else None
 
 ''' Weather methods '''
 @app.get("/api/weather", tags=["Weather methods"])
 async def get_Weather(response: Response):
-    var,code = fibenv.get('fe').remoteCall("getResource","weather")
+    var,code = fibenv.get('fe').luaCall("getResource","weather")
     response.status_code = code
     return var if code < 300 else None
 
@@ -576,21 +585,21 @@ class WeatherSpec(BaseModel):
 
 @app.put("/api/weather", tags=["Weather methods"])
 async def modify_Weather(args: WeatherSpec, response: Response):
-    var,code = fibenv.get('fe').remoteCall("modifyResource","weather",None,args.json())
+    var,code = fibenv.get('fe').luaCall("modifyResource","weather",None,args.json())
     response.status_code = code
     return var if code < 300 else None
 
 ''' iosDevices methods '''
 @app.get("/api/iosDevices", tags=["iosDevices methods"])
 async def get_ios_Devices(response: Response):
-    var,code = fibenv.get('fe').remoteCall("getResource","iosDevices")
+    var,code = fibenv.get('fe').luaCall("getResource","iosDevices")
     response.status_code = code
     return var if code < 300 else None
 
 ''' home methods '''
 @app.get("/api/home", tags=["Home methods"])
 async def get_Home(response: Response):
-    var,code = fibenv.get('fe').remoteCall("getResource","home")
+    var,code = fibenv.get('fe').luaCall("getResource","home")
     response.status_code = code
     return var if code < 300 else None
 
@@ -616,132 +625,132 @@ class HomeParams(BaseModel):
 
 @app.put("/api/home", tags=["Home methods"])
 async def modify_Home(args: HomeParams, response: Response):
-    var,code = fibenv.get('fe').remoteCall("modifyResource","home",None,args.json())
+    var,code = fibenv.get('fe').luaCall("modifyResource","home",None,args.json())
     response.status_code = code
     return var if code < 300 else None
 
 ''' debugMessages methods '''
 @app.get("/api/debugMessages", tags=["debugMessage methods"])
 async def get_debug_Messages(response: Response):
-    var,code = fibenv.get('fe').remoteCall("getResource","debugMessages")
+    var,code = fibenv.get('fe').luaCall("getResource","debugMessages")
     response.status_code = code
     return var if code < 300 else None
 
 ''' settings methods '''
 @app.get("/api/settings/{name}", tags=["Settings methods"])
 async def get_Settings(name: str, response: Response):
-    var,code = fibenv.get('fe').remoteCall("getResource","settings/"+name)
+    var,code = fibenv.get('fe').luaCall("getResource","settings/"+name)
     response.status_code = code
     return var if code < 300 else None
 
 ''' partition methods '''
 @app.get("/api/alarms/v1/partitions", tags=["Partition methods"])
 async def get_Partitions(response: Response):
-    items,code = fibenv.get('fe').remoteCall("getResource","alarms/v1/partitions")
+    items,code = fibenv.get('fe').luaCall("getResource","alarms/v1/partitions")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 @app.get("/api/alarms/v1/partitions/{id}", tags=["Partition methods"])
 async def get_Partition(id: int, response: Response):
-    item,code = fibenv.get('fe').remoteCall("getResource","alarms/v1/partitions",id)
+    item,code = fibenv.get('fe').luaCall("getResource","alarms/v1/partitions",id)
     response.status_code = code
     return item if code < 300 else None
 
 ''' alarm devices methods '''
 @app.get("/api/alarms/v1/devices/", tags=["Alarm devices methods"])
 async def get_alarm_devices(response: Response):
-    items,code = fibenv.get('fe').remoteCall("getResource","alarms/v1/devices")
+    items,code = fibenv.get('fe').luaCall("getResource","alarms/v1/devices")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' notificationCenter methods '''
 @app.get("/api/notificationCenter", tags=["NotificationCenter methods"])
 async def get_Notification_Center(response: Response):
-    items,code = fibenv.get('fe').remoteCall("getResource","notificationCenter")
+    items,code = fibenv.get('fe').luaCall("getResource","notificationCenter")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' profiles methods '''
 @app.get("/api/profiles", tags=["Profiles methods"])
 async def get_Profiles(response: Response):
-    var,code = fibenv.get('fe').remoteCall("getResource","profiles")
+    var,code = fibenv.get('fe').luaCall("getResource","profiles")
     response.status_code = code
     return var if code < 300 else None
 
 ''' icons methods '''
 @app.get("/api/icons", tags=["Icons methods"])
 async def get_Icons(response: Response):
-    items,code = fibenv.get('fe').remoteCall("getResource","icons")
+    items,code = fibenv.get('fe').luaCall("getResource","icons")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' users methods '''
 @app.get("/api/users", tags=["Users methods"])
 async def get_Users(response: Response):
-    items,code = fibenv.get('fe').remoteCall("getResource","users")
+    items,code = fibenv.get('fe').luaCall("getResource","users")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' energy devices methods '''
 @app.get("/api/energy/devices", tags=["Energy devices methods"])
 async def get_Energy_Devices(response: Response):
-    items,code = fibenv.get('fe').remoteCall("getResource","energy/devices")
+    items,code = fibenv.get('fe').luaCall("getResource","energy/devices")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' panels/location methods '''
 @app.get("/api/panels/location", tags=["Panels location methods"])
 async def get_Panels_Location(response: Response):
-    items,code = fibenv.get('fe').remoteCall("getResource","panels/location")
+    items,code = fibenv.get('fe').luaCall("getResource","panels/location")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' panels/notification methods '''
 @app.get("/api/panels/notifications", tags=["Panels notifications methods"])
 async def get_Panels_Notifications(response: Response):
-    items,code = fibenv.get('fe').remoteCall("getResource","panels/notifications")
+    items,code = fibenv.get('fe').luaCall("getResource","panels/notifications")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' panels/family methods '''
 @app.get("/api/panels/family", tags=["Panels family methods"])
 async def get_Panels_Family(response: Response):
-    items,code = fibenv.get('fe').remoteCall("getResource","panels/family")
+    items,code = fibenv.get('fe').luaCall("getResource","panels/family")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' panels/sprinklers methods '''
 @app.get("/api/panels/sprinklers", tags=["Panels sprinklers methods"])
 async def get_Panels_Sprinklers(response: Response):
-    items,code = fibenv.get('fe').remoteCall("getResource","panels/sprinklers")
+    items,code = fibenv.get('fe').luaCall("getResource","panels/sprinklers")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' panels/humidity methods '''
 @app.get("/api/panels/humidity", tags=["Panels humidity methods"])
 async def get_Panels_Humidity(response: Response):
-    items,code = fibenv.get('fe').remoteCall("getResource","panels/humidity")
+    items,code = fibenv.get('fe').luaCall("getResource","panels/humidity")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' panels/favoriteColors methods '''
 @app.get("/api/panels/favoriteColors", tags=["Panels favoriteColors methods"])
 async def get_Favorite_Colors(response: Response):
-    items,code = fibenv.get('fe').remoteCall("getResource","panels/favoriteColors")
+    items,code = fibenv.get('fe').luaCall("getResource","panels/favoriteColors")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' panels/favoriteColors/v2 methods '''
 @app.get("/api/panels/favoriteColors/v2", tags=["Panels favoriteColors/v2 methods"])
 async def get_Favorite_ColorsV2(response: Response):
-    items,code = fibenv.get('fe').remoteCall("getResource","panels/favoriteColors/v2")
+    items,code = fibenv.get('fe').luaCall("getResource","panels/favoriteColors/v2")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
 ''' diagnostics methods '''
 @app.get("/api/diagnostics", tags=["Diagnostics methods"])
 async def get_Diagnostics(response: Response):
-    items,code = fibenv.get('fe').remoteCall("getResource","diagnostics")
+    items,code = fibenv.get('fe').luaCall("getResource","diagnostics")
     response.status_code = code
     return list(items.values()) if code < 300 else None
 

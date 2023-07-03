@@ -37,31 +37,25 @@ local config = pconfig
 config.creds = util.basicAuthorization(config.user or "", config.password or "")
 
 config.lcl = config['local'] or false
-os.milliclock = config.hooks.clock
-net._createTCPSocket = config.hooks.createTCPSocket
-net._createUDPSocket = config.hooks.createUDPSocket
-net._createWebSocket = config.hooks.createWebSocket
-local clock = config.hooks.clock
+local pyhooks = config.hooks
+config.hooks = nil
+local clock = pyhooks.clock
 local luaType = function(obj)
     local t = type(obj)
     return t == 'table' and obj.__USERDATA and 'userdata' or t
 end
-os.http,os.httpAsync = config.hooks.http,config.hooks.httpAsync
-local hooks = config.hooks
-config.hooks = nil
 
 QA, DIR = { config = config, fun = {}, debug={} }, {}
 local debugFlags = QA.debug
 debugFlags.color = true
 debugFlags.refresh = true
-net._debugFlags = debugFlags
+fibaro = { pyhooks = pyhooks, debugFlags = debugFlags, fibemu = QA }
 
 local libs = { 
     devices = devices, resources = resources, files = files, refreshStates = refreshStates, lldebugger = lldebugger,
     emu = QA, util = util, binser = doload("binser.lua"), ui = doload("ui.lua"),
 }
 
-os.refreshStates = hooks.refreshStates
 devices.init(config, luapath.."devices.json", libs)
 resources.init(config, libs)
 refreshStates.init(config, libs)
@@ -195,11 +189,10 @@ local function createEnvironment(id)
 
     env.fibaro.debugFlags = debugFlags
     env.fibaro._emulator = "fibemu"
+    env.fibaro.fibemu = QA
     env.fibaro._IPADDRESS = config.whost
     env.fibaro.config = config
-    env.net._createTCPSocket = net._createTCPSocket
-    env.net._createUDPSocket = net._createUDPSocket
-    env.net._createWebSocket = net._createWebSocket
+    env.fibaro.pyhooks = pyhooks
     env.fibaro.createDevice = fakes.createDevice
     if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['TEXT'] or 'white' end
     return env

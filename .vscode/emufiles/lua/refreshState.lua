@@ -316,7 +316,7 @@ function r.start()
             ["Content-Type"] = "application/json",
         }
     }
-    os.refreshStates(true, url, options) -- Python function 
+    fibaro.pyhooks.refreshStates(true, url, options) -- Python function 
 end
 
 r.eventTypes = EventTypes

@@ -22,12 +22,8 @@ local function callHC3(method, path, data, hc3)
     local port = hc3 and conf.port or conf.wport
     local creds = hc3 and conf.creds or nil
     local url = fmt("http://%s:%s/api%s", host, port, path)
-    if net._debugFlags.hc3_http then
-        if fibaro then
-            fibaro.trace(__TAG, fmt("HC3 %s: %s", method, url))
-        else
-            QA.syslog("HC3", "%s: %s", method, url)
-        end
+    if fibaro.debugFlags.hc3_http then 
+            fibaro.fibemu.syslog(__TAG or "HC3", "%s: %s", method, url)
     end
     local options = {
         headers = {
@@ -38,7 +34,7 @@ local function callHC3(method, path, data, hc3)
             ["Content-Type"] = "application/json",
         }
     }
-    local status, res, headers = os.http(method, url, options, data and json.encode(data) or nil, lcl)
+    local status, res, headers = fibaro.pyhooks.http(method, url, options, data and json.encode(data) or nil, lcl)
     if status >= 303 then
         return nil, status
         --error(fmt("HTTP error %d: %s", status, res))
@@ -51,7 +47,7 @@ function net.HTTPClient()
     return {
         request = function(_, url, opts)
             if debugFlags.http and not url:match("/refreshStates") then
-                fibaro.trace(__TAG, fmt("HTTPClient: %s", url))
+                fibaro.fibemu.syslog(__TAG, "HTTPClient: %s", url)
             end
             url = patch(url)
             local options = (opts or {}).options or {}
@@ -68,7 +64,7 @@ function net.HTTPClient()
                     end
                 end)
                 if not stat then
-                    fibaro.error(__TAG, "netClient callback:", res)
+                    fibaro.fibemu.syslogerr(__TAG, "netClient callback: %s", res)
                 end
             end
             local opts = {
@@ -76,7 +72,7 @@ function net.HTTPClient()
                 callback = callback,
                 id = plugin.mainDeviceId or -1
             }
-            return os.httpAsync(options.method or "GET", url, opts, data, false)
+            return fibaro.pyhooks.httpAsync(options.method or "GET", url, opts, data, false)
         end
     }
 end
@@ -85,7 +81,7 @@ local function createCB(cb) return { callback = cb, id = plugin.mainDeviceId or 
 
 function net.TCPSocket(opts2)
     local self2 = { opts = opts2 or {} }
-    self2.sock = net._createTCPSocket()
+    self2.sock = fibaro.pyhooks.createTCPSocket()
     if tonumber(self2.opts.timeout) then
         self2.sock:settimeout(opts2.timeout) -- timeout in ms
     end
@@ -142,7 +138,7 @@ end
 
 function net.UDPSocket(opts2)
     local self2 = { opts = opts2 or {} }
-    self2.sock = net._createUDPSocket()
+    self2.sock = fibaro.pyhooks.createUDPSocket()
     if self2.opts.broadcast ~= nil then
         --self2.sock:bind("127.0.0.1", 0)
         self2.sock:setoption("broadcast", self2.opts.broadcast)
@@ -190,7 +186,7 @@ function net.WebSocketClient()
             local f = self._callback[event]
             if f then f(...) end
         end
-        self._sock = net._createWebSocket(url, headers, createCB(cb))
+        self._sock = fibaro.pyhooks.createWebSocket(url, headers, createCB(cb))
     end
 
     function self:addEventListener(event, callback)

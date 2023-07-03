@@ -17,7 +17,7 @@ function QuickApp:onInit()
 
     self.sock:connect(url)
 
-    setInterval(function() self:debug("interval") end, 1000)
+    --setInterval(function() self:debug("interval") end, 1000)
 end
 
 function QuickApp:handleConnected()
