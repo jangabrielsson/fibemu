@@ -14,7 +14,7 @@
               </tr>
             </thead>
             <tbody>
-              {% for key,val in emu.remoteCall("getResource","globalVariables")[0].items() %}
+              {% for key,val in emu.luaCall("getResource","globalVariables")[0].items() %}
               <tr>
                 <td>{{key}}</td>
                 <td>{{val.value}}</td>
