@@ -1,6 +1,7 @@
 local config, resources, devices, lldebugger = nil, nil, nil, nil
 local libs,exports,emu,ui = nil, nil,nil,nil
 local copy,merge,append
+local QA,DIR
 
 local function init(conf, libs2)
     libs = libs2
@@ -10,6 +11,7 @@ local function init(conf, libs2)
     devices = libs.devices
     lldebugger = libs.lldebugger
     emu = libs.emu
+    QA,DIR = emu,emu.DIR
     copy,merge,append = libs.util.copy,libs.util.merge,libs.util.append
     for name, fun in pairs(exports) do QA.fun[name] = fun end -- export file functions
 end
@@ -193,12 +195,36 @@ local function installQA(fname, id)
     return DIR[id]
 end
 
-local childUIs = {
+local customUI = {
     ['com.fibaro.binarySwitch'] = {
-        {button="_btnOn", text="ON", onReleased="turnOn"},
-        {button="_btnOn", text="OFF", onReleased="turnOff"}
+        {{button="__turnon", text="Turn On", onReleased="turnOn"},
+        {button="__turnoff", text="Turn Off", onReleased="turnOff"}}
+    },
+    ['com.fibaro.multilevelSwitch'] = {
+        {{button="__turnon", text="Turn On", onReleased="turnOn"},
+        {button="__turnoff", text="Turn Off", onReleased="turnOff"}},
+        {label='_Brightness', text='Brightness'},
+        {slider='__value', min=0, max=99, onChanged='setValue'},
+        {
+          {button='__sli', text="&#8679;",onReleased="startLevelIncrease"},
+          {button='__sld', text="&#8681;",onReleased="startLevelIncrease"},
+          {button='__sls', text="&Vert;",onReleased="stopLevelChange"},
+        }
+    },
+    ['com.fibaro.colorController'] = 
+    {{{button='__turnon', text="Turn On",onReleased="turnOn"},{button='__turnoff', text="Turn Off",onReleased="turnOff"}},
+      {label='_Brightness', text='Brightness'},
+      {slider='__value', min=0, max=99, onChanged='setValue'},
+      {
+        {button='__sli', text="&#8679;",onReleased="startLevelIncrease"},
+        {button='__sld', text="&#8681;",onReleased="startLevelDecrease"},
+        {button='__sls', text="&Vert;",onReleased="stopLevelChange"}
+      }
     },
 }
+
+--customUI['com.fibaro.binarySensor']     = customUI['com.fibaro.binarySwitch']      -- For debugging
+--customUI['com.fibaro.multilevelSensor'] = customUI['com.fibaro.multilevelSwitch']  -- For debugging
 
 local function createChildDevice(pID, cdev)
     QA.syslog("install","Child '%s' %s", cdev.name, cdev.type)
@@ -220,6 +246,13 @@ local function createChildDevice(pID, cdev)
     local uiStruct,uiMap = {},{}
     if dev.properties.viewLayout then
         uiStruct,uiMap = ui.view2UI(dev.properties.viewLayout,dev.properties.uiCallbacks),nil
+    end
+    if next(uiStruct) == nil then
+        local UI = customUI[dev.type] or {}
+        ui.transformUI(UI)
+        dev.properties.viewLayout = ui.mkViewLayout(UI,nil,dev.id)
+        dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(UI)
+        uiStruct = ui.view2UI(dev.properties.viewLayout,dev.properties.uiCallbacks)
     end
     uiStruct,uiMap = annotateUI(uiStruct)
 

@@ -100,7 +100,7 @@
           <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
             <div class="accordion-body">
 <pre>
-{{emu.remoteCall("getResource","devices",qa.dev.id)[0] | prettyjson}}
+{{emu.luaCall("getResource","devices",qa.dev.id)[0] | prettyjson}}
 </pre>
             </div>
           </div>

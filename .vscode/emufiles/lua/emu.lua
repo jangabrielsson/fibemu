@@ -46,6 +46,7 @@ local luaType = function(obj)
 end
 
 QA, DIR = { config = config, fun = {}, debug={} }, {}
+QA.DIR = DIR
 local debugFlags = QA.debug
 debugFlags.color = true
 debugFlags.refresh = true
@@ -432,9 +433,6 @@ end
 
 function Events.uiEvent(event)
     local id = event.deviceId
-    if DIR[id] and DIR[id].child then
-        id = DIR[id].dev.parentId
-    end
     if not DIR[id] then -- ToDo, should forward to remote devices
         QA.syslogerr("uiEvent","Unknown QA, ID:%s", id)
         return 

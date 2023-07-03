@@ -29,6 +29,9 @@ function QuickApp:onInit()
     function MyChild:turnOn()
         self:debug("Child turned on")
     end
+    function MyChild:turnOff()
+        self:debug("Child turned off")
+    end
 
     local child = MyChild{
         uid = 'x',
