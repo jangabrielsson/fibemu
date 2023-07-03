@@ -115,6 +115,7 @@ local COLORMAP = {
   white = "\027[37;1m",
   darkgrey = "\027[30;1m",
 }
+local colorEnd = '\027[0m'
 
 local fibColors = {
   ["SYS"] = 'brown', ["SYSERR"] = 'red', ["DEBUG"] = 'green', ["TRACE"] = 'blue', ["WARNING"] = 'orange',
@@ -144,14 +145,17 @@ function util.debug(flags, tag, str, typ)
   if flags.color then
     local txt_color = COLORMAP[(fibColors['TEXT'] or "black")]
     local typ_color = COLORMAP[(fibColors[typ] or "black")]
-    print(format("%s%s [%s%-6s%s] [%-7s]: %s",
+    local outstr = format("%s%s [%s%-6s%s] [%-7s]: %s%s",
       txt_color, os.date("[%d.%m.%Y] [%H:%M:%S]"),
       typ_color, typ, txt_color,
       tag,
-      str
-    ))
+      str,
+      colorEnd
+    )
+    io.write(outstr,"\r\n")
   else
     print(format("%s [%s] [%s]: %s", os.date("[%d.%m.%Y] [%H:%M:%S]"), typ, tag, str))
+    io.stdout:flush()
   end
 end
 
