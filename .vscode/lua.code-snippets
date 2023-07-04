@@ -1,0 +1,14 @@
+{
+    "QA headers": {
+        "prefix": "tqae",
+        "body": [
+            "--%%name=MyQA",
+            "--%%type=com.fibaro.binarySwitch",
+            "-- %%var=myVar:42,myVar2:43",
+            "-- %%file=lib/fibaroExtra.lua,fibaroExtra;",
+            "-- %%debug=refreshStates:true",
+            "$0"
+        ],
+        "description": "QA headers"
+    }
+}
