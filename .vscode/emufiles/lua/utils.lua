@@ -119,7 +119,7 @@ local colorEnd = '\027[0m'
 
 local fibColors = {
   ["SYS"] = 'brown', ["SYSERR"] = 'red', ["DEBUG"] = 'green', ["TRACE"] = 'blue', ["WARNING"] = 'orange',
-  ["ERROR"] = 'red', ['TEXT'] = 'black'
+  ["ERROR"] = 'red', ['TEXT'] = 'black', ['DARKTEXT'] = 'grey'
 }
 
 local function html2color(str, startColor, dflTxt)
@@ -152,10 +152,9 @@ function util.debug(flags, tag, str, typ)
       str,
       colorEnd
     )
-    io.write(outstr,"\r\n")
+    print(outstr)--io.write(outstr,"\r\n")
   else
     print(format("%s [%s] [%s]: %s", os.date("[%d.%m.%Y] [%H:%M:%S]"), typ, tag, str))
-    io.stdout:flush()
   end
 end
 

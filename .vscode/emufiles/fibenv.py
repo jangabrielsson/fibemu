@@ -126,12 +126,11 @@ class FibaroEnvironment:
                 'createWebSocket':lambda url,headers,cb: fibnet.LuaWebSocket(self,url,headers,cb),
                 'setLogLevel':setLogLevel,
             }
-            config['hooks'] = hooks
-            emulator = config['path'] + "lua/" + config['emulator']
-            f = self.lua.eval(f'function(config) loadfile("{emulator}")(config) end')
-            f(self.lua.table_from(config))
+            luapath = config['path'] + "lua/"
+            emulator = luapath + config['emulator']
+            f = self.lua.eval(f'function(config,hooks,path) loadfile("{emulator}")(config,hooks,path) end')
+            f(json.dumps(config),self.lua.table_from(hooks),luapath)
             QA = globals.QA
-            del config['hooks']
             self.DIR =globals.DIR
             self.QA = QA
             self.QA.addEvent = lambda e: self.addEvent(e)

@@ -1,5 +1,4 @@
-local pconfig = ...
-local luapath = pconfig.path .. "lua/"
+local pconfig,hooks,luapath = ...
 local function doload(fname) return dofile(luapath .. fname) end
 
 local RESTART_TIME = 5000 -- 5s wait before restarting QA
@@ -7,6 +6,8 @@ local RESTART_TIME = 5000 -- 5s wait before restarting QA
 doload("json.lua")
 doload("net.lua")
 doload("class.lua")
+
+pconfig = json.decode(pconfig)
 
 local util = doload("utils.lua")
 local devices = doload("device.lua")
@@ -37,8 +38,7 @@ local config = pconfig
 config.creds = util.basicAuthorization(config.user or "", config.password or "")
 
 config.lcl = config['local'] or false
-local pyhooks = config.hooks
-config.hooks = nil
+local pyhooks = hooks
 local clock = pyhooks.clock
 local luaType = function(obj)
     local t = type(obj)
@@ -64,7 +64,9 @@ files.init(config, libs)
 fakes.init(config, libs)
 util.init(config, libs)
 
---resources.refresh(true)
+for k,v in pairs(config.colors or {}) do util.fibColors[k] = v end
+
+if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['DARKTEXT'] end
 if not config.lcl then refreshStates.start() end
 
 function QA.syslog(typ, fmt, ...)
@@ -195,7 +197,7 @@ local function createEnvironment(id)
     env.fibaro.config = config
     env.fibaro.pyhooks = pyhooks
     env.fibaro.createDevice = fakes.createDevice
-    if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['TEXT'] or 'white' end
+    if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['DARKTEXT'] end
     return env
 end
 
