@@ -1,0 +1,33 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "download QA",
+            "type": "shell",
+            "command": "python3", 
+            "args": [
+              "${workspaceFolder}/.vscode/emufiles/fibtool.py", 
+              "qa", "get", 
+              "-id", "${input:QA_id}",
+              "-d","${input:path_id}",
+              "-t", "QA%ID_%Y_%N"
+            ]
+        }
+      ],
+      "inputs": [
+        {
+          "type": "promptString",
+          "id": "QA_id",
+          "description": "deviceId of QA from HC3 you want to download?",
+          "default": "-"
+        },
+        {
+          "type": "promptString",
+          "id": "path_id",
+          "description": "path where to store the QA",
+          "default": "test"
+        }
+      ]
+    }
