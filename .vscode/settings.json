@@ -7,5 +7,10 @@
     ],
     "Lua.diagnostics.disable": [
         "duplicate-set-field"
-    ]
+    ],
+    "Lua.workspace.library": [
+        "${workspace}/.vscode/emufiles/lspaddons"
+    ],
+    "Lua.hint.enable": true,
+    "Lua.workspace.checkThirdParty": false
 }
