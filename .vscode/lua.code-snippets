@@ -2,8 +2,8 @@
     "QA headers": {
         "prefix": "fibemu",
         "body": [
-            "--%%name=MyQA",
-            "--%%type=com.fibaro.binarySwitch",
+            "--%%name=${1:MyQA}",
+            "--%%type=com.fibaro.${2:binarySwitch}",
             "-- %%var=myVar:42,myVar2:43",
             "-- %%file=lib/fibaroExtra.lua,fibaroExtra;",
             "-- %%debug=refreshStates:true",
