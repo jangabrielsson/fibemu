@@ -1,6 +1,6 @@
 {
     "QA headers": {
-        "prefix": "tqae",
+        "prefix": "fibemu",
         "body": [
             "--%%name=MyQA",
             "--%%type=com.fibaro.binarySwitch",
@@ -9,6 +9,6 @@
             "-- %%debug=refreshStates:true",
             "$0"
         ],
-        "description": "QA headers"
+        "description": "QA headers for fibemu"
     }
 }
