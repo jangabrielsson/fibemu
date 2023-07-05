@@ -1,14 +1,17 @@
 import lupa
 from lupa import LuaRuntime
+import threading
 from threading import Thread
 from threading import Timer
+from threading import active_count
+import multiprocessing
 import logging
 import requests
 from requests import exceptions
 import queue
 from collections import deque
 import json
-import time, sys
+import time, sys, os
 from datetime import datetime
 import fibapi, fibnet
 
@@ -125,6 +128,7 @@ class FibaroEnvironment:
                 'createUDPSocket':lambda: fibnet.LuaUDPSocket(self),
                 'createWebSocket':lambda url,headers,cb: fibnet.LuaWebSocket(self,url,headers,cb),
                 'setLogLevel':setLogLevel,
+                'exit':lambda code: sys.exit(code)
             }
             luapath = config['path'] + "lua/"
             emulator = luapath + config['emulator']
@@ -142,7 +146,7 @@ class FibaroEnvironment:
                 self.postEvent({"type":"installQA","file":config['file2']})
             if config['file2']:
                 self.postEvent({"type":"installQA","file":config['file3']})
-            while True: # main loop, repeatadly call QA.dispatcher with events
+            while not QA.isDead: # main loop, repeatadly call QA.dispatcher with events
                 delay = QA.dispatcher()
                 # print(f"event: {delay}s", end='',file=sys.stderr)
                 try:
@@ -155,6 +159,7 @@ class FibaroEnvironment:
                         QA.onEvent(json.dumps(event[0]),event[1])
                     except Exception as e:
                         print(f"onEvent Error: {e}",file=sys.stderr)
-
-        self.thread = Thread(target=runner, args=())
+            print(f"Exit - threads left:{active_count()}",file=sys.stderr)
+            exit(0)
+        self.thread = Thread(target=runner,  args=())
         self.thread.start()

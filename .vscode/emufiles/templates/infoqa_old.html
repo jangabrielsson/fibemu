@@ -2,6 +2,7 @@
 {% block title %}Index{% endblock %}
 {% block head %}
     {{ super() }}
+    <link href="css/bootstrap-range.css" rel="stylesheet">
     <style>
     @media (min-width: 1200px) {
         .container{
@@ -13,38 +14,9 @@
         background-color: #f6f6f6;
         border-color: #c7c7c7;
     }
-    .form-range::-webkit-slider-thumb { 
-      background: #cdcccc;
-    }
-    .form-range::-moz-range-thumb {
-      background: #cdcccc;
-    }
-    .form-range::-ms-thumb {
-      background: #cdcccc;
-    }
-    @media (prefers-reduced-motion: reduce) {
-  .form-range::-webkit-slider-thumb {
-    -webkit-transition: none;
-    transition: none;
-  }
-}
- 
-.form-range::-webkit-slider-thumb:active {
-  background-color: #FF8000;
-}
- 
-.form-range::-webkit-slider-runnable-track {
-  width: 100%;
-  height: 0.5rem;
-  color: transparent;
-  cursor: pointer;
-  background-color: #a0a0a0;
-  border-color: transparent;
-  border-radius: 1rem;
- 
-}
+
     </style>
-    <link href="css/bootstrap-range.css" rel="stylesheet">
+    <script type='text/javascript' src="//cdnjs.cloudflare.com/ajax/libs/modernizr/2.8.2/modernizr.min.js"></script>
     <script>
         function btnClicker(id,elm,val) {
             fetch(`http://127.0.0.1:5004/emu/button/${id}/${elm}/${val}`)
@@ -83,15 +55,10 @@
               </button>
               {% endif %}
               {% if e.type == 'slider' %}
-                <output>{{e.value or 33}}</output>
-                <input type="range" class="form-range" 
-                id="customRange1"
-                tooltips="true"
-                min="{{e.min or 0}}"
-                max="{{e.max or 100}}"
-                value="{{e.value or 33}}"
-                oninput="this.previousElementSibling.value = this.value"
-                onmouseup='btnClicker({{qa.dev.id}},"{{e.slider}}",this.value)'>
+                <input id="ex1" data-id='ex1RangePicker' type="range" 
+                data-min="{{e.min or 0}}" data-max="{{e.max or 100}}" data-step="1" data-value="{{e.value or 33}}"
+                onmouseup='btnClicker({{qa.dev.id}},"{{e.slider}}",this.value)'
+                />
               {% endif %}
               {% if e.type == 'label' %}
               <div class="text-center">{{e.text}}</div>

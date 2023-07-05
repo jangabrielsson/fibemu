@@ -42,9 +42,11 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--init', help='init file')
     parser.add_argument('-e', '--emulator', help='emulator file', default='emu.lua')
     parser.add_argument('-b', "--stop", help='debuger break on load file', action='store_true')
+    parser.add_argument('-nw', '--noweb', help='no web api', action='store_true')
     parser.add_argument('-wp', '--wport', default=5004, help='port for web/api interface', type=int)
     parser.add_argument('-wh', '--whost', default='127.0.0.1', help='host for webserver')
     parser.add_argument('-wlv', '--web_log_level', default='warning', help='log level for webserver',choices=['debug', 'info', 'trace', 'warning', 'error', 'critical'])
+    parser.add_argument('-extra', '--extra', nargs='*', help='extra arguments for QA', default=[]) 
 
     args = parser.parse_args()
     config['local'] = args.local
@@ -62,7 +64,10 @@ if __name__ == "__main__":
     config['file2'] = args.file2 or None
     config['file3'] = args.file3 or None
     config['version'] = version
+    config['server'] = args.noweb
     config['path'] = ".vscode/emufiles/"
+    config['argv'] = sys.argv
+    config['extra'] = args.extra
 
     config['apiURL'] =  f"http://{config['whost']}:{config['wport']}/api"
     config['apiDocURL'] =  f"http://{config['whost']}:{config['wport']}/docs"
@@ -71,4 +76,7 @@ if __name__ == "__main__":
     f = FibaroEnvironment(config)
     fibapi.fibenv['fe'] = f
     f.run()
-    uvicorn.run("__init__:app", host=config['whost'], port=config['wport'], log_level=config['wlog'])
+    if not args.noweb:
+        uvicorn.run("__init__:app", host=config['whost'], port=config['wport'], log_level=config['wlog'])
+    else:
+        print("Web server disabled",file=sys.stderr)

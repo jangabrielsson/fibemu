@@ -264,6 +264,11 @@ local function runner(fc, id)
         log("Running '%s'", qf.name)
         local stat, err = pcall(qf.qa) -- Start QA
         if not stat then
+            if type(err)=='userdata' then
+                require("lldebugger").stop()
+                QA.isDead=true
+                return 
+            end
             logerr("Running '%s' - %s - restarting in 5s", qf.name, err)
             QA.restart(id, RESTART_TIME)
         end

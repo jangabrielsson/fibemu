@@ -79,11 +79,9 @@ local function installQA(fname, id)
         if stat then return res,true else return nil,false end
     end
 
+    local fileoffset = ""
     local chandler = {}
-    for i=1,20 do
-        local u = "u"..i
-        chandler[u]=chandler.u
-    end
+    function chandler.fileoffset(var, val, vars) fileoffset = val end
     function chandler.u(var, val, vars)
         vars.ui = vars.ui or {}
         local value,stat = eval(val)
@@ -93,8 +91,12 @@ local function installQA(fname, id)
             vars.ui[#vars.ui+1] = value
         end
     end
-    function chandler.name(var, val, vars) vars.name = val end
-    function chandler.type(var, val, vars) vars.type = val end
+    for i=1,20 do
+        local u = "u"..i
+        chandler[u]=chandler.u
+    end
+    function chandler.name(var, val, vars) vars.name = val:match('"(.-)"') or val end
+    function chandler.type(var, val, vars) vars.type = val:match('"(.-)"') or val end
     function chandler.allRemote(var, val, vars) vars.allRemote = eval(val)==true end
     function chandler.id(var, val, vars) vars.id = tonumber(val) end
     function chandler.proxy(var, val, vars) vars.proxy = tonumber(val) end
@@ -129,7 +131,7 @@ local function installQA(fname, id)
     end
     function chandler.file(var, val, vars) --%%file=path,name;
         local fn, qn = table.unpack(val:sub(1, -2):split(","))
-        vars.files[#vars.files + 1] = { fname = fn, name = qn, isMain=false, content = nil }
+        vars.files[#vars.files + 1] = { fname = fileoffset..fn, name = qn, isMain=false, content = nil }
     end
     function chandler.remote(var, val, vars)
         local typ,list = val:match("([%w_]-):(.+)")
@@ -145,7 +147,10 @@ local function installQA(fname, id)
             chandler[var](var, val, vars)
         else
             QA.syslogerr("install","%s - Unknown header variable '%s'", fname, var)
-        end
+        end 
+    end)
+    code:gsub("%-%-FILE:(.-)[\n\r]", function(val) --backward compatible
+        chandler.file('file', val, vars)
     end)
     table.insert(vars.files, { name='main', isMain=true, content = code, fname = fname })
 
