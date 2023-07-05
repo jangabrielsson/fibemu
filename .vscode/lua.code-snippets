@@ -10,5 +10,15 @@
             "$0"
         ],
         "description": "QA headers for fibemu"
+    },
+    "QA def": {
+        "prefix": "QA",
+        "body": [
+            "function QuickApp:onInit()",
+            "   self:debug('onInit',self.name,self.id)",
+            "end",
+            "$0"
+        ],
+        "description": "QA structure"
     }
 }
