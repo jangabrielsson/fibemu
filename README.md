@@ -1,6 +1,6 @@
 # fibemu
 
-Work-in-progress...
+More doc [here](https://forum.fibaro.com/topic/66394-visual-studio-code-vscode-for-quickapp-development/)
 
 Steps to run
 
