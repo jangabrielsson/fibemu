@@ -123,24 +123,6 @@
       },
       "breakInCoroutines": true,
       "ignorePatterns": ["^copas"]
-    },
-    {
-      "name": "Tool (remote, HC3 access)",    // For debugging QA lua file
-      "type": "lua-local",
-      "request": "launch",
-      "program": {
-        "command": "python3",
-        //"communication": "pipe"
-      },
-      "args": [
-        "${workspaceFolder}/.vscode/emufiles/__init__.py",
-        "-nw",
-        "-l",
-        "-i",
-        "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
-        "-extra",
-        "${file}"
-      ],
-    },
+    }
   ]
 }

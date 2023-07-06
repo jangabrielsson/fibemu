@@ -4,7 +4,7 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "download QA",
+            "label": "download QA.fqa",
             "type": "shell",
             "command": "python3", 
             "args": [
@@ -20,6 +20,24 @@
               "${input:QA_id}",
               "${input:path_id}"
             ]
+        },
+        {
+          "label": "download QA.lua",
+          "type": "shell",
+          "command": "python3", 
+          "args": [
+            "${workspaceFolder}/.vscode/emufiles/__init__.py",
+            "-nw",
+            "-l",
+            "-i",
+            "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
+            "-extra",
+            "${file}",
+            "qa", 
+            "download_split", 
+            "${input:QA_id}",
+            "${input:path_id}"
+          ]
         }
       ],
       "inputs": [
