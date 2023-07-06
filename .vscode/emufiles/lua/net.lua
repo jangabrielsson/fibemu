@@ -123,7 +123,7 @@ function net.TCPSocket(opts2)
     end
 
     function self2:write(data, opts)
-        data = string.byte(data,1,-1)
+        data = {string.byte(data,1,-1)}
         local err, sent = self.sock:send(data)
         if err == 0 and opts and opts.success then
             opts.success(sent)
