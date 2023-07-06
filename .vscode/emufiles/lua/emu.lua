@@ -50,7 +50,7 @@ QA.DIR = DIR
 local debugFlags = QA.debug
 debugFlags.color = true
 debugFlags.refresh = true
-fibaro = { pyhooks = pyhooks, debugFlags = debugFlags, fibemu = QA }
+fibaro = { pyhooks = pyhooks, debugFlags = debugFlags, fibemu = QA, config = config }
 
 local libs = { 
     devices = devices, resources = resources, files = files, refreshStates = refreshStates, lldebugger = lldebugger,
@@ -265,7 +265,7 @@ local function runner(fc, id)
         local stat, err = pcall(qf.qa) -- Start QA
         if not stat then
             if type(err)=='userdata' then
-                require("lldebugger").stop()
+                if lldebugger then lldebugger.stop() end
                 QA.isDead=true
                 return 
             end
@@ -332,15 +332,12 @@ end
 -- Simple call arguments so no need to encode as json
 
 function QA.runFile(fname)
-    local env = {}
-    for k,v in pairs(_G) do if v ~= _G then env[k] = v end end
-    for _, l in ipairs({ "json.lua", "class.lua", "fibaro.lua", "net.lua"}) do
-        local fn = luapath .. l
-        local stat, res = pcall(function() loadfile(fn, "t", env)() end)
-    end
-    env.fibaro.debugFlags = debugFlags
+    DIR[1] = { dev = { id = 1}, debug = { color = true }}
+    createEnvironment(1)
+    local env = DIR[1].env
     local stat, res = pcall(function() loadfile(fname, "t", env)() end)
-    if not stat then QA.syslogerr("initfile","Error: %s", res) end
+    if (not stat) and type(res) ~= "userdata" then QA.syslogerr("initfile","Error: %s", res) 
+    else QA.isDead=true end
 end
 
 function QA.install(fname, id)

@@ -8,11 +8,17 @@
             "type": "shell",
             "command": "python3", 
             "args": [
-              "${workspaceFolder}/.vscode/emufiles/fibtool.py", 
-              "qa", "get", 
-              "-id", "${input:QA_id}",
-              "-d","${input:path_id}",
-              "-t", "QA%ID_%Y_%N"
+              "${workspaceFolder}/.vscode/emufiles/__init__.py",
+              "-nw",
+              "-l",
+              "-i",
+              "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
+              "-extra",
+              "${file}",
+              "qa", 
+              "download_fqa", 
+              "${input:QA_id}",
+              "${input:path_id}"
             ]
         }
       ],

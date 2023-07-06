@@ -136,7 +136,7 @@
         "${workspaceFolder}/.vscode/emufiles/__init__.py",
         "-nw",
         "-l",
-        "-f",
+        "-i",
         "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
         "-extra",
         "${file}"

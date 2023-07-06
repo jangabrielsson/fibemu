@@ -144,7 +144,7 @@ class FibaroEnvironment:
                 self.postEvent({"type":"installQA","file":config['file1']})
             if config['file2']:
                 self.postEvent({"type":"installQA","file":config['file2']})
-            if config['file2']:
+            if config['file3']:
                 self.postEvent({"type":"installQA","file":config['file3']})
             while not QA.isDead: # main loop, repeatadly call QA.dispatcher with events
                 delay = QA.dispatcher()
