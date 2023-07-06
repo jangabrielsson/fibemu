@@ -43,6 +43,7 @@ if __name__ == "__main__":
     parser.add_argument('-e', '--emulator', help='emulator file', default='emu.lua')
     parser.add_argument('-b', "--stop", help='debuger break on load file', action='store_true')
     parser.add_argument('-nw', '--noweb', help='no web api', action='store_true')
+    parser.add_argument('-ng', "--nogreet", help='No emulator greet message', action='store_true')
     parser.add_argument('-wp', '--wport', default=5004, help='port for web/api interface', type=int)
     parser.add_argument('-wh', '--whost', default='127.0.0.1', help='host for webserver')
     parser.add_argument('-wlv', '--web_log_level', default='warning', help='log level for webserver',choices=['debug', 'info', 'trace', 'warning', 'error', 'critical'])
@@ -68,6 +69,7 @@ if __name__ == "__main__":
     config['path'] = ".vscode/emufiles/"
     config['argv'] = sys.argv
     config['extra'] = args.extra
+    config['nogreet'] = args.nogreet
 
     config['apiURL'] =  f"http://{config['whost']}:{config['wport']}/api"
     config['apiDocURL'] =  f"http://{config['whost']}:{config['wport']}/docs"

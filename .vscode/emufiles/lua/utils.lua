@@ -152,7 +152,7 @@ function util.debug(flags, tag, str, typ)
       str,
       colorEnd
     )
-    print(outstr)--io.write(outstr,"\r\n")
+    print(outstr) --io.write(outstr,"\r\n")
   else
     print(format("%s [%s] [%s]: %s", os.date("[%d.%m.%Y] [%H:%M:%S]"), typ, tag, str))
   end
@@ -209,7 +209,7 @@ end
 do -- Used for print device table structs - sortorder for device structs
   local sortKeys = {
     'id', 'name', 'roomID', 'type', 'baseType', 'enabled', 'visible', 'isPlugin', 'parentId', 'viewXml', 'configXml',
-    'interfaces', 'properties', 'view', 'actions', 'created', 'modified', 'sortOrder'
+    'interfaces', 'properties', 'view', 'actions', 'created', 'modified', 'sortOrder',
   }
   local sortOrder = {}
   for i, s in ipairs(sortKeys) do sortOrder[s] = "\n" .. string.char(i + 64) .. " " .. s end

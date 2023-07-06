@@ -4,13 +4,14 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "download QA.fqa",
+            "label": "QA, download fqa",
             "type": "shell",
             "command": "python3", 
             "args": [
               "${workspaceFolder}/.vscode/emufiles/__init__.py",
               "-nw",
               "-l",
+              "-ng",
               "-i",
               "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
               "-extra",
@@ -22,19 +23,20 @@
             ]
         },
         {
-          "label": "download QA.lua",
+          "label": "QA, download and unpack",
           "type": "shell",
           "command": "python3", 
           "args": [
             "${workspaceFolder}/.vscode/emufiles/__init__.py",
             "-nw",
             "-l",
+            "-ng",
             "-i",
             "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
             "-extra",
             "${file}",
             "qa", 
-            "download_split", 
+            "download_unpack", 
             "${input:QA_id}",
             "${input:path_id}"
           ]
@@ -51,7 +53,7 @@
           "type": "promptString",
           "id": "path_id",
           "description": "path where to store the QA",
-          "default": "test"
+          "default": "dev"
         }
       ]
     }

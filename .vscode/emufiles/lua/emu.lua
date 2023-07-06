@@ -56,6 +56,7 @@ local libs = {
     devices = devices, resources = resources, files = files, refreshStates = refreshStates, lldebugger = lldebugger,
     emu = QA, util = util, binser = doload("binser.lua"), ui = doload("ui.lua"),
 }
+QA.libs = libs
 
 devices.init(config, luapath.."devices.json", libs)
 resources.init(config, libs)
@@ -75,9 +76,11 @@ end
 
 ------- Greeting -----------------------------
 QA.syslog('boot',"Fibemu v%s",config.version)
-QA.syslog('boot',"Web UI : %s",config.webURL)
-QA.syslog('boot',"API Doc: %s",config.apiDocURL)
-QA.syslog('boot',"API EP : %s",config.apiURL)
+if not config.nogreet then
+    QA.syslog('boot',"Web UI : %s",config.webURL)
+    QA.syslog('boot',"API Doc: %s",config.apiDocURL)
+    QA.syslog('boot',"API EP : %s",config.apiURL)
+end
 ----------------------------------------------
 
 function QA.syslogerr(typ, fmt, ...)
@@ -122,7 +125,7 @@ local function createEnvironment(id)
 
     os.debug = debug
     local funs = {
-        "os", "pairs", "ipairs", "select", "print", "math", "string", "pcall", "xpcall", "table", "error",
+        "os", "io","pairs", "ipairs", "select", "print", "math", "string", "pcall", "xpcall", "table", "error",
         "next", "json", "tostring", "tonumber", "assert", "unpack", "utf8", "collectgarbage", "type",
         "setmetatable", "getmetatable", "rawset", "rawget", "coroutine" -- extra stuff
     }
@@ -541,4 +544,6 @@ function QA.dispatcher()
     return 0.5
 end
 
-QA.syslog("boot","QA emulator started")
+if not config.nogreet then
+    QA.syslog("boot","QA emulator started")
+end

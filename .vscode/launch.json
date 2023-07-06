@@ -123,6 +123,28 @@
       },
       "breakInCoroutines": true,
       "ignorePatterns": ["^copas"]
-    }
+    },
+    {
+      "name": "Debug task",    // For debugging QA lua file
+      "type": "lua-local",
+      "request": "launch",
+      "program": {
+        "command": "python3",
+      },
+      "args": [
+        "${workspaceFolder}/.vscode/emufiles/__init__.py",
+        "-nw",
+        "-l",
+        "-ng",
+        "-i",
+        "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
+        "-extra",
+        "${file}",
+        "qa", 
+        "download_unpack", 
+        "1110",
+        "dev"
+      ],
+    },
   ]
 }

@@ -22,8 +22,8 @@ local function callHC3(method, path, data, hc3)
     local port = hc3 and conf.port or conf.wport
     local creds = hc3 and conf.creds or nil
     local url = fmt("http://%s:%s/api%s", host, port, path)
-    if fibaro.debugFlags.hc3_http then 
-            fibaro.fibemu.syslog(__TAG or "HC3", "%s: %s", method, url)
+    if fibaro.debugFlags.hc3_http then
+        fibaro.fibemu.syslog(__TAG or "HC3", "%s: %s", method, url)
     end
     local options = {
         headers = {
@@ -100,7 +100,8 @@ function net.TCPSocket(opts2)
     function self2:read(opts) -- I interpret this as reading as much as is available...?
         local function cb(err, res)
             if err == 0 and opts and opts.success then
-                opts.success(res)
+                local msg = string.char(table.unpack(res))
+                opts.success(msg)
             elseif res == nil and opts and opts.error then
                 opts.error(err)
             end
@@ -112,7 +113,8 @@ function net.TCPSocket(opts2)
         assert(nil, "Not implemented")
         local function cb(res, err)
             if res and opts and opts.success then
-                opts.success(res)
+                local msg = string.char(table.unpack(res))
+                opts.success(msg)
             elseif res == nil and opts and opts.error then
                 opts.error(err)
             end
@@ -121,6 +123,7 @@ function net.TCPSocket(opts2)
     end
 
     function self2:write(data, opts)
+        data = string.byte(data,1,-1)
         local err, sent = self.sock:send(data)
         if err == 0 and opts and opts.success then
             opts.success(sent)
@@ -147,29 +150,35 @@ function net.UDPSocket(opts2)
         self2.sock:settimeout(self2.opts.timeout)
     end
 
-    function self2:bind(ip, port) 
-        local stat,err = self.sock:bind(ip, port) 
-        if stat ~= 0 then error(err,2) end
+    function self2:bind(ip, port)
+        local stat, err = self.sock:bind(ip, port)
+        if stat ~= 0 then error(err, 2) end
     end
 
     function self2:sendTo(datagram, ip, port, callbacks)
-        local stat, res = self.sock:sendto(datagram, ip, port)
-        if stat==0 and callbacks.success then
-            pcall(callbacks.success, res)
-        elseif stat == 1 and callbacks.error then
-            pcall(callbacks.error, res)
-        end
+        local stat, res = pcall(function()
+            local stat, res = self.sock:sendto({string.byte(datagram,1,-1)}, ip, port)
+            if stat == 0 and callbacks.success then
+                pcall(callbacks.success, res)
+            elseif stat == 1 and callbacks.error then
+                pcall(callbacks.error, res)
+            end
+        end)
+        if not stat then print("python socket",res) end
     end
 
     function self2:receive(callbacks)
+        print("CALL from receieve")
         local function cb(stat, res, ip, port)
-            if stat==0 and callbacks.success then
+            if stat == 0 and callbacks.success then
+                local msg = string.char(table.unpack(res))
                 pcall(callbacks.success, res, ip, port)
             elseif stat == 1 and callbacks.error then
                 pcall(callbacks.error, res)
             end
         end
         self.sock:recieve(createCB(cb))
+        print("BACK from receieve")
     end
 
     function self2:close() self.sock:close() end
@@ -311,10 +320,10 @@ function mqtt.Client.connect(uri, options)
     end
 
     --function client:acknowledge() end
-    local function DEBUG(a,b,c) end
+    local function DEBUG(a, b, c) end
     local function encode(t) return t and json.encode(t) or "nil" end
     local function safeJson(t) return t and json.encode(t) or "nil" end
-    
+
     _client:on {
         --{"type":2,"sp":false,"rc":0}
         connect = function(connack)

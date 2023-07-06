@@ -58,8 +58,8 @@ local function installFQA(fqa, id)
     return DIR[dev.id]
 end
 
-local function installQA(fname, id)
-    QA.syslog("install","QA '%s'", fname)
+local function installQA(fname, id, silent)
+    if not silent then QA.syslog("install","QA '%s'", fname) end
     local f = io.open(fname, "r")
     if not f then
         QA.syslogerr("install","File not found - %s", fname)
@@ -196,7 +196,7 @@ local function installQA(fname, id)
 
     for k,v in pairs(vars.debug) do emu.debug[k] = v end
 
-    resources.createDevice(dev)
+    if not silent then resources.createDevice(dev) end
     return DIR[id]
 end
 
