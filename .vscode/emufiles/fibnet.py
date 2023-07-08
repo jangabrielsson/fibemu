@@ -4,7 +4,7 @@ import requests_async
 import requests
 from requests import exceptions
 import asyncio
-import socket, errno, os
+import socket, errno, os, sys
 import websocket
 import paho.mqtt.client as mqtt
 import fibapi
@@ -90,6 +90,59 @@ class LuaTCPSocket:
             callCB(self.fibemu,cb,1,"not implemented")
         Thread(target=asyncio.run, args=(runner(),)).start()
 
+class LuaTCPSocketServer: ## should implement tcp server...
+    def __init__(self, fibemu):
+        self.fibemu = fibemu
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setblocking(False) 
+
+    def settimeout(self,value):
+        self.socket.settimeout(value/1000)
+        self.sock.setblocking(False) 
+
+    def connect(self, ip, port, cb):
+        async def runner():
+            loop = asyncio.get_running_loop()
+            try:
+                await loop.sock_connect(self.sock,(ip, port))
+                callCB(self.fibemu,cb,0,'connected')
+            except Exception as e:
+                callCB(self.fibemu,cb,1,str(e))
+        Thread(target=asyncio.run, args=(runner(),)).start()
+
+    def send(self,msg):
+        try:
+            msg = bytes(msg.values())
+            self.sock.sendall(msg)
+            return 0,len(msg)
+        except Exception as e:
+            return 1,"Bad file descriptor"
+
+    def close(self):
+        self.sock.close()
+
+    def recieve(self,cb):
+        async def runner():
+            loop = asyncio.get_running_loop()
+            try:
+                msg = await loop.sock_recv(self.sock,4096)
+                msg = list(msg)
+                if len(msg)==0:
+                    callCB(self.fibemu,cb,1,"End of file")
+                else:
+                    callCB(self.fibemu,cb,0,msg)
+            except socket.timeout:
+                callCB(self.fibemu,cb,1,"operation cancelled")
+            except Exception as e:
+                callCB(self.fibemu,cb,1,str(e))
+        Thread(target=asyncio.run, args=(runner(),)).start()
+
+    def receieveUntil(self,until,cb):
+        async def runner():
+            loop = asyncio.get_running_loop()
+            callCB(self.fibemu,cb,1,"not implemented")
+        Thread(target=asyncio.run, args=(runner(),)).start()
+
 class LuaUDPSocket:
     def __init__(self, fibemu):
         self.fibemu = fibemu
@@ -106,14 +159,26 @@ class LuaUDPSocket:
         self.sock.setblocking(False) 
     def setoption(self, option, flag):
         if option == "broadcast":
-            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, flag and 1)
-    def sendto(self, msg, ip, port):
-        try:
-            msg = bytes(msg.values())
-            self.sock.sendto(msg, (ip, port))
-            return 0,len(msg)
-        except Exception as e:
-            return 1,"Bad file descriptor"
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, flag and 1 or 0)
+        elif option == "reuseport":
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, flag and 1 or 0)
+        elif option == "reuseaddr":
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, flag and 1 or 0)
+        self.sock.setblocking(False)
+    async def _sendto(self, msg, ip, port, cb):
+            try:
+                loop = asyncio.get_running_loop()
+                # for b in msg.values():
+                #     print(f"{b:02x} ",end="", file=sys.stderr)
+                # print(file=sys.stderr)
+                msg = bytes(msg.values())
+                await loop.sock_sendto(self.sock, msg, (ip, port))
+                callCB(self.fibemu,cb,0,len(msg))
+            except Exception as e:
+                #print(str(e), file=sys.stderr)
+                callCB(self.fibemu,cb,1,"Bad file descriptor",str(e))
+    def sendto(self, msg, ip, port, cb):
+        Thread(target=asyncio.run, args=(self._sendto(msg,ip,port,cb),)).start()
     def close(self):
         self.sock.close()
     def recieve(self,cb):
@@ -180,7 +245,6 @@ class LuaMQTT:
         client.on_message = lambda client,userdata,msg: self.on_message(client, userdata, msg)
         self.client = client
 
-    #client.connect("mqtt.eclipseprojects.io", 1883, 60)
     def connect(self, url, port, keepalive):
         self.client.connect(url, port, keepalive)
         Thread(target=self.client.loop_forever).start()

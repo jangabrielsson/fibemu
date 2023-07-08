@@ -159,6 +159,7 @@ class FibaroEnvironment:
                         QA.onEvent(json.dumps(event[0]),event[1])
                     except Exception as e:
                         print(f"onEvent Error: {e}",file=sys.stderr)
+                time.sleep(0.001)
             print(f"Exit - threads left:{active_count()}",file=sys.stderr)
             exit(0)
         self.thread = Thread(target=runner,  args=())

@@ -385,7 +385,7 @@ end
 
 function QA.fun.debugMessages(arg)
     arg = json.decode(arg)
-    util.debug({ color = true }, arg.messageType, arg.message, arg.tag)
+    util.debug({ color = true }, arg.tag, arg.message, arg.messageType)
     return "OK",200
 end
 

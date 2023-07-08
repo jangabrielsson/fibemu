@@ -148,29 +148,35 @@ end
 function net.UDPSocket(opts2)
     local self2 = { opts = opts2 or {} }
     self2.sock = fibaro.pyhooks.createUDPSocket()
+    if tonumber(self2.opts.timeout) then
+        self2.sock:settimeout(self2.opts.timeout)
+    end
     if self2.opts.broadcast ~= nil then
         --self2.sock:bind("127.0.0.1", 0)
         self2.sock:setoption("broadcast", self2.opts.broadcast)
     end
-    if tonumber(self2.opts.timeout) then
-        self2.sock:settimeout(self2.opts.timeout)
+    if self2.opts.reuseport ~= nil then
+        --self2.sock:bind("127.0.0.1", 0)
+        self2.sock:setoption("reuseport", self2.opts.reuseport)
     end
-
+    if self2.opts.reuseaddrt ~= nil then
+        --self2.sock:bind("127.0.0.1", 0)
+        self2.sock:setoption("reuseaddr", self2.opts.reuseaddr)
+    end
     function self2:bind(ip, port)
         local stat, err = self.sock:bind(ip, port)
         if stat ~= 0 then error(err, 2) end
     end
 
     function self2:sendTo(datagram, ip, port, callbacks)
-        local stat, res = pcall(function()
-            local stat, res = self.sock:sendto({string.byte(datagram,1,-1)}, ip, port)
+        local function cb(stat,res,e)
             if stat == 0 and callbacks.success then
                 callback(callbacks.success, res)
             elseif stat == 1 and callbacks.error then
                 callback(callbacks.error, res)
             end
-        end)
-        if not stat then print("python socket",res) end
+        end
+        self.sock:sendto({string.byte(datagram,1,-1)}, ip, port, createCB(cb))
     end
 
     function self2:receive(callbacks)
