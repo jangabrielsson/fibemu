@@ -41,14 +41,22 @@ class LuaTCPSocket:
     def __init__(self, fibemu):
         self.fibemu = fibemu
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setblocking(False) 
+
     def settimeout(self,value):
         self.socket.settimeout(value/1000)
+        self.sock.setblocking(False) 
+
     def connect(self, ip, port, cb):
-        def runner():
-            err = self.sock.connect_ex((ip, port))
-            errstr = os.strerror(err)
-            callCB(self.fibemu,cb,err,errstr)
-        Thread(target=runner, args=()).run()
+        async def runner():
+            loop = asyncio.get_running_loop()
+            try:
+                await loop.sock_connect(self.sock,(ip, port))
+                callCB(self.fibemu,cb,0,'connected')
+            except Exception as e:
+                callCB(self.fibemu,cb,1,str(e))
+        Thread(target=asyncio.run, args=(runner(),)).start()
+
     def send(self,msg):
         try:
             msg = bytes(msg.values())
@@ -56,12 +64,15 @@ class LuaTCPSocket:
             return 0,len(msg)
         except Exception as e:
             return 1,"Bad file descriptor"
+
     def close(self):
         self.sock.close()
+
     def recieve(self,cb):
-        def runner():
+        async def runner():
+            loop = asyncio.get_running_loop()
             try:
-                msg = self.sock.recv(4096)
+                msg = await loop.sock_recv(self.sock,4096)
                 msg = list(msg)
                 if len(msg)==0:
                     callCB(self.fibemu,cb,1,"End of file")
@@ -69,16 +80,21 @@ class LuaTCPSocket:
                     callCB(self.fibemu,cb,0,msg)
             except socket.timeout:
                 callCB(self.fibemu,cb,1,"operation cancelled")
-        Thread(target=runner, args=()).run()
+            except Exception as e:
+                callCB(self.fibemu,cb,1,str(e))
+        Thread(target=asyncio.run, args=(runner(),)).start()
+
     def receieveUntil(self,until,cb):
-        def runner():
-            callCB(self.fibemu,cb,"")
-        Thread(target=runner, args=()).run()
+        async def runner():
+            loop = asyncio.get_running_loop()
+            callCB(self.fibemu,cb,1,"not implemented")
+        Thread(target=asyncio.run, args=(runner(),)).start()
 
 class LuaUDPSocket:
     def __init__(self, fibemu):
         self.fibemu = fibemu
         self.sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        self.sock.setblocking(False) 
     def bind(self, localIP, localPort):
         try:
             self.sock.bind((localIP, localPort))
@@ -87,6 +103,7 @@ class LuaUDPSocket:
             return 1,str(e)
     def settimeout(self,value):
         self.sock.settimeout(value/1000)
+        self.sock.setblocking(False) 
     def setoption(self, option, flag):
         if option == "broadcast":
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, flag and 1)
@@ -100,9 +117,10 @@ class LuaUDPSocket:
     def close(self):
         self.sock.close()
     def recieve(self,cb):
-        def runner():
+        async def runner():
             try:
-                msgFromServer, addr = self.sock.recvfrom(4096)
+                loop = asyncio.get_running_loop()
+                msgFromServer, addr = await loop.sock_recvfrom(self.sock,4096)
                 msg = list(msgFromServer)
                 if len(msg)==0:
                     callCB(self.fibemu,cb,1,"End of file")
@@ -110,7 +128,9 @@ class LuaUDPSocket:
                     callCB(self.fibemu,cb,0,msg,addr[0],addr[1])
             except socket.timeout:
                 callCB(self.fibemu,cb,1,"operation cancelled")
-        Thread(target=runner, args=()).run()
+            except Exception as e:
+                callCB(self.fibemu,cb,1,str(e))
+        Thread(target=asyncio.run, args=(runner(),)).start()
 
 class LuaWebSocket:
     #    websocket.enableTrace(True)

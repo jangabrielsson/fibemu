@@ -124,6 +124,7 @@ function tool.download_unpack(file,rsrc,id,path)
     local function outf(...) headers[#headers+1] = string.format(...) end
     outf("--%%%%name=%s",name)
     outf("--%%%%type=%s",typ)
+    outf("--%%%%id=%s",id)
     qa.UI = uilib.view2UI(fqa.initialProperties.viewLayout,fqa.initialProperties.uiCallbacks)
     for _,row in ipairs(qa.UI or {}) do
         outf("--%%%%u=%s",toLua(row))

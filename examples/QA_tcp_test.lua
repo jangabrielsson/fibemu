@@ -11,9 +11,9 @@ PORT = 8986
 local Event = {}
 local function post(ev,self) 
     self = self or {}
-    function self:post(ev) Event[ev.type](self,ev) end
+    function self:post(ev) setTimeout(function() Event[ev.type](self,ev) end, 0) end
     function self:debug(...) print(string.format(...)) end
-    Event[ev.type](self,ev) 
+    setTimeout(function() Event[ev.type](self,ev) end,0)
 end
 
 function Event:init(ev)
@@ -62,5 +62,6 @@ end
 function QuickApp:onInit()
     self:debug(self.name,self.id)
     post({type='init'}, {host="127.0.0.1",port=PORT})
+    --post({type='init'}, {host="127.0.0.1",port=PORT+1})
 end
 

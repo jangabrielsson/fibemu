@@ -78,6 +78,12 @@ function net.HTTPClient()
 end
 
 local function createCB(cb) return { callback = cb, id = plugin.mainDeviceId or -1 } end
+local function callback(f,...)
+    local stat,res = pcall(f,...)
+    if not stat then
+        fibaro.fibemu.syslogerr(__TAG, "netClient callback: %s", res)
+    end
+end
 
 function net.TCPSocket(opts2)
     local self2 = { opts = opts2 or {} }
@@ -89,9 +95,9 @@ function net.TCPSocket(opts2)
         for k, v in pairs(self.opts) do opts[k] = v end
         local function cb(err, errstr)
             if err == 0 and opts and opts.success then
-                opts.success()
+                callback(opts.success)
             elseif opts and opts.error then
-                opts.error(errstr)
+                callback(opts.error,errstr)
             end
         end
         self2.sock:connect(ip, port, createCB(cb))
@@ -101,9 +107,9 @@ function net.TCPSocket(opts2)
         local function cb(err, res)
             if err == 0 and opts and opts.success then
                 local msg = string.char(table.unpack(res))
-                opts.success(msg)
+                callback(opts.success,msg)
             elseif res == nil and opts and opts.error then
-                opts.error(err)
+                callback(opts.error,err)
             end
         end
         self2.sock:recieve(createCB(cb))
@@ -114,9 +120,9 @@ function net.TCPSocket(opts2)
         local function cb(res, err)
             if res and opts and opts.success then
                 local msg = string.char(table.unpack(res))
-                opts.success(msg)
+                callback(opts.success,msg)
             elseif res == nil and opts and opts.error then
-                opts.error(err)
+                callback(opts.error,err)
             end
         end
         self2.sock:recieveUntil(delimiter, createCB(cb))
@@ -126,9 +132,9 @@ function net.TCPSocket(opts2)
         data = {string.byte(data,1,-1)}
         local err, sent = self.sock:send(data)
         if err == 0 and opts and opts.success then
-            opts.success(sent)
+            setTimeout(function() callback(opts.success,sent) end,0)
         elseif err == 1 and opts and opts.error then
-            opts.error(sent)
+            setTimeout(function() callback(opts.error,sent) end,0)
         end
     end
 
@@ -159,26 +165,24 @@ function net.UDPSocket(opts2)
         local stat, res = pcall(function()
             local stat, res = self.sock:sendto({string.byte(datagram,1,-1)}, ip, port)
             if stat == 0 and callbacks.success then
-                pcall(callbacks.success, res)
+                callback(callbacks.success, res)
             elseif stat == 1 and callbacks.error then
-                pcall(callbacks.error, res)
+                callback(callbacks.error, res)
             end
         end)
         if not stat then print("python socket",res) end
     end
 
     function self2:receive(callbacks)
-        print("CALL from receieve")
         local function cb(stat, res, ip, port)
             if stat == 0 and callbacks.success then
                 local msg = string.char(table.unpack(res))
-                pcall(callbacks.success, res, ip, port)
+                callback(callbacks.success, msg, ip, port)
             elseif stat == 1 and callbacks.error then
-                pcall(callbacks.error, res)
+                callback(callbacks.error, res)
             end
         end
         self.sock:recieve(createCB(cb))
-        print("BACK from receieve")
     end
 
     function self2:close() self.sock:close() end

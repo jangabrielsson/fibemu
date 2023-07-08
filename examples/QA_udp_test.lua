@@ -14,7 +14,7 @@ function QuickApp:onInit()
         timeout = 10000
     })
     local stat,res = pcall(function()
-        self.udp:bind("127.0.0.1",PORT)
+        --self.udp:bind("127.0.0.1",PORT)
     end)
     if not stat then
         self:debug("Error binding",res)
@@ -35,7 +35,7 @@ function QuickApp:receiveData()
     print("Waiting for data")
     self.udp:receive({
     success = function(data, ip, port)
-        print("Recieved",data, ip, port)
+        print("Recieved",string.char(table.unpack(data)), ip, port)
         self:receiveData() -- will read next datagram
     end,
     error = function(error)
