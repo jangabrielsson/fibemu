@@ -31,9 +31,12 @@ def httpCall(method, url, options, data, local):
 def httpCallAsync(fibemu, method, url, options, data, local):
     ''' http call in separate thread and post back to lua '''
     def runner():
-        status, text, headers = httpCall(method, url, options, data, local)
-        headers = dict(headers)
-        fibemu.postEvent({"type":"luaCallback","args":[status,text,headers]}, extra=options)
+        try:
+            status, text, headers = httpCall(method, url, options, data, local)
+            headers = dict(headers)
+            fibemu.postEvent({"type":"luaCallback","args":[status,text,headers]}, extra=options)
+        except Exception as e:
+            fibemu.postEvent({"type":"luaCallback","args":[404,str(e)]}, extra=options)
     rthread = Thread(target=runner, args=())
     rthread.start()
 

@@ -124,6 +124,7 @@ local function createEnvironment(id)
     end
 
     os.debug = debug
+    os.dofile = dofile
     local funs = {
         "os", "io","pairs", "ipairs", "select", "print", "math", "string", "pcall", "xpcall", "table", "error",
         "next", "json", "tostring", "tonumber", "assert", "unpack", "utf8", "collectgarbage", "type",

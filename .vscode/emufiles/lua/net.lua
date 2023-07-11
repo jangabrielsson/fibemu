@@ -44,7 +44,7 @@ end
 
 function net.HTTPClient()
     local debugFlags = net._debugFlags or {}
-    return {
+    local self2 = {
         request = function(_, url, opts)
             if debugFlags.http and not url:match("/refreshStates") then
                 fibaro.fibemu.syslog(__TAG, "HTTPClient: %s", url)
@@ -75,6 +75,9 @@ function net.HTTPClient()
             return fibaro.pyhooks.httpAsync(options.method or "GET", url, opts, data, false)
         end
     }
+    local pstr = "HTTPClient object: " .. tostring(self2):match("%s(.*)")
+    setmetatable(self2, { __tostring = function(_) return pstr end })
+    return self2
 end
 
 local function createCB(cb) return { callback = cb, id = plugin.mainDeviceId or -1 } end
@@ -163,6 +166,10 @@ function net.UDPSocket(opts2)
         --self2.sock:bind("127.0.0.1", 0)
         self2.sock:setoption("reuseaddr", self2.opts.reuseaddr)
     end
+    function self2:setsockname(ip, port)
+        local stat, err = self.sock:setsockname(ip, port)
+        if stat ~= 0 then error(err, 2) end
+    end
     function self2:bind(ip, port)
         local stat, err = self.sock:bind(ip, port)
         if stat ~= 0 then error(err, 2) end
@@ -170,9 +177,9 @@ function net.UDPSocket(opts2)
 
     function self2:sendTo(datagram, ip, port, callbacks)
         local function cb(stat,res,e)
-            if stat == 0 and callbacks.success then
+            if callbacks and stat == 0 and callbacks.success then
                 callback(callbacks.success, res)
-            elseif stat == 1 and callbacks.error then
+            elseif callbacks and stat == 1 and callbacks.error then
                 callback(callbacks.error, res)
             end
         end
@@ -181,10 +188,10 @@ function net.UDPSocket(opts2)
 
     function self2:receive(callbacks)
         local function cb(stat, res, ip, port)
-            if stat == 0 and callbacks.success then
+            if callbacks and stat == 0 and callbacks.success then
                 local msg = string.char(table.unpack(res))
                 callback(callbacks.success, msg, ip, port)
-            elseif stat == 1 and callbacks.error then
+            elseif callbacks and stat == 1 and callbacks.error then
                 callback(callbacks.error, res)
             end
         end

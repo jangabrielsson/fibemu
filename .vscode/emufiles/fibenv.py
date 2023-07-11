@@ -78,9 +78,15 @@ class FibaroEnvironment:
                         if data.get('events'):
                             for event in data['events']:
                                 self.postEvent({"type":"refreshStates","event":event})
+                    elif resp.status_code == 401:
+                        print(f"HC3 credentials error",file=sys.stderr)
+                        print(f"Exiting refreshStates loop",file=sys.stderr)
+                        return
                 except exceptions.ConnectionError as e:
                     retries += 1
                     if retries > 5:
+                        print(f"Connection error Error: {nurl}",file=sys.stderr)
+                        print(f"Exiting refreshStates loop",file=sys.stderr)
                         return
                 except Exception as e:
                     print(f"Error: {e} {nurl}",file=sys.stderr)
