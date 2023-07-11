@@ -105,8 +105,10 @@ function QuickAppBase:setVariable(name,value)
 end
 
 function QuickAppBase:updateProperty(prop,val)
+  print("UPDATEPROP",json.encode({self.properties[prop],val}))
   __assert_type(prop,'string')
   if self.properties[prop] ~= val then
+    self.properties[prop] = val
     api.post("/plugins/updateProperty", {deviceId=self.id, propertyName=prop, value=val})
   end
 end
@@ -230,8 +232,16 @@ end
 function onUIEvent(id, event)
   print("UIEvent: ", json.encode(event))
   if quickApp.UIHandler then quickApp:UIHandler(event) return end
-  if quickApp.uiCallbacks[event.elementName] and quickApp.uiCallbacks[event.elementName][event.eventType] then 
-    quickApp:callAction(quickApp.uiCallbacks[event.elementName][event.eventType], event)
+  local QA = quickApp
+  if id ~= event.deviceId then
+    QA = QA.childDevices[event.deviceId]
+    if QA == nil then
+      quickApp:warning(string.format("Child with id:%s not found",id))
+      return
+    end
+  end
+  if QA.uiCallbacks[event.elementName] and QA.uiCallbacks[event.elementName][event.eventType] then 
+    QA:callAction(QA.uiCallbacks[event.elementName][event.eventType], event)
   else
     quickApp:warning(string.format("UI callback for element:%s not found.", event.elementName))
   end 
