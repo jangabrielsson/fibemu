@@ -129,6 +129,11 @@ local function installQA(fname, id, silent)
             end
         end
     end
+    function chandler.interface(var, val, vars) --%%interface=x,y,z
+        for _,ifc in ipairs(val:split(",")) do
+            vars.interfaces[ifc] = true
+        end
+    end
     function chandler.file(var, val, vars) --%%file=path,name;
         local fn, qn = table.unpack(val:sub(1, -2):split(","))
         vars.files[#vars.files + 1] = { fname = fileoffset..fn, name = qn, isMain=false, content = nil }
@@ -141,7 +146,7 @@ local function installQA(fname, id, silent)
         vars.remote[typ] = append(vars.remote[typ], items)
     end
 
-    local vars = { files = {}, writes = {}, remote = {}, debug= {}, qvars={} }
+    local vars = { files = {}, writes = {}, remote = {}, debug= {}, qvars={}, interfaces={} }
     code:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
         if chandler[var] then
             chandler[var](var, val, vars)
@@ -154,6 +159,7 @@ local function installQA(fname, id, silent)
     end)
     table.insert(vars.files, { name='main', isMain=true, content = code, fname = fname })
 
+    local definedId = vars.id
     if vars.id == nil then vars.id = resources.nextRsrcId() end
     id = vars.id
 
@@ -173,7 +179,10 @@ local function installQA(fname, id, silent)
     local qvars = {}
     for k,v in pairs(vars.qvars or {}) do qvars[#qvars+1] = {name=k, value=v} end
     dev.properties.quickAppVariables = qvars
-    dev.interfaces = {}
+    vars.interfaces['quickApp'] = true
+    local ifs = {}
+    for i,_ in pairs(vars.interfaces) do ifs[#ifs+1] = i end
+    dev.interfaces = ifs
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id
 
@@ -192,6 +201,7 @@ local function installQA(fname, id, silent)
         remotes = vars.remote, allRemote = vars.allRemote, 
         UI = uiStruct or {},
         uiMap = uiMap or {},
+        definedId = definedId,
     }
 
     for k,v in pairs(vars.debug) do emu.debug[k] = v end
@@ -299,8 +309,8 @@ end
 local function getQAfiles(id,name)
     if not DIR[id] then return nil,404 end
     if name == nil then
-        local res
-        for f in ipairs(DIR[id].files) do
+        local res = {}
+        for _,f in ipairs(DIR[id].files) do
             res[#res+1]={name=f.name,content=nil,type='lua',isOpen=false,isMain=f.isMain}
         end
         return res,200

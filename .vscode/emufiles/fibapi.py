@@ -517,7 +517,7 @@ class QAFileSpec(BaseModel):
 
 @app.post("/api/quickApp/{id}/files", tags=["QuickApp methods"])
 async def create_QuickApp_Files(id: int, file: QAFileSpec, response: Response):
-    f,code = fibenv.get('fe').luaCall("setQAfiles",id,json.dumps(file.__dict__))
+    f,code = fibenv.get('fe').luaCall("setQAfiles",id,file.json())
     response.status_code = code
     return f if code < 300 else None
 
@@ -528,14 +528,15 @@ async def get_QuickApp_File(id: int, name: str, response: Response):
     return f if code < 300 else None
 
 @app.put("/api/quickApp/{id}/files/{name}", tags=["QuickApp methods"])
-async def modify_QuickApp_File(id: int, name: str,response: Response):
-    f,code = fibenv.get('fe').luaCall("setQAfiles",id,name)
+async def modify_QuickApp_File(id: int, name: str, file: QAFileSpec, response: Response):
+    f,code = fibenv.get('fe').luaCall("setQAfiles",id,name,file.json())
     response.status_code = code
     return f if code < 300 else None
 
 @app.put("/api/quickApp/{id}/files", tags=["QuickApp methods"])
-async def modify_QuickApp_Files(id: int, response: Response):
-    f,code = fibenv.get('fe').luaCall("setQAfiles",id)
+async def modify_QuickApp_Files(id: int, args: List[QAFileSpec], response: Response):
+    files = [f.__dict__ for f in args]
+    f,code = fibenv.get('fe').luaCall("setQAfiles",id,json.dumps(files))
     response.status_code = code
     return f if code < 300 else None
 

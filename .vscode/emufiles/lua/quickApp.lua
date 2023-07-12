@@ -105,7 +105,6 @@ function QuickAppBase:setVariable(name,value)
 end
 
 function QuickAppBase:updateProperty(prop,val)
-  print("UPDATEPROP",json.encode({self.properties[prop],val}))
   __assert_type(prop,'string')
   if self.properties[prop] ~= val then
     self.properties[prop] = val

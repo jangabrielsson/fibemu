@@ -10,46 +10,46 @@ local rsrc = fibaro.config.extra[2]
 local cmd = fibaro.config.extra[3]
 local name = fibaro.config.extra[4]
 local path = fibaro.config.extra[5]
-local function printf(fmt,...) print(string.format(fmt,...)) end
-local function printerrf(fmt,...) fibaro.error(__TAG,string.format(fmt,...)) end
-__TAG="fibtool"
+local function printf(fmt, ...) print(string.format(fmt, ...)) end
+local function printerrf(fmt, ...) fibaro.error(__TAG, string.format(fmt, ...)) end
+__TAG = "fibtool"
 
 local tool = {}
-function tool.download_fqa(file,rsrc,name,path)
-    printf("Downloading fqa %s to %s",name,path)
-    local fqa,code = api.get("/quickApp/export/"..name,"hc3")
+function tool.download_fqa(file, rsrc, name, path)
+    printf("Downloading fqa %s to %s", name, path)
+    local fqa, code = api.get("/quickApp/export/" .. name, "hc3")
     if not fqa then
-        printf("Error downloading fqa: %s",code)
+        printf("Error downloading fqa: %s", code)
         return
     end
     local name = fqa.name or "QA"
-    name = name:gsub("(%s+)","_")
-    local fname = path.."/"..name..".fqa"
+    name = name:gsub("(%s+)", "_")
+    local fname = path .. "/" .. name .. ".fqa"
 
-    local stat,res = pcall(function()
-        local f,err = io.open(fname,"w")
+    local stat, res = pcall(function()
+        local f, err = io.open(fname, "w")
         if not f then
-            printerrf("Error opening %s: %s",fname,err)
+            printerrf("Error opening %s: %s", fname, err)
             return
         end
         f:write(json.encode(fqa))
-        printf("Saved %s",fname)
+        printf("Saved %s", fname)
     end)
     if not stat then
-        printf("Error saving fqa: %s",res)
+        printf("Error saving fqa: %s", res)
     end
     return true
 end
 
-local function writeFile(fname,content,silent)
-    local f = io.open(fname,"w")
+local function writeFile(fname, content, silent)
+    local f = io.open(fname, "w")
     if not f then
-        printerrf("Error opening %s: %s",fname,err)
+        printerrf("Error opening %s: %s", fname, err)
         return nil
     end
     f:write(content)
     f:close()
-    if not silent then printf("Wrote %s",fname) end
+    if not silent then printf("Wrote %s", fname) end
     return true
 end
 
@@ -63,33 +63,33 @@ local sortKeys = {
 local sortOrder = {}
 for i, s in ipairs(sortKeys) do sortOrder[s] = "\n" .. string.char(i + 64) .. " " .. s end
 local function keyCompare(a, b)
-  local av, bv = sortOrder[a] or a, sortOrder[b] or b
-  return av < bv
+    local av, bv = sortOrder[a] or a, sortOrder[b] or b
+    return av < bv
 end
 
 local function toLua(t)
-    if type(t)=='table' and t[1] then
+    if type(t) == 'table' and t[1] then
         local res = {}
-        for _,v in ipairs(t) do
-            res[#res+1] = toLua(v)
+        for _, v in ipairs(t) do
+            res[#res + 1] = toLua(v)
         end
-        return "{"..table.concat(res,",").."}"
+        return "{" .. table.concat(res, ",") .. "}"
     else
-        local res,keys = {},{}
-        for k,_ in pairs(t) do keys[#keys+1] = k end
-        table.sort(keys,keyCompare)
-        for _,k in ipairs(keys) do
-            res[#res+1] = string.format('%s="%s"',k,t[k])
+        local res, keys = {}, {}
+        for k, _ in pairs(t) do keys[#keys + 1] = k end
+        table.sort(keys, keyCompare)
+        for _, k in ipairs(keys) do
+            res[#res + 1] = string.format('%s="%s"', k, t[k])
         end
-        return "{"..table.concat(res,",").."}"
+        return "{" .. table.concat(res, ",") .. "}"
     end
 end
 
-function tool.download_unpack(file,rsrc,id,path)
-    printf("Downloading QA %s to %s",name,path)
-    local fqa,code = api.get("/quickApp/export/"..id,"hc3")
+function tool.download_unpack(file, rsrc, id, path)
+    printf("Downloading QA %s to %s", name, path)
+    local fqa, code = api.get("/quickApp/export/" .. id, "hc3")
     if not fqa then
-        printerrf("Downloading fqa %s: %s",id,code)
+        printerrf("Downloading fqa %s: %s", id, code)
         return true
     end
     local name = fqa.name or "QA"
@@ -98,60 +98,169 @@ function tool.download_unpack(file,rsrc,id,path)
     local props = fqa.initialProperties
     local interfaces = fqa.initialInterfaces
 
-    local fname = name:gsub("(%s+)","_")
+    local fname = name:gsub("(%s+)", "_")
 
-    local files,main = {},""
-    for _,f in ipairs(fqa.files) do
-        files[f.name] = {code = f.content, fname = path.."/"..fname.."_"..f.name..".lua"}
+    local files, main = {}, ""
+    for _, f in ipairs(fqa.files) do
+        files[f.name] = { code = f.content, fname = path .. "/" .. fname .. "_" .. f.name .. ".lua" }
         if f.isMain then
             main = f.name
         end
     end
     local mainFD = files[main]
-    files[main]=nil
+    files[main] = nil
 
-    for qname,fd in pairs(files) do
-        if not writeFile(fd.fname,fd.code) then return true end
+    for qname, fd in pairs(files) do
+        if not writeFile(fd.fname, fd.code) then return true end
     end
 
-    local mainFname = path.."/"..fname..".lua"
-    if not writeFile(mainFname,mainFD.code,true) then return true end
+    local mainFname = path .. "/" .. fname .. ".lua"
+    if not writeFile(mainFname, mainFD.code, true) then return true end
 
     local flib = fibaro.fibemu.libs.files
     local uilib = fibaro.fibemu.libs.ui
-    local qa = flib.installQA(mainFname,nil,true)
-    local headers={}
-    local function outf(...) headers[#headers+1] = string.format(...) end
-    outf("--%%%%name=%s",name)
-    outf("--%%%%type=%s",typ)
-    outf("--%%%%id=%s",id)
-    qa.UI = uilib.view2UI(fqa.initialProperties.viewLayout,fqa.initialProperties.uiCallbacks)
-    for _,row in ipairs(qa.UI or {}) do
-        outf("--%%%%u=%s",toLua(row))
+    local qa = flib.installQA(mainFname, nil, true)
+    local headers = {}
+    local function outf(...) headers[#headers + 1] = string.format(...) end
+    outf("--%%%%name=%s", name)
+    outf("--%%%%type=%s", typ)
+    outf("--%%%%id=%s", id)
+    qa.UI = uilib.view2UI(fqa.initialProperties.viewLayout, fqa.initialProperties.uiCallbacks)
+    for _, row in ipairs(qa.UI or {}) do
+        outf("--%%%%u=%s", toLua(row))
     end
-    for n,fd in pairs(files) do
-        outf("--%%%%file=%s,%s;",fd.fname,n)
+    for n, fd in pairs(files) do
+        outf("--%%%%file=%s,%s;", fd.fname, n)
     end
-    local theaders = table.concat(headers,"\n")
-    mainFD.code = theaders.."\n"..mainFD.code.."\n\n"..mainFD.code
-    if not writeFile(mainFname,mainFD.code) then return true end
+    local theaders = table.concat(headers, "\n")
+    mainFD.code = theaders .. "\n" .. mainFD.code .. "\n\n" .. mainFD.code
+    if not writeFile(mainFname, mainFD.code) then return true end
     return true
 end
 
-function tool.upload(file,rsrc,name,path)
+function tool.upload(file, rsrc, name, path)
+    if name == '.' then name = file end
+    local flib = fibaro.fibemu.libs.files
+    local qa = flib.installQA(name, nil, true)
+    local dev = qa.dev
+    local files = qa.files
+    local function readContent(fname)
+        local f, err = io.open(fname, "r")
+        if not f then
+            printerrf("Error opening %s: %s", fname, err)
+            return nil
+        end
+        local content = f:read("*a")
+        f:close()
+        return content
+    end
+    for _, f in ipairs(files) do
+        f.content = readContent(f.fname)
+        f.fname = nil
+        f.isOpen = false
+        f.type = "lua"
+    end
+    local props = {
+        apiVersion = "1.2",
+        quickAppVariables = dev.properties.quickAppVariables or {},
+        uiCallbacks = dev.properties.uiCallbacks,
+        viewLayout = dev.properties.viewLayout,
+        typeTemplateInitialized = true,
+    }
+    local fqa = {
+        apiVersion = "1.2",
+        name = dev.name,
+        type = dev.type,
+        files = files,
+        initialProperties = props,
+        initialInterfaces = dev.interfaces,
+    }
+    local stat, res = api.post("/quickApp/", fqa, "hc3")
+    if not stat then
+        printerrf("Error uploading QA: %s", res)
+        return true
+    else
+        printf("Uploaded QA %s", stat.id)
+    end
 end
 
-function tool.package(file,rsrc,name,path)
+function tool.update(file, rsrc, name, path)
+    if name == '.' then name = file end
+    local flib = fibaro.fibemu.libs.files
+    local qa = flib.installQA(name, nil, true)
+    if not qa.definedId then
+        printerrf("QA need to define --%%id=<HC3ID>\nso we know what QA to update on HC3")
+        return true
+    end
+    local id = qa.definedId
+    local dev = qa.dev
+    local files = qa.files
+    local function readContent(fname)
+        local f, err = io.open(fname, "r")
+        if not f then
+            printerrf("Error opening %s: %s", fname, err)
+            return nil
+        end
+        local content = f:read("*a")
+        f:close()
+        return content
+    end
+    for _, f in ipairs(files) do
+        f.content = readContent(f.fname)
+        f.fname = nil
+        f.isOpen = false
+        f.type = "lua"
+    end
+    local currFiles = api.get("/quickApp/" .. id .. "/files", "hc3")
+    if not currFiles then
+        printerrf("Error getting QA files for id:%s", id)
+        return true
+    end
+    local oldMap, newMap = {}, {}
+    for _, f in ipairs(currFiles) do oldMap[f.name] = f end
+    for _, f in ipairs(files) do newMap[f.name] = f end
+    for newF, d in pairs(newMap) do
+        if not oldMap[newF] then
+            local stat, res = api.post("/quickApp/" .. id .. "/files", d, "hc3")
+            if not stat then
+                printerrf("Error creating QA file %s: %s", newF, res)
+                return true
+            end
+        end
+    end
+    local stat, res = api.put("/quickApp/" .. id .. "/files", files, "hc3")
+    if not stat then
+        printerrf("Error updating QA files %s", res)
+        return true
+    end
+    for oldF, _ in pairs(oldMap) do
+        if not newMap[oldF] then
+            api.delete("/quickApp/" .. id .. "/files/" .. oldF, "hc3")
+        end
+    end
+    --local stat,res = api.put("/plugin/updateProperty")
+    local stat, res = api.put("/devices/" .. id, {
+        properties = {
+            uiCallbacks = dev.properties.uiCallbacks,
+            viewLayout = dev.properties.viewLayout,
+            quickAppVariables = dev.properties.quickAppVariables,
+        }
+    }, "hc3")
+    if not stat then
+        printerrf("Error updating QA props %s", res)
+        return true
+    end
+    printf("QA %s updated", id)
 end
 
 if not tool[cmd] then
-    fibaro.debug("fibtool","Unknown command: "..cmd)
+    fibaro.debug("fibtool", "Unknown command: " .. cmd)
 else
-    local stat,res = pcall(tool[cmd],file,rsrc,name,path)
-    if not stat then 
-        fibaro.error("fibtool","Error: "..res)
+    local stat, res = pcall(tool[cmd], file, rsrc, name, path)
+    if not stat then
+        fibaro.error("fibtool", "Error: " .. tostring(res))
     elseif res ~= true then
-        fibaro.debug("fibtool","Success")
+        fibaro.debug("fibtool", "Success")
     end
 end
 fibaro.pyhooks.exit(0)

@@ -422,7 +422,7 @@ end
 function r.createDevice(d) return r.createResource("devices", d) end
 
 function r.updateDeviceProp(d, remote)
-    arg = type(d) == 'string' and json.decode(d) or d
+    local arg = type(d) == 'string' and json.decode(d) or d
     initr("devices")
     local id = arg.deviceId or arg.id
     if remote then
@@ -439,6 +439,10 @@ function r.updateDeviceProp(d, remote)
         api.put("/devices/" .. id, { properties = { [prop] = newValue } }, "hc3")
         d.properties[prop] = newValue
         return nil, 200
+    else
+        if QA.DIR[id] then
+            QA.DIR[id].dev.properties[prop] = newValue
+        end
     end
     local oldValue = d.properties[prop]
     d.properties[prop] = newValue

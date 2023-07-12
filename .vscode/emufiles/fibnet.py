@@ -25,8 +25,11 @@ def httpCall(method, url, options, data, local):
             res = req.post(url, headers = headers, data = data)
         case 'DELETE':
             res = req.delete(url, headers = headers, data = data)
-    res = asyncio.run(res) if local else res
-    return res.status_code, res.text , res.headers
+    try:
+        res = asyncio.run(res) if local else res
+        return res.status_code, res.text , res.headers
+    except Exception as e:
+        return 500, str(e), {}
 
 def httpCallAsync(fibemu, method, url, options, data, local):
     ''' http call in separate thread and post back to lua '''
