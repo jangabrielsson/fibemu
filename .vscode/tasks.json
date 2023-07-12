@@ -1,29 +1,10 @@
 {
-    // See https://go.microsoft.com/fwlink/?LinkId=733558
-    // for the documentation about the tasks.json format
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "QA, download fqa",
-            "type": "shell",
-            "command": "python3", 
-            "args": [
-              "${workspaceFolder}/.vscode/emufiles/__init__.py",
-              "-nw",
-              "-l",
-              "-ng",
-              "-i",
-              "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
-              "-extra",
-              "${file}",
-              "qa", 
-              "download_fqa", 
-              "${input:QA_id}",
-              "${input:path_id}"
-            ]
-        },
-        {
-          "label": "QA, download and unpack",
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+      {
+          "label": "QA, download fqa",
           "type": "shell",
           "command": "python3", 
           "args": [
@@ -36,24 +17,85 @@
             "-extra",
             "${file}",
             "qa", 
-            "download_unpack", 
+            "download_fqa", 
             "${input:QA_id}",
             "${input:path_id}"
           ]
-        }
-      ],
-      "inputs": [
-        {
-          "type": "promptString",
-          "id": "QA_id",
-          "description": "deviceId of QA from HC3 you want to download?",
-          "default": "-"
-        },
-        {
-          "type": "promptString",
-          "id": "path_id",
-          "description": "path where to store the QA",
-          "default": "dev"
-        }
-      ]
-    }
+      },
+      {
+        "label": "QA, download and unpack",
+        "type": "shell",
+        "command": "python3", 
+        "args": [
+          "${workspaceFolder}/.vscode/emufiles/__init__.py",
+          "-nw",
+          "-l",
+          "-ng",
+          "-i",
+          "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
+          "-extra",
+          "${file}",
+          "qa", 
+          "download_unpack", 
+          "${input:QA_id}",
+          "${input:path_id}"
+        ]
+      },
+      {
+        "label": "QA, upload",
+        "type": "shell",
+        "command": "python3", 
+        "args": [
+          "${workspaceFolder}/.vscode/emufiles/__init__.py",
+          "-nw",
+          "-l",
+          "-ng",
+          "-i",
+          "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
+          "-extra",
+          "${file}",
+          "qa", 
+          "upload", 
+          "${input:QA_name}"
+        ]
+      },
+      {
+        "label": "QA, update",
+        "type": "shell",
+        "command": "python3", 
+        "args": [
+          "${workspaceFolder}/.vscode/emufiles/__init__.py",
+          "-nw",
+          "-l",
+          "-ng",
+          "-i",
+          "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
+          "-extra",
+          "${file}",
+          "qa", 
+          "update", 
+          "${input:QA_name}"
+        ]
+      }
+    ],
+    "inputs": [
+      {
+        "type": "promptString",
+        "id": "QA_id",
+        "description": "deviceId of QA from HC3 you want to download?",
+        "default": "-"
+      },
+      {
+        "type": "promptString",
+        "id": "path_id",
+        "description": "path where to store the QA",
+        "default": "dev"
+      },
+      {
+        "type": "promptString",
+        "id": "QA_name",
+        "description": "'.' for open file, or QA path name",
+        "default": "."
+      }
+    ]
+  }

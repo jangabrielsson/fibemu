@@ -431,6 +431,7 @@ function r.updateDeviceProp(d, remote)
     end
     local prop = arg.propertyName
     local newValue = arg.value
+    --print("DDD1",json.encode(d),tostring(QA.DIR[id].dev.properties[prop]))
     if rsrcs.devices[id] == nil then return nil, 404 end
     local d = rsrcs.devices[id]
     if d.properties[prop] == newValue then return nil, 200 end
@@ -440,6 +441,7 @@ function r.updateDeviceProp(d, remote)
         d.properties[prop] = newValue
         return nil, 200
     else
+        --print("DDD2",json.encode(d),tostring(QA.DIR[id].dev.properties[prop]),tostring(newValue))
         if QA.DIR[id] then
             QA.DIR[id].dev.properties[prop] = newValue
         end
