@@ -221,6 +221,7 @@ function tool.update(file, rsrc, name, path)
     for _, f in ipairs(files) do newMap[f.name] = f end
     for newF, d in pairs(newMap) do
         if not oldMap[newF] then
+            printf("Creating file %s", newF)
             local stat, res = api.post("/quickApp/" .. id .. "/files", d, "hc3")
             if not stat then
                 printerrf("Error creating QA file %s: %s", newF, res)
@@ -228,6 +229,7 @@ function tool.update(file, rsrc, name, path)
             end
         end
     end
+    printf("Updating existing files")
     local stat, res = api.put("/quickApp/" .. id .. "/files", files, "hc3")
     if not stat then
         printerrf("Error updating QA files %s", res)
@@ -235,10 +237,11 @@ function tool.update(file, rsrc, name, path)
     end
     for oldF, _ in pairs(oldMap) do
         if not newMap[oldF] then
+            printf("Deleting file %s", oldF)
             api.delete("/quickApp/" .. id .. "/files/" .. oldF, "hc3")
         end
     end
-    --local stat,res = api.put("/plugin/updateProperty")
+    printf("Updating quickAppVariables, viewLayout, and uiCallbacks...")
     local stat, res = api.put("/devices/" .. id, {
         properties = {
             uiCallbacks = dev.properties.uiCallbacks,
