@@ -1,7 +1,29 @@
 local config, resources, devices, lldebugger = nil, nil, nil, nil
-local libs,exports,emu,ui = nil, nil,nil,nil
-local copy,merge,append
-local QA,DIR
+local libs, exports, emu, ui = nil, nil, nil, nil
+local copy, merge, append
+local QA, DIR
+
+local function base64encode(data)
+    local bC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+    return ((data:gsub('.', function(x)
+        local r, b = '', x:byte()
+        for i = 8, 1, -1 do r = r .. (b % 2 ^ i - b % 2 ^ (i - 1) > 0 and '1' or '0') end
+        return r;
+    end) .. '0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
+        if (#x < 6) then return '' end
+        local c = 0
+        for i = 1, 6 do c = c + (x:sub(i, i) == '1' and 2 ^ (6 - i) or 0) end
+        return bC:sub(c + 1, c + 1)
+    end) .. ({ '', '==', '=' })[#data % 3 + 1])
+end
+
+local function getSize(b)
+    local buf = {}
+    for i = 1, 8 do buf[i] = b:byte(16 + i) end
+    local width = (buf[1] << 24) + (buf[2] << 16) + (buf[3] << 8) + (buf[4] << 0)
+    local height = (buf[5] << 24) + (buf[6] << 16) + (buf[7] << 8) + (buf[8] << 0);
+    return width, height
+end
 
 local function init(conf, libs2)
     libs = libs2
@@ -11,58 +33,65 @@ local function init(conf, libs2)
     devices = libs.devices
     lldebugger = libs.lldebugger
     emu = libs.emu
-    QA,DIR = emu,emu.DIR
-    copy,merge,append = libs.util.copy,libs.util.merge,libs.util.append
+    QA, DIR = emu, emu.DIR
+    copy, merge, append = libs.util.copy, libs.util.merge, libs.util.append
     for name, fun in pairs(exports) do QA.fun[name] = fun end -- export file functions
 end
 
 local function annotateUI(UI)
-    local res,map = {},{}
-    for _,e in ipairs(UI) do
-        if e[1]==nil then e = {e} end
-        for _,e2 in ipairs(e) do
-            e2.type=e2.button and 'button' or e2.slider and 'slider' or e2.label and 'label'
+    local res, map = {}, {}
+    for _, e in ipairs(UI) do
+        if e[1] == nil then e = { e } end
+        for _, e2 in ipairs(e) do
+            e2.type = e2.button and 'button' or e2.slider and 'slider' or e2.label and 'label'
             map[e2[e2.type]] = e2
         end
-        res[#res+1]= e
+        res[#res + 1] = e
     end
-    return res,map
+    return res, map
 end
 
 local function installFQA(fqa, id)
-    QA.syslog("install","FQA '%s'", fqa.name)
+    QA.syslog("install", "FQA '%s'", fqa.name)
     local dev = devices.getDeviceStruct(fqa.type)
     if dev == nil then
-        QA.syslogerr("install","%s - Unknown device type '%s'", fqa.name, fqa.type)
+        QA.syslogerr("install", "%s - Unknown device type '%s'", fqa.name, fqa.type)
         return
     end
     dev = copy(dev)
     dev.name = fqa.name
     dev.type = fqa.type
     dev.id = resources.nextRsrcId()
-    for k,v in pairs(fqa.initialProperties or {}) do
+    for k, v in pairs(fqa.initialProperties or {}) do
         dev.properties[k] = v
     end
-    dev.interfaces = merge(dev.interfaces,fqa.initialInterfaces or {})
+    dev.interfaces = merge(dev.interfaces, fqa.initialInterfaces or {})
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id
-    local uiStruct,uiMap = ui.view2UI(dev.properties.viewLayout,dev.properties.uiCallbacks),nil
-    uiStruct,uiMap = annotateUI(uiStruct)
+    local uiStruct, uiMap = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks), nil
+    uiStruct, uiMap = annotateUI(uiStruct)
 
-    DIR[dev.id] = { 
-        fname = "", dev = dev, files = fqa.files, name = dev.name, 
-        tag = tag, debug = {}, UI = uiStruct or {}, uiMap = uiMap or {},
-        remotes = {}, allRemote = false,
-     }
+    DIR[dev.id] = {
+        fname = "",
+        dev = dev,
+        files = fqa.files,
+        name = dev.name,
+        tag = tag,
+        debug = {},
+        UI = uiStruct or {},
+        uiMap = uiMap or {},
+        remotes = {},
+        allRemote = false,
+    }
     resources.createDevice(dev)
     return DIR[dev.id]
 end
 
 local function installQA(fname, id, silent)
-    if not silent then QA.syslog("install","QA '%s'", fname) end
+    if not silent then QA.syslog("install", "QA '%s'", fname) end
     local f = io.open(fname, "r")
     if not f then
-        QA.syslogerr("install","File not found - %s", fname)
+        QA.syslogerr("install", "File not found - %s", fname)
         return
     end
     local code = f:read("*all")
@@ -70,141 +99,164 @@ local function installQA(fname, id, silent)
 
     local name, ftype = fname:match("([%w_]+)%.([luafq]+)$")
     if ftype ~= "lua" then
-        QA.syslogerr("install"," Unsupported file type - %s", tostring(fname))
+        QA.syslogerr("install", " Unsupported file type - %s", tostring(fname))
         return
     end
 
     local function eval(str)
-        local stat,res = pcall(function() return load("return " .. str,nil,"t",{config=config})() end)
-        if stat then return res,true else return nil,false end
+        local stat, res = pcall(function() return load("return " .. str, nil, "t", { config = config })() end)
+        if stat then return res, true else return nil, false end
     end
 
     local fileoffset = ""
     local chandler = {}
     function chandler.fileoffset(var, val, vars) fileoffset = val end
+
     function chandler.u(var, val, vars)
         vars.ui = vars.ui or {}
-        local value,stat = eval(val)
-        if stat==false then
-            QA.syslogerr("install","Bad UI expr '%s'", val)
+        local value, stat = eval(val)
+        if stat == false then
+            QA.syslogerr("install", "Bad UI expr '%s'", val)
         else
-            vars.ui[#vars.ui+1] = value
+            vars.ui[#vars.ui + 1] = value
         end
     end
-    for i=1,20 do
-        local u = "u"..i
-        chandler[u]=chandler.u
+
+    for i = 1, 20 do
+        local u = "u" .. i
+        chandler[u] = chandler.u
     end
     function chandler.name(var, val, vars) vars.name = val:match('"(.-)"') or val end
+
     function chandler.type(var, val, vars) vars.type = val:match('"(.-)"') or val end
-    function chandler.allRemote(var, val, vars) vars.allRemote = eval(val)==true end
+
+    function chandler.allRemote(var, val, vars) vars.allRemote = eval(val) == true end
+
     function chandler.id(var, val, vars) vars.id = tonumber(val) end
+
     function chandler.proxy(var, val, vars) vars.proxy = tonumber(val) end
+
     function chandler.debug(var, val, vars) --%%debug=flag1:val1,flag2:val2
         local dbs = {}
         vars.debug._init = true
         val:gsub("([^,]+)", function(d) dbs[#dbs + 1] = d end)
-        for _,d in ipairs(dbs) do
-            local var,val,stat = d:match("([%w_]+):(.+)")
-            val,stat = eval(val)
-            if stat==false or not var then
-                QA.syslogerr("install","Bad debug expr '%s'", d)
+        for _, d in ipairs(dbs) do
+            local var, val, stat = d:match("([%w_]+):(.+)")
+            val, stat = eval(val)
+            if stat == false or not var then
+                QA.syslogerr("install", "Bad debug expr '%s'", d)
             else
                 vars.debug[var] = val
                 if emu.debug.debugFlags then
-                    QA.syslog("install","Debugflag %s=%s",var,val)
+                    QA.syslog("install", "Debugflag %s=%s", var, val)
                 end
             end
         end
     end
+
     function chandler.var(var, val2, vars) --%%var=varname:varvalue
-        local var,val,stat = val2:match("([%w_]+):(.+)")
-        val,stat = eval(val)
-        if stat==false or not var then
-            QA.syslogerr("install","Bad quickvar expr '%s'", val2)
+        local var, val, stat = val2:match("([%w_]+):(.+)")
+        val, stat = eval(val)
+        if stat == false or not var then
+            QA.syslogerr("install", "Bad quickvar expr '%s'", val2)
         else
             vars.qvars[var] = val
             if emu.debug.quickVars then
-                QA.syslog("install","QuickVar %s=%s",var,val)
+                QA.syslog("install", "QuickVar %s=%s", var, val)
             end
         end
     end
+
     function chandler.interface(var, val, vars) --%%interface=x,y,z
-        for _,ifc in ipairs(val:split(",")) do
+        for _, ifc in ipairs(val:split(",")) do
             vars.interfaces[ifc] = true
         end
     end
+
+    function chandler.image(var, val, vars) --%%image=fname,name
+        local fname, name = val:match("(.-),(.*)")
+        vars.images = vars.images or {}
+        vars.images[#vars.images + 1] = { name = name, fname = fname }
+    end
+
     function chandler.file(var, val, vars) --%%file=path,name;
         local fn, qn = table.unpack(val:sub(1, -2):split(","))
-        vars.files[#vars.files + 1] = { fname = fileoffset..fn, name = qn, isMain=false, content = nil }
+        vars.files[#vars.files + 1] = { fname = fileoffset .. fn, name = qn, isMain = false, content = nil }
     end
+
     function chandler.remote(var, val, vars)
-        local typ,list = val:match("([%w_]-):(.+)")
+        local typ, list = val:match("([%w_]-):(.+)")
         local items = {}
         list:gsub("([^,]+)", function(item) items[#items + 1] = tonumber(item) or item end)
         vars.remote[typ] = vars.remote[typ] or {}
         vars.remote[typ] = append(vars.remote[typ], items)
     end
 
-    local vars = { files = {}, writes = {}, remote = {}, debug= {}, qvars={}, interfaces={} }
+    local vars = { files = {}, writes = {}, remote = {}, debug = {}, qvars = {}, interfaces = {} }
     code:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
         if chandler[var] then
             chandler[var](var, val, vars)
         else
-            QA.syslogerr("install","%s - Unknown header variable '%s'", fname, var)
-        end 
+            QA.syslogerr("install", "%s - Unknown header variable '%s'", fname, var)
+        end
     end)
     code:gsub("%-%-FILE:(.-)[\n\r]", function(val) --backward compatible
         chandler.file('file', val, vars)
     end)
-    table.insert(vars.files, { name='main', isMain=true, content = code, fname = fname })
+    table.insert(vars.files, { name = 'main', isMain = true, content = code, fname = fname })
 
     local definedId = vars.id
     if vars.id == nil then vars.id = resources.nextRsrcId() end
     id = vars.id
 
     if DIR[id] then
-        QA.syslogerr("install","ID:%s already installed (%s)", id, fname)
+        QA.syslogerr("install", "ID:%s already installed (%s)", id, fname)
         return
     end
 
     local dev = devices.getDeviceStruct(vars.type or "com.fibaro.binarySwitch")
     if dev == nil then
-        QA.syslogerr("install","%s - Unknown device type '%s'", fname, vars.type)
+        QA.syslogerr("install", "%s - Unknown device type '%s'", fname, vars.type)
         dev = devices.getDeviceStruct("com.fibaro.binarySwitch")
     end
     dev = copy(dev)
     dev.name = vars.name or name
     dev.id = vars.id
     local qvars = {}
-    for k,v in pairs(vars.qvars or {}) do qvars[#qvars+1] = {name=k, value=v} end
+    for k, v in pairs(vars.qvars or {}) do qvars[#qvars + 1] = { name = k, value = v } end
     dev.properties.quickAppVariables = qvars
     vars.interfaces['quickApp'] = true
     local ifs = {}
-    for i,_ in pairs(vars.interfaces) do ifs[#ifs+1] = i end
+    for i, _ in pairs(vars.interfaces) do ifs[#ifs + 1] = i end
     dev.interfaces = ifs
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id
 
-    local uiStruct,uiMap = nil,nil
+    local uiStruct, uiMap = nil, nil
     if vars.ui then
         ui.transformUI(vars.ui)
-        dev.properties.viewLayout = ui.mkViewLayout(vars.ui,nil,dev.id)
+        dev.properties.viewLayout = ui.mkViewLayout(vars.ui, nil, dev.id)
         dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(vars.ui)
-        uiStruct = ui.view2UI(dev.properties.viewLayout,dev.properties.uiCallbacks)
+        uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
         uiStruct, uiMap = annotateUI(uiStruct)
     end
 
-    DIR[id] = { 
-        fname = fname, dev = dev, files = vars.files, name = dev.name, 
-        tag = tag, debug = vars.debug,
-        remotes = vars.remote, allRemote = vars.allRemote, 
+    DIR[id] = {
+        fname = fname,
+        dev = dev,
+        files = vars.files,
+        name = dev.name,
+        tag = tag,
+        debug = vars.debug,
+        remotes = vars.remote,
+        allRemote = vars.allRemote,
         UI = uiStruct or {},
         uiMap = uiMap or {},
         definedId = definedId,
+        images = vars.images,
     }
 
-    for k,v in pairs(vars.debug) do emu.debug[k] = v end
+    for k, v in pairs(vars.debug) do emu.debug[k] = v end
 
     if not silent then resources.createDevice(dev) end
     return DIR[id]
@@ -212,29 +264,39 @@ end
 
 local customUI = {
     ['com.fibaro.binarySwitch'] = {
-        {{button="__turnon", text="Turn On", onReleased="turnOn"},
-        {button="__turnoff", text="Turn Off", onReleased="turnOff"}}
+        { { button = "__turnon", text = "Turn On", onReleased = "turnOn" },
+            { button = "__turnoff", text = "Turn Off", onReleased = "turnOff" } }
     },
     ['com.fibaro.multilevelSwitch'] = {
-        {{button="__turnon", text="Turn On", onReleased="turnOn"},
-        {button="__turnoff", text="Turn Off", onReleased="turnOff"}},
-        {label='_Brightness', text='Brightness'},
-        {slider='__value', min=0, max=99, onChanged='setValue'},
+        { { button = "__turnon", text = "Turn On", onReleased = "turnOn" },
+            { button = "__turnoff", text = "Turn Off", onReleased = "turnOff" } },
+        { label = '_Brightness', text = 'Brightness' },
+        { slider = '__value',  min = 0,          max = 99, onChanged = 'setValue' },
         {
-          {button='__sli', text="&#8679;",onReleased="startLevelIncrease"},
-          {button='__sld', text="&#8681;",onReleased="startLevelIncrease"},
-          {button='__sls', text="&Vert;",onReleased="stopLevelChange"},
+            { button = '__sli', text = "&#8679;", onReleased = "startLevelIncrease" },
+            { button = '__sld', text = "&#8681;", onReleased = "startLevelIncrease" },
+            { button = '__sls', text = "&Vert;", onReleased = "stopLevelChange" },
         }
     },
-    ['com.fibaro.colorController'] = 
-    {{{button='__turnon', text="Turn On",onReleased="turnOn"},{button='__turnoff', text="Turn Off",onReleased="turnOff"}},
-      {label='_Brightness', text='Brightness'},
-      {slider='__value', min=0, max=99, onChanged='setValue'},
-      {
-        {button='__sli', text="&#8679;",onReleased="startLevelIncrease"},
-        {button='__sld', text="&#8681;",onReleased="startLevelDecrease"},
-        {button='__sls', text="&Vert;",onReleased="stopLevelChange"}
-      }
+    ['com.fibaro.energyMeter'] = {
+        { label = '__energy', text = '...' }
+    },
+    ['com.fibaro.powerMeter'] = {
+        { label = '__power', text = '...' }
+    },
+    ['com.fibaro.colorController'] =
+    { { { button = '__turnon', text = "Turn On", onReleased = "turnOn" },
+                                                                   { button = '__turnoff', text = "Turn Off",
+            onReleased = "turnOff" } },
+        { label = '_Brightness',                                   text = 'Brightness' },
+        { slider = '__value',                                      min = 0,                                                   max = 99,
+                                                                                                                                          onChanged =
+            'setValue' },
+        {
+            { button = '__sli', text = "&#8679;", onReleased = "startLevelIncrease" },
+            { button = '__sld', text = "&#8681;", onReleased = "startLevelDecrease" },
+            { button = '__sls', text = "&Vert;", onReleased = "stopLevelChange" }
+        }
     },
 }
 
@@ -242,40 +304,48 @@ local customUI = {
 --customUI['com.fibaro.multilevelSensor'] = customUI['com.fibaro.multilevelSwitch']  -- For debugging
 
 local function createChildDevice(pID, cdev)
-    QA.syslog("install","Child '%s' %s", cdev.name, cdev.type)
+    QA.syslog("install", "Child '%s' %s", cdev.name, cdev.type)
     local dev = devices.getDeviceStruct(cdev.type)
     if dev == nil then
-        QA.syslogerr("install","%s - Unknown device type '%s'", cdev.name, cdev.type)
+        QA.syslogerr("install", "%s - Unknown device type '%s'", cdev.name, cdev.type)
         return
     end
     dev = copy(dev)
     dev.name = cdev.name
     dev.type = cdev.type
     dev.id = resources.nextRsrcId()
-    for k,v in pairs(cdev.initialProperties or {}) do
+    for k, v in pairs(cdev.initialProperties or {}) do
         dev.properties[k] = v
     end
-    dev.interfaces = merge(dev.interfaces,cdev.initialInterfaces or {})
+    dev.interfaces = merge(dev.interfaces, cdev.initialInterfaces or {})
     dev.parentId = pID
     local tag = "QUICKAPP" .. dev.id
-    local uiStruct,uiMap = {},{}
+    local uiStruct, uiMap = {}, {}
     if dev.properties.viewLayout then
-        uiStruct,uiMap = ui.view2UI(dev.properties.viewLayout,dev.properties.uiCallbacks),nil
+        uiStruct, uiMap = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks), nil
     end
     if next(uiStruct) == nil then
         local UI = customUI[dev.type] or {}
         ui.transformUI(UI)
-        dev.properties.viewLayout = ui.mkViewLayout(UI,nil,dev.id)
+        dev.properties.viewLayout = ui.mkViewLayout(UI, nil, dev.id)
         dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(UI)
-        uiStruct = ui.view2UI(dev.properties.viewLayout,dev.properties.uiCallbacks)
+        uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
     end
-    uiStruct,uiMap = annotateUI(uiStruct)
+    uiStruct, uiMap = annotateUI(uiStruct)
 
-    DIR[dev.id] = { 
-        fname = "", dev = dev, files = {}, name = dev.name, 
-        tag = tag, debug = {}, UI = uiStruct or {}, uiMap = uiMap or {},
-        remotes = {}, allRemote = false, child = true,
-     }
+    DIR[dev.id] = {
+        fname = "",
+        dev = dev,
+        files = {},
+        name = dev.name,
+        tag = tag,
+        debug = {},
+        UI = uiStruct or {},
+        uiMap = uiMap or {},
+        remotes = {},
+        allRemote = false,
+        child = true,
+    }
     resources.createDevice(dev)
     return DIR[dev.id]
 end
@@ -291,11 +361,11 @@ local function loadFiles(id)
             file:close()
         end
         if qa.debug.userfiles then
-            QA.syslog(qa.tag,"Loading user file %s",qf.fname or qf.name)
+            QA.syslog(qa.tag, "Loading user file %s", qf.fname or qf.name)
         end
         local qa2, res = load(qf.content, qf.fname, "t", env) -- Load QA
         if not qa2 then
-            QA.syslogerr(qa.tag,"%s - %s", qf.fname or qf.nam, res)
+            QA.syslogerr(qa.tag, "%s - %s", qf.fname or qf.nam, res)
             return false
         end
         qf.qa = qa2
@@ -303,73 +373,93 @@ local function loadFiles(id)
             qf.qa = function() lldebugger.call(qa, true) end
         end
     end
+    local imcont = { "_IMAGES={};\n" }
+    for _, im in ipairs(qa.images or {}) do
+        local file = io.open(im.fname, "r")
+        assert(file, "Image not found:" .. im.name, im.fname)
+        local img = file:read("*all")
+        local w,h = getSize(img)
+        imcont[#imcont+1] = string.format([[
+            _IMAGES['%s']={data='%s',w=%s,h=%s}
+            ]],im.name,"data:image/png;base64,"..base64encode(img),w,h)
+        file:close()
+    end
+    if #imcont > 1 then
+        local content = table.concat(imcont,"\n")
+        local qa2, res = load(content, "images", "t", env) -- Load QA
+        table.insert(qa.files,1,{qa = qa2, name="_IMAGES",content=content,type='lua',isMain=false,isOpen=false})
+    end
     return true
 end
 
-local function getQAfiles(id,name)
-    if not DIR[id] then return nil,404 end
+local function getQAfiles(id, name)
+    if not DIR[id] then return nil, 404 end
     if name == nil then
         local res = {}
-        for _,f in ipairs(DIR[id].files) do
-            res[#res+1]={name=f.name,content=nil,type='lua',isOpen=false,isMain=f.isMain}
+        for _, f in ipairs(DIR[id].files) do
+            res[#res + 1] = { name = f.name, content = nil, type = 'lua', isOpen = false, isMain = f.isMain }
         end
-        return res,200
+        return res, 200
     end
-    for _,f in ipairs(DIR[id].files) do
+    for _, f in ipairs(DIR[id].files) do
         if f.name == name then
-            return {name=f.name,content=f.content,type='lua',isOpen=false,isMain=f.isMain==true},200
+            return { name = f.name, content = f.content, type = 'lua', isOpen = false, isMain = f.isMain == true }, 200
         end
     end
-    return nil,404
+    return nil, 404
 end
 
-local function setQAfiles(id,files)
-    if not DIR[id] then return nil,404 end
+local function setQAfiles(id, files)
+    if not DIR[id] then return nil, 404 end
     local qa = DIR[id]
-    files = type(files)=="string" and json.decode(files) or files
-    for i = 1,#qa.files do
+    files = type(files) == "string" and json.decode(files) or files
+    for i = 1, #qa.files do
         local f = qa.files[i]
         if f.name == files.name then
             qa.files[i] = files
             QA.restart(id)
-            return nil,200
+            return nil, 200
         end
     end
-    qa.files[#qa.files+1] = files
+    qa.files[#qa.files + 1] = files
     QA.restart(id)
-    return nil,200
+    return nil, 200
 end
 
 local function exportFQA(id)
-    if not DIR[id] then 
-        if resources.getResource("devices",id) then
-            local fqa,code = api.get("/quickApp/export/"..id,"hc3")
-            return fqa,code
+    if not DIR[id] then
+        if resources.getResource("devices", id) then
+            local fqa, code = api.get("/quickApp/export/" .. id, "hc3")
+            return fqa, code
         end
-        return nil,404 
+        return nil, 404
     end
 end
 
 local function importFQA(file)
 end
 
-local function deleteQAfile(id,name)
-    if not DIR[id] then return nil,404 end
+local function deleteQAfile(id, name)
+    if not DIR[id] then return nil, 404 end
     local files = DIR[id].files
     for i = 1, #files do
         if files[i].name == name then
             table.remove(files, i)
             QA.restart(id)
-            return name,200
+            return name, 200
         end
     end
-    return nil,404
+    return nil, 404
 end
 
-exports = { 
-    installQA = installQA, init = init, loadFiles = loadFiles,
-    getQAfiles = getQAfiles, setQAfiles = setQAfiles,
-    importQA = importFQA, exportFQA = exportFQA,
+exports = {
+    installQA = installQA,
+    init = init,
+    loadFiles = loadFiles,
+    getQAfiles = getQAfiles,
+    setQAfiles = setQAfiles,
+    importQA = importFQA,
+    exportFQA = exportFQA,
     installFQA = installFQA,
     deleteQAfile = deleteQAfile,
     createChildDevice = createChildDevice,

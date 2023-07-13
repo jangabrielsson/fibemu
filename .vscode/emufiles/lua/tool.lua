@@ -144,22 +144,31 @@ function tool.upload(file, rsrc, name, path)
     local qa = flib.installQA(name, nil, true)
     local dev = qa.dev
     local files = qa.files
-    local function readContent(fname)
-        local f, err = io.open(fname, "r")
-        if not f then
-            printerrf("Error opening %s: %s", fname, err)
-            return nil
-        end
-        local content = f:read("*a")
-        f:close()
-        return content
+    flib.loadFiles(qa.dev.id)
+    for _,f in ipairs(files) do
+        f.qa = nil
+        f.fname=nil
+        f.isOpen=false
+        f.type="lua"
     end
-    for _, f in ipairs(files) do
-        f.content = readContent(f.fname)
-        f.fname = nil
-        f.isOpen = false
-        f.type = "lua"
-    end
+    -- local function readContent(fname)
+    --     local f, err = io.open(fname, "r")
+    --     if not f then
+    --         printerrf("Error opening %s: %s", fname, err)
+    --         return nil
+    --     end
+    --     local content = f:read("*a")
+    --     f:close()
+    --     return content
+    -- end
+    -- for _, f in ipairs(files) do
+    --     if f.name ~= "_IMAGES" then
+    --         f.content = readContent(f.fname)
+    --         f.fname = nil
+    --         f.isOpen = false
+    --         f.type = "lua"
+    --     end
+    -- end
     local props = {
         apiVersion = "1.2",
         quickAppVariables = dev.properties.quickAppVariables or {},
@@ -195,22 +204,29 @@ function tool.update(file, rsrc, name, path)
     local id = qa.definedId
     local dev = qa.dev
     local files = qa.files
-    local function readContent(fname)
-        local f, err = io.open(fname, "r")
-        if not f then
-            printerrf("Error opening %s: %s", fname, err)
-            return nil
-        end
-        local content = f:read("*a")
-        f:close()
-        return content
+    flib.loadFiles(qa.dev.id)
+    for _,f in ipairs(files) do
+        f.qa = nil
+        f.fname=nil
+        f.isOpen=false
+        f.type='lua'
     end
-    for _, f in ipairs(files) do
-        f.content = readContent(f.fname)
-        f.fname = nil
-        f.isOpen = false
-        f.type = "lua"
-    end
+    -- local function readContent(fname)
+    --     local f, err = io.open(fname, "r")
+    --     if not f then
+    --         printerrf("Error opening %s: %s", fname, err)
+    --         return nil
+    --     end
+    --     local content = f:read("*a")
+    --     f:close()
+    --     return content
+    -- end
+    -- for _, f in ipairs(files) do
+    --     f.content = readContent(f.fname)
+    --     f.fname = nil
+    --     f.isOpen = false
+    --     f.type = "lua"
+    -- end
     local currFiles = api.get("/quickApp/" .. id .. "/files", "hc3")
     if not currFiles then
         printerrf("Error getting QA files for id:%s", id)
