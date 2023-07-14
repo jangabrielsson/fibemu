@@ -6,6 +6,6 @@
 - pcall protect calls between python and lua
 - SYSlog should always trace [SYS] [QUICKAPP500]...
 - MQTT
-- Default UI for child devices
+- FIXED. Default UI for child devices (for some of the simple ones...)
 - Proxy?
 - Self updating QA Web UI?

@@ -16,6 +16,8 @@ def httpCall(method, url, options, data, local):
     ''' http called from lua, async-wait if we call our own api (local, Fast API) '''
     headers = options['headers']
     req = requests if not local else requests_async.ASGISession(fibapi.app)
+    if data:
+        data = data.encode('utf-8')
     match method:
         case 'GET':
             res = req.get(url, headers = headers)
@@ -211,7 +213,7 @@ class LuaWebSocket:
         self.fibemu = fibemu
         self.cb = cb
         self.ws = websocket.WebSocketApp(url=url,#"wss://api.gemini.com/v1/marketdata/BTCUSD",
-                         #     header=headers,
+                              header=headers,
                               on_open=lambda ws: self.on_open(ws),
                               on_message=lambda ws,msg: self.on_message(ws,msg),
                               on_error=lambda ws,err: self.on_error(ws,err),

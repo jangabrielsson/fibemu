@@ -119,7 +119,7 @@ local EventTypes = { -- There are more, but these are what I seen so far...
     },
     PluginProcessCrashedEvent = {
         f=function(d,e) return true end,
-        l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end
+        l=function(d,e) return fmt("%s ID:%s %s",e.type,d.id or d.deviceId,d.error or "") end
     },
 
     SceneStartedEvent = {

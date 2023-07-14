@@ -14,6 +14,16 @@ local function printf(fmt, ...) print(string.format(fmt, ...)) end
 local function printerrf(fmt, ...) fibaro.error(__TAG, string.format(fmt, ...)) end
 __TAG = "fibtool"
 
+local function copy(obj)
+    if type(obj) == 'table' then
+        local res = {}
+        for k, v in pairs(obj) do res[k] = copy(v) end
+        return res
+    else
+        return obj
+    end
+end
+
 local tool = {}
 function tool.download_fqa(file, rsrc, name, path)
     printf("Downloading fqa %s to %s", name, path)
@@ -145,34 +155,16 @@ function tool.upload(file, rsrc, name, path)
     local dev = qa.dev
     local files = qa.files
     flib.loadFiles(qa.dev.id)
-    for _,f in ipairs(files) do
+    for _, f in ipairs(files) do
         f.qa = nil
-        f.fname=nil
-        f.isOpen=false
-        f.type="lua"
+        f.fname = nil
+        f.isOpen = false
+        f.type = "lua"
     end
-    -- local function readContent(fname)
-    --     local f, err = io.open(fname, "r")
-    --     if not f then
-    --         printerrf("Error opening %s: %s", fname, err)
-    --         return nil
-    --     end
-    --     local content = f:read("*a")
-    --     f:close()
-    --     return content
-    -- end
-    -- for _, f in ipairs(files) do
-    --     if f.name ~= "_IMAGES" then
-    --         f.content = readContent(f.fname)
-    --         f.fname = nil
-    --         f.isOpen = false
-    --         f.type = "lua"
-    --     end
-    -- end
     local props = {
         apiVersion = "1.2",
         quickAppVariables = dev.properties.quickAppVariables or {},
-        uiCallbacks = dev.properties.uiCallbacks,
+        uiCallbacks = #dev.properties.uiCallbacks > 0 and dev.properties.uiCallbacks or nil,
         viewLayout = dev.properties.viewLayout,
         typeTemplateInitialized = true,
     }
@@ -184,9 +176,17 @@ function tool.upload(file, rsrc, name, path)
         initialProperties = props,
         initialInterfaces = dev.interfaces,
     }
-    local stat, res = api.post("/quickApp/", fqa, "hc3")
+    local fqa = {
+        name = dev.name,
+        type = dev.type,
+        files = files,
+        initialProperties = props,
+        initialInterfaces = dev.interfaces,
+    }
+
+    local stat, res, info = api.post("/quickApp/", fqa, "hc3")
     if not stat then
-        printerrf("Error uploading QA: %s", res)
+        printerrf("Error uploading QA: %s %s", res, tostring(info))
         return true
     else
         printf("Uploaded QA %s", stat.id)
@@ -205,11 +205,11 @@ function tool.update(file, rsrc, name, path)
     local dev = qa.dev
     local files = qa.files
     flib.loadFiles(qa.dev.id)
-    for _,f in ipairs(files) do
+    for _, f in ipairs(files) do
         f.qa = nil
-        f.fname=nil
-        f.isOpen=false
-        f.type='lua'
+        f.fname = nil
+        f.isOpen = false
+        f.type = 'lua'
     end
     -- local function readContent(fname)
     --     local f, err = io.open(fname, "r")

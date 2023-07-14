@@ -31,15 +31,15 @@ local function callHC3(method, path, data, hc3)
             ["Accept"] = '*/*',
             ["X-Fibaro-Version"] = "2",
             ["Fibaro-User-PIN"] = conf.pin,
-            ["Content-Type"] = "application/json",
+            ["Content-Type"] = "application/json; charset=utf-8",
         }
     }
     local status, res, headers = fibaro.pyhooks.http(method, url, options, data and json.encode(data) or nil, lcl)
     if status >= 303 then
-        return nil, status
+        return nil, status, res, headers
         --error(fmt("HTTP error %d: %s", status, res))
     end
-    return res and type(res) == 'string' and res ~= "" and json.decode(res) or nil, status
+    return res and type(res) == 'string' and res ~= "" and json.decode(res) or nil, status, headers
 end
 
 function net.HTTPClient()

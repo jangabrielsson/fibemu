@@ -387,7 +387,7 @@ local function loadFiles(id)
     if #imcont > 1 then
         local content = table.concat(imcont,"\n")
         local qa2, res = load(content, "images", "t", env) -- Load QA
-        table.insert(qa.files,1,{qa = qa2, name="_IMAGES",content=content,type='lua',isMain=false,isOpen=false})
+        table.insert(qa.files,1,{qa = qa2, name="IMAGES",content=content,type='lua',isMain=false,isOpen=false})
     end
     return true
 end
