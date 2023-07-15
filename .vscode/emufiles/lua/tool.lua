@@ -194,14 +194,21 @@ function tool.upload(file, rsrc, name, path)
 end
 
 function tool.update(file, rsrc, name, path)
+    local updateQvs,id = true,nil
     if name == '.' then name = file end
+    if name == '-' then name = file; updateQvs = false end
+    if tonumber(name) then
+        id = tonumber(name)
+        name = file
+    end
     local flib = fibaro.fibemu.libs.files
     local qa = flib.installQA(name, nil, true)
-    if not qa.definedId then
+    if not id and not qa.definedId then
         printerrf("QA need to define --%%id=<HC3ID>\nso we know what QA to update on HC3")
         return true
+    elseif not id then
+        id = qa.definedId
     end
-    local id = qa.definedId
     local dev = qa.dev
     local files = qa.files
     flib.loadFiles(qa.dev.id)
@@ -211,22 +218,6 @@ function tool.update(file, rsrc, name, path)
         f.isOpen = false
         f.type = 'lua'
     end
-    -- local function readContent(fname)
-    --     local f, err = io.open(fname, "r")
-    --     if not f then
-    --         printerrf("Error opening %s: %s", fname, err)
-    --         return nil
-    --     end
-    --     local content = f:read("*a")
-    --     f:close()
-    --     return content
-    -- end
-    -- for _, f in ipairs(files) do
-    --     f.content = readContent(f.fname)
-    --     f.fname = nil
-    --     f.isOpen = false
-    --     f.type = "lua"
-    -- end
     local currFiles = api.get("/quickApp/" .. id .. "/files", "hc3")
     if not currFiles then
         printerrf("Error getting QA files for id:%s", id)
@@ -257,12 +248,16 @@ function tool.update(file, rsrc, name, path)
             api.delete("/quickApp/" .. id .. "/files/" .. oldF, "hc3")
         end
     end
-    printf("Updating quickAppVariables, viewLayout, and uiCallbacks...")
+    if updateQvs then
+        printf("Updating quickAppVariables, viewLayout, and uiCallbacks...")
+    else
+        printf("Updating viewLayout and uiCallbacks...")
+    end
     local stat, res = api.put("/devices/" .. id, {
         properties = {
             uiCallbacks = dev.properties.uiCallbacks,
             viewLayout = dev.properties.viewLayout,
-            quickAppVariables = dev.properties.quickAppVariables,
+            quickAppVariables = updateQvs and dev.properties.quickAppVariables or nil,
         }
     }, "hc3")
     if not stat then

@@ -17,7 +17,8 @@ def httpCall(method, url, options, data, local):
     headers = options['headers']
     req = requests if not local else requests_async.ASGISession(fibapi.app)
     if data:
-        data = data.encode('utf-8')
+        if headers and 'Content-Type' in headers and 'utf-8' in headers['Content-Type']:
+            data = data.encode('utf-8')
     match method:
         case 'GET':
             res = req.get(url, headers = headers)
