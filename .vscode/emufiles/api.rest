@@ -1,0 +1,12 @@
+### Uses the REST Client plugin for VS Code
+
+GET http://{{host}}/api/devices
+Authorization: Basic {{user}}:{{pwd}}
+
+###
+GET http://{{host}}/api/devices?interface=quickApp
+Authorization: Basic {{user}}:{{pwd}}
+
+###
+GET http://{{host}}/api/globalVariables/A
+Authorization: Basic {{user}}:{{pwd}}

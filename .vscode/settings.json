@@ -12,5 +12,18 @@
         "${workspace}/.vscode/emufiles/lspaddons"
     ],
     "Lua.hint.enable": true,
-    "Lua.workspace.checkThirdParty": false
+    "Lua.workspace.checkThirdParty": false,
+
+    "rest-client.environmentVariables": {
+        "local": {
+            "host": "127.0.0.1:5004",
+            "user": "admin",
+            "pwd" : "admin"
+        },
+        "hc3": {
+            "host": "192.168.1.57:80",
+            "user": "admin",
+            "pwd" : "admin"
+        }
+    }
 }
