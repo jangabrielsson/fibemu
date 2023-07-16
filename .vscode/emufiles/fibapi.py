@@ -173,10 +173,17 @@ async def call_quickapp_method(id: int, name: str, args: ActionParams):
 class DeviceQueryParams(BaseModel):
     id: int | None = None
     parentId: int | None = None
+    interface: str | None = None
+    name: str | None = None
+    type: str | None = None
 
-def filterQuery(query: dict, d: dict):
+paramMap = dict(interface ='interfaces')
+def filterQuery(query: dict, d: dict): # need to support lists too
     for k,v in query.items():
-        if d[k] != v:
+        if k in paramMap:
+            if not v in d[paramMap.get(k)]:
+                return False
+        elif d[k] != v:
             return False
     return True
 
