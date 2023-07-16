@@ -2,6 +2,7 @@ local config, resources, devices, lldebugger = nil, nil, nil, nil
 local libs, exports, emu, ui = nil, nil, nil, nil
 local copy, merge, append
 local QA, DIR
+local customUI = {}
 
 local function base64encode(data)
     local bC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
@@ -239,6 +240,13 @@ local function installQA(fname, id, silent)
         dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(vars.ui)
         uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
         uiStruct, uiMap = annotateUI(uiStruct)
+    else
+        local UI = customUI[dev.type] or {}
+        ui.transformUI(UI)
+        dev.properties.viewLayout = ui.mkViewLayout(UI, nil, dev.id)
+        dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(UI)
+        uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
+        uiStruct, uiMap = annotateUI(uiStruct)
     end
 
     DIR[id] = {
@@ -262,7 +270,7 @@ local function installQA(fname, id, silent)
     return DIR[id]
 end
 
-local customUI = {
+customUI = {
     ['com.fibaro.binarySwitch'] = {
         { { button = "__turnon", text = "Turn On", onReleased = "turnOn" },
             { button = "__turnoff", text = "Turn Off", onReleased = "turnOff" } }

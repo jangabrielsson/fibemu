@@ -276,6 +276,11 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         f=function(d,e) return true end,
         l=function(d,e) return fmt("%s ID:%s %s",e.type,d.id,d.actionName) end
     },
+
+    PowerMetricsChangedEvent = {
+        f=function(d,e) return true end,
+        l=function(d,e) return fmt("%s consumptionPower:%s productionPower:%s",e.type,d.consumptionPower,d.productionPower) end
+    },
 }
 
 function r.init(conf, libs)

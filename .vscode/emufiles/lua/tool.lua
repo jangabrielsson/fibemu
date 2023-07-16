@@ -199,6 +199,10 @@ function tool.update(file, rsrc, name, path)
     if name == '-' then name = file; updateQvs = false end
     if tonumber(name) then
         id = tonumber(name)
+        if id < 0 then
+            updateQvs = false
+            id = -id
+        end
         name = file
     end
     local flib = fibaro.fibemu.libs.files
