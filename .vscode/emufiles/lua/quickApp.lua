@@ -46,6 +46,8 @@ function QuickAppBase:setupUICallbacks()
   end
 end
 
+QuickAppBase.registerUICallbacks = QuickAppBase.setupUICallbacks
+
 function QuickAppBase:registerUICallback(elm, typ, fun)
   local uic = self.uiCallbacks
   uic[elm] = uic[elm] or {}
