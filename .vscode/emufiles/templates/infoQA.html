@@ -64,6 +64,8 @@
     <div class="p-3 bg-light border border-primary shadow">
         <h2>QuickApp "{{qa.name}}"</h2>
         <h4>{{qa.dev.type}}</h4>
+        Interfaces: 
+        {%for i,j in qa.dev.interfaces.items() %}{{j}},{% endfor %}
         <div class="p-1 container-xs">
         <button type="button" class="btn btn-primary"
                onclick='btnPost({{qa.dev.id}})'>

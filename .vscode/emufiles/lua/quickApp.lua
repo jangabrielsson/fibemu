@@ -44,6 +44,7 @@ function QuickAppBase:setupUICallbacks()
   for _,elm in pairs(callbacks) do
       self:registerUICallback(elm.name, elm.eventType, elm.callback)
   end
+  --local qa = fibaro.fibemu.DIR[self.id]
 end
 
 QuickAppBase.registerUICallbacks = QuickAppBase.setupUICallbacks
