@@ -410,6 +410,14 @@ function QA.fun.deleteChildDevice(id)
     return qa.dev,200
 end
 
+function QA.fun.publishEvent(args)
+    args = json.decode(args)
+    local type = args.type
+    local id = args.source
+    QA.syslog("centralSceneEvent","CentralSceneEvent:%s %s %s",id,args.data.keyId,args.data.keyAttribute)
+    return true,200
+end
+
 ------------ Events posted from fibenv.py ------------
 -- Usually carries complex data, so event.args is json encoded
 local Events = {}

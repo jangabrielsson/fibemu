@@ -441,6 +441,8 @@ async def delete_Child_Device(id: int, response: Response):
 
 class EventParams(BaseModel):
     type: str
+    source: int | None = None
+    data: Any
 
 @app.post("/api/plugins/publishEvent", tags=["Plugins methods"])
 async def publish_event(args: EventParams, response: Response):
