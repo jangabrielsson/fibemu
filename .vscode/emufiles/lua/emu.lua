@@ -415,6 +415,14 @@ function QA.fun.publishEvent(args)
     local type = args.type
     local id = args.source
     QA.syslog("centralSceneEvent","CentralSceneEvent:%s %s %s",id,args.data.keyId,args.data.keyAttribute)
+    local ev = {
+        type = "CentralSceneEvent",
+        data = {
+            id = id,
+            data = args.data
+        }
+    }
+    QA.addEvent(json.encode(ev))
     return true,200
 end
 

@@ -21,3 +21,14 @@ Authorization: Basic {{user}}:{{pwd}}
     "source": 5000,
     "data": { "keyId": 1, "keyAttribute": "Pressed" }
 }
+
+###
+POST http://{{host}}/api/proxy?url=http://localhost:11112/api/plugins/publishEvent HTTP/1.1
+content-type: application/json
+Authorization: Basic {{user}}:{{pwd}}
+
+{
+    "type": "centralSceneEvent",
+    "source": 5000,
+    "data": { "keyId": 1, "keyAttribute": "Pressed" }
+}

@@ -365,14 +365,14 @@ async def delete_CustomEvent(name: str, response: Response):
     return {} if code < 300 else None
 
 ''' RefreshStates methods '''
-class RefresStatesQuery(BaseModel):
+class RefreshStatesQuery(BaseModel):
     last: int = 0
     lang: str = "en"
     rand: float = 0.09580020181569104
     logs: bool = False  
 
-@app.get("/api/refreshStates", tags=["RefresStates methods"])
-async def get_RefreshStates_events(response: Response, query: RefresStatesQuery = Depends()):
+@app.get("/api/refreshStates", tags=["RefreshStates methods"])
+async def get_refreshStates_events(response: Response, query: RefreshStatesQuery = Depends()):
     res = fibenv.get('fe').getEvents(query.last)
     code = 200
     response.status_code = code
@@ -636,13 +636,6 @@ class HomeParams(BaseModel):
 @app.put("/api/home", tags=["Home methods"])
 async def modify_Home(args: HomeParams, response: Response):
     var,code = fibenv.get('fe').luaCall("modifyResource","home",None,args.json())
-    response.status_code = code
-    return var if code < 300 else None
-
-''' debugMessages methods '''
-@app.get("/api/debugMessages", tags=["debugMessage methods"])
-async def get_debug_Messages(response: Response):
-    var,code = fibenv.get('fe').luaCall("getResource","debugMessages")
     response.status_code = code
     return var if code < 300 else None
 
