@@ -3,6 +3,7 @@ local fmt = string.format
 net = {}
 
 local apiPatches = {}
+local tostring = tostring 
 
 local function patch(url)
     for k, v in pairs(apiPatches) do
@@ -75,7 +76,7 @@ function net.HTTPClient()
             return fibaro.pyhooks.httpAsync(options.method or "GET", url, opts, data, false)
         end
     }
-    local pstr = "HTTPClient object: " .. tostring(self2):match("%s(.*)")
+    local pstr = "HTTPClient object: " .. tostring({}):match("%s(.*)")
     setmetatable(self2, { __tostring = function(_) return pstr end })
     return self2
 end
