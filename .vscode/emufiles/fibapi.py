@@ -220,31 +220,31 @@ class GlobalVarSpec(BaseModel):
     invokeScenes: bool | None = True
 
 @app.get("/api/globalVariables", tags=["GlobalVariabes methods"])
-async def get_GlobalVariables(response: Response):
+async def get_Global_Variables(response: Response):
     vars,code = fibenv.get('fe').luaCall("getResource","globalVariables")
     response.status_code = code
     return list(vars.values()) if code < 300 else None
 
 @app.get("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
-async def get_GlobalVariable(name: str, response: Response):
+async def get_Global_Variable(name: str, response: Response):
     var,code = fibenv.get('fe').luaCall("getResource","globalVariables",name)
     response.status_code = code
     return var if code < 300 else None
 
 @app.post("/api/globalVariables", tags=["GlobalVariabes methods"])
-async def create_GlobalVariable(data: GlobalVarSpec, response: Response):
+async def create_Global_Variable(data: GlobalVarSpec, response: Response):
     var,code = fibenv.get('fe').luaCall("createResource","globalVariables",data.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.put("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
-async def modify_GlobalVariable(name: str, data: GlobalVarSpec, response: Response):
+async def modify_Global_Variable(name: str, data: GlobalVarSpec, response: Response):
     var,code = fibenv.get('fe').luaCall("modifyResource","globalVariables",name,data.json())
     response.status_code = code
     return var if code < 300 else None
 
 @app.delete("/api/globalVariables/{name}", tags=["GlobalVariabes methods"])
-async def delete_GlobalVariable(name: str, response: Response):
+async def delete_Global_Variable(name: str, response: Response):
     var,code = fibenv.get('fe').luaCall("deleteResource","globalVariables",name)
     response.status_code = code
     return var if code < 300 else None
@@ -359,7 +359,7 @@ async def delete_CustomEvent(name: str, response: Response):
     return var if code < 300 else None
 
 @app.post("/api/customEvents/{name}", tags=["CustomEvents methods"])
-async def delete_CustomEvent(name: str, response: Response):
+async def emit_CustomEvent(name: str, response: Response):
     var,code = fibenv.get('fe').luaCall("emitCustomEvent",name)
     response.status_code = code
     return {} if code < 300 else None
@@ -380,7 +380,7 @@ async def get_refreshStates_events(response: Response, query: RefreshStatesQuery
 
 ''' Plugins methods '''
 @app.get("/api/plugins/callUIEvent", tags=["Plugins methods"])
-async def call_UIEvent(deviceID: int, eventType: str, elementName: str, value: str):
+async def call_UI_Event(deviceID: int, eventType: str, elementName: str, value: str):
     t = time.time()
     fibenv.get('fe').postEvent({"type":"uiEvent","deviceId":deviceID,"eventType":eventType,"elementName":elementName,"values":value})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
