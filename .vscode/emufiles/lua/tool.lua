@@ -176,13 +176,6 @@ function tool.upload(file, rsrc, name, path)
         initialProperties = props,
         initialInterfaces = dev.interfaces,
     }
-    local fqa = {
-        name = dev.name,
-        type = dev.type,
-        files = files,
-        initialProperties = props,
-        initialInterfaces = dev.interfaces,
-    }
 
     local stat, res, info = api.post("/quickApp/", fqa, "hc3")
     if not stat then
