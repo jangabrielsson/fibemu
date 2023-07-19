@@ -462,12 +462,8 @@ end
 
 function QA.fun.exportFQA(id)
     if not DIR[id] then return nil,404 end
-    local dev = DIR[id].dev
-    local files = files.exportFQA(dev)
-    local stat,res = pcall(QA.installFQA,args,args.roomId)
-    if stat then 
-        return res.dev,200
-    else return nil,409 end
+    local fqa = files.createFQA(id)
+    return fqa,200
 end
 
 ------------ Events posted from fibenv.py ------------

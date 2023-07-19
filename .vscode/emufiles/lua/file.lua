@@ -435,6 +435,34 @@ local function setQAfiles(id, files)
     return nil, 200
 end
 
+local function createFQA(id)
+    local qa = DIR[id]
+    local files = copy(qa.files)
+    local dev = qa.dev
+    for _, f in ipairs(files) do
+        f.qa = nil
+        f.fname = nil
+        f.isOpen = false
+        f.type = "lua"
+    end
+    local props = {
+        apiVersion = "1.2",
+        quickAppVariables = dev.properties.quickAppVariables or {},
+        uiCallbacks = #dev.properties.uiCallbacks > 0 and dev.properties.uiCallbacks or nil,
+        viewLayout = dev.properties.viewLayout,
+        typeTemplateInitialized = true,
+    }
+    local fqa = {
+        apiVersion = "1.2",
+        name = dev.name,
+        type = dev.type,
+        files = files,
+        initialProperties = props,
+        initialInterfaces = dev.interfaces,
+    }
+    return fqa
+end
+
 local function exportFQA(id)
     if not DIR[id] then
         if resources.getResource("devices", id) then
@@ -469,6 +497,7 @@ exports = {
     setQAfiles = setQAfiles,
     importQA = importFQA,
     exportFQA = exportFQA,
+    createFQA = createFQA,
     installFQA = installFQA,
     deleteQAfile = deleteQAfile,
     createChildDevice = createChildDevice,

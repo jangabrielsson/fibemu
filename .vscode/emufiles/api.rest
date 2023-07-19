@@ -23,6 +23,11 @@ Authorization: Basic {{user}}:{{pwd}}
 }
 
 ###
+GET http://{{host}}/api/quickApp/export/1206 HTTP/1.1
+content-type: application/json
+Authorization: Basic {{user}}:{{pwd}}
+
+###
 POST http://{{host}}/api/proxy?url=http://localhost:11112/api/plugins/publishEvent HTTP/1.1
 content-type: application/json
 Authorization: Basic {{user}}:{{pwd}}
