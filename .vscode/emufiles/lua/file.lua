@@ -111,7 +111,7 @@ local function installQA(fname, id, silent)
 
     local fileoffset = ""
     local chandler = {}
-    function chandler.fileoffset(var, val, vars) fileoffset = val end
+    function chandler.root(var, val, vars) fileoffset = val end
 
     function chandler.u(var, val, vars)
         vars.ui = vars.ui or {}
