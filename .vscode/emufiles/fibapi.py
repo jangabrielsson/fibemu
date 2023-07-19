@@ -555,11 +555,20 @@ async def export_QuickApp_FQA(id: int, response: Response):
     response.status_code = code
     return fqa if code < 300 else None
 
+class QAImportSpec(BaseModel):
+    name: str
+    type: str
+    apiVersion: str
+    files: List[QAFileSpec]
+    initialProperties: Any | None = None
+    initialInterfaces: Any | None = None
+
 @app.post("/api/quickApp/", tags=["QuickApp methods"])
-async def import_QuickApp_not_implemented():
+async def import_QuickApp(file: QAImportSpec, response: Response):
     t = time.time()
-    fibenv.get('fe').postEvent({"type":"importFQA","file":""})
-    return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
+    fqa,code = fibenv.get('fe').luaCall("importFQA",file.json())
+    response.status_code = code
+    return fqa if code < 300 else None
 
 class QAImportParams(BaseModel):
     file: str

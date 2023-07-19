@@ -392,9 +392,15 @@ function mqtt.Client.connect(uri, options)
     return client
 end
 
+local function callHC3S(...) -- sleep to let threads catch up (ex. importFQA)
+    local a,b,c = callHC3(...)
+    if fibaro.sleep then fibaro.sleep(0) end
+    return a,b,c
+end
+
 api = {
-    get = function(url, hc3) return callHC3("GET", patch(url), nil, hc3) end,
-    post = function(url, data, hc3) return callHC3("POST", url, data, hc3) end,
-    put = function(url, data, hc3) return callHC3("PUT", url, data, hc3) end,
-    delete = function(url, data, hc3) return callHC3("DELETE", url, data, hc3) end,
+    get = function(url, hc3) return callHC3S("GET", patch(url), nil, hc3) end,
+    post = function(url, data, hc3) return callHC3S("POST", url, data, hc3) end,
+    put = function(url, data, hc3) return callHC3S("PUT", url, data, hc3) end,
+    delete = function(url, data, hc3) return callHC3S("DELETE", url, data, hc3) end,
 }

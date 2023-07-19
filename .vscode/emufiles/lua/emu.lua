@@ -116,7 +116,23 @@ local function createEnvironment(id)
     local function setTimer(f, ms, log)
         assert(type(f) == 'function', "setTimeout first arg must be function")
         assert(type(ms) == 'number', "setTimeout second arg must be a number")
-        return qa.addTimer(ms, f, log)
+        local ctx = debug.getinfo(2)
+        local callLine = ctx.currentline
+        local callFile = ctx.source
+        local function f2()
+            xpcall(f,function(err)
+                local c2 = debug.getinfo(2)
+                local errFile = c2.source
+                local errLine = c2.currentline
+                ctx = debug.getinfo(f)
+                local funFile = ctx.source
+                local funLine = ctx.linedefined
+                local err = err:match("%]:%d+:%s*(.*)")
+                local msg = format("%s - %s:%s, timer called from %s:%s", err, errFile,errLine,callFile,callLine)
+                env.fibaro.error(env.__TAG, format("setTimeout: %s", msg))
+            end)
+        end
+        return qa.addTimer(ms, f2, log)
     end
     local function clearTimer(ref)
         assert(type(ref) == 'number', "clearTimeout arg must be number")
@@ -355,6 +371,7 @@ function QA.installFQA(data, roomId)
     local qa = files.installFQA(data, roomId)
     if qa then
         QA.restart(qa.dev.id)
+        return qa
     end
 end
 
@@ -424,6 +441,29 @@ function QA.fun.publishEvent(args)
     }
     refreshStates.newEvent(ev)
     return true,200
+end
+
+function QA.fun.exportFQA(args)
+    args = json.decode(args)
+    return true,200
+end
+
+function QA.fun.importFQA(args)
+    args = json.decode(args)
+    local stat,res = pcall(QA.installFQA,args,args.roomId)
+    if stat then 
+        return res.dev,200
+    else return nil,404 end
+end
+
+function QA.fun.exportFQA(id)
+    if not DIR[id] then return nil,404 end
+    local dev = DIR[id].dev
+    local files = files.exportFQA(dev)
+    local stat,res = pcall(QA.installFQA,args,args.roomId)
+    if stat then 
+        return res.dev,200
+    else return nil,409 end
 end
 
 ------------ Events posted from fibenv.py ------------
