@@ -124,9 +124,9 @@ local function createEnvironment(id)
                 local c2 = debug.getinfo(2)
                 local errFile = c2.source
                 local errLine = c2.currentline
-                ctx = debug.getinfo(f)
-                local funFile = ctx.source
-                local funLine = ctx.linedefined
+                -- ctx = debug.getinfo(f)
+                -- local funFile = ctx.source
+                -- local funLine = ctx.linedefined
                 local err = err:match("%]:%d+:%s*(.*)")
                 local msg = format("%s - %s:%s, timer called from %s:%s", err, errFile,errLine,callFile,callLine)
                 env.fibaro.error(env.__TAG, format("setTimeout: %s", msg))
