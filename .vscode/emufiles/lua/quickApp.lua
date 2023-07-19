@@ -21,7 +21,7 @@ function QuickAppBase:__init(dev)
   self.uiCallbacks = {}
   self._view = {}
   for _,e in ipairs(dev.properties.uiCallbacks or {}) do
-    self.uiCallbacks[e.name] = self.uiCallbacks[e.name] or {} 
+    self.uiCallbacks[e.name] = self.uiCallbacks[e.name] or {}
     self.uiCallbacks[e.name][e.eventType]=e.callback
   end
 end
@@ -36,7 +36,16 @@ function QuickAppBase:callAction(name,...)
     self:error("callAction: No such method "..tostring(name))
     return
   end
-  self[name](self,...) 
+  local f,args = self[name],{...}
+  xpcall(function() f(self,table.unpack(args)) end,function(err)
+          local c2 = os.debug.getinfo(2)
+          local errFile = c2.source
+          local errLine = c2.currentline
+          err = err:match("%]:%d+:%s*(.*)")
+          local msg = string.format("QuickApp:%s(...), %s - %s:%s", name, err, errFile,errLine)
+          self:error("onAction:",msg)
+      end)
+  --self[name](self,...)
 end
 
 function QuickAppBase:setupUICallbacks()
@@ -94,13 +103,13 @@ local function copy(l) local r={}; for _,i in ipairs(l) do r[#r+1]={name=i.name,
 function QuickAppBase:setVariable(name,value)
   __assert_type(name,'string')
   local vars = copy(self.properties.quickAppVariables or {})
-  for _,v in ipairs(vars) do 
-    if v.name==name then 
+  for _,v in ipairs(vars) do
+    if v.name==name then
       v.value=value
       api.post("/plugins/updateProperty", {deviceId=self.id, propertyName='quickAppVariables', value=vars})
       self.properties.quickAppVariables = vars
-      return 
-    end 
+      return
+    end
   end
   vars[#vars+1]={name=name,value=value}
   api.post("/plugins/updateProperty", {deviceId=self.id, propertyName='quickAppVariables', value=vars})
@@ -186,7 +195,7 @@ function QuickAppBase:internalStorageSet(key, val, hidden)
   local data = { name=key, value=val, isHidden=hidden}
   local _,stat = api.put("/plugins/"..self.id.."/variables/"..key,data)
   --print(key,stat)
-  if stat>206 then 
+  if stat>206 then
     local _,stat = api.post("/plugins/"..self.id.."/variables",data)
     --print(key,stat)
     return stat
@@ -227,9 +236,9 @@ function onAction(id,event)
   print("onAction: ", json.encode(event))
   if quickApp.actionHandler then return quickApp:actionHandler(event) end
   if event.deviceId == quickApp.id then
-    return quickApp:callAction(event.actionName, table.unpack(event.args)) 
+    return quickApp:callAction(event.actionName, table.unpack(event.args))
   elseif quickApp.childDevices[event.deviceId] then
-    return quickApp.childDevices[event.deviceId]:callAction(event.actionName, table.unpack(event.args)) 
+    return quickApp.childDevices[event.deviceId]:callAction(event.actionName, table.unpack(event.args))
   end
   quickApp:warning(string.format("Child with id:%s not found",id))
 end
@@ -245,9 +254,9 @@ function onUIEvent(id, event)
       return
     end
   end
-  if QA.uiCallbacks[event.elementName] and QA.uiCallbacks[event.elementName][event.eventType] then 
+  if QA.uiCallbacks[event.elementName] and QA.uiCallbacks[event.elementName][event.eventType] then
     QA:callAction(QA.uiCallbacks[event.elementName][event.eventType], event)
   else
     quickApp:warning(string.format("UI callback for element:%s not found.", event.elementName))
-  end 
+  end
 end

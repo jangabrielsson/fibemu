@@ -282,16 +282,20 @@ local function runner(fc, id)
     collectgarbage("collect")
     for _, qf in pairs(qa.files) do
         log("Running '%s'", qf.name)
-        local stat, err = pcall(qf.qa) -- Start QA
-        if not stat then
+        local stat, err = xpcall(qf.qa,function(err) -- Start QA
             if type(err)=='userdata' then
                 if lldebugger then lldebugger.stop() end
                 QA.isDead=true
                 return 
             end
+            local c2 = debug.getinfo(2)
+            local errFile = c2.source
+            local errLine = c2.currentline
+            err = err:match("%]:%d+:%s*(.*)")
+            local msg = string.format("%s - %s:%s", err, errFile,errLine)
             logerr("Running '%s' - %s - restarting in 5s", qf.name, err)
             QA.restart(id, RESTART_TIME)
-        end
+        end)
     end
 
     local stat, err = pcall(function()
