@@ -156,6 +156,7 @@ local function installQA(fname, id, silent)
     end
 
     function chandler.var(var, val2, vars) --%%var=varname:varvalue
+        local l = fibaro
         local var, val, stat = val2:match("([%w_]+):(.+)")
         val, stat = eval(val)
         if stat == false or not var then
