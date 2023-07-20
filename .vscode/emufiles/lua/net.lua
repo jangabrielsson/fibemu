@@ -45,8 +45,10 @@ end
 
 function net.HTTPClient()
     local debugFlags = net._debugFlags or {}
+    local util = fibaro.fibemu.libs.util
     local self2 = {
         request = function(_, url, opts)
+            local ctx = util.getErrCtx(3)
             if debugFlags.http and not url:match("/refreshStates") then
                 fibaro.fibemu.syslog(__TAG, "HTTPClient: %s", url)
             end
@@ -57,16 +59,23 @@ function net.HTTPClient()
             local succH = opts.success
             local function callback(status, data, headers)
                 if fibaro.__dead then return end
-                local stat, res = pcall(function()
+                -- local stat, res = pcall(function()
+                --     if status < 303 and succH and type(succH) == 'function' then
+                --         succH({ status = status, data = data, headers = headers })
+                --     elseif errH and type(errH) == 'function' then
+                --         errH(status, headers)
+                --     end
+                -- end)
+                -- if not stat then
+                --     fibaro.fibemu.syslogerr(__TAG, "netClient callback: %s", res)
+                -- end
+                util.betterErrorCall("netClient callback",__TAG or "sys",ctx,function()
                     if status < 303 and succH and type(succH) == 'function' then
                         succH({ status = status, data = data, headers = headers })
                     elseif errH and type(errH) == 'function' then
                         errH(status, headers)
                     end
                 end)
-                if not stat then
-                    fibaro.fibemu.syslogerr(__TAG, "netClient callback: %s", res)
-                end
             end
             local opts = {
                 headers = options.headers or {},

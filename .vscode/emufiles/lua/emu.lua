@@ -292,6 +292,14 @@ local function runner(fc, id)
         if not ok then env.fibaro.error(env.__TAG, format("%s Error: %s", str, err)) end
     end
 
+    local function errMsg(err)
+        local c2 = debug.getinfo(3)   -- TODO. make this an util function...
+        local errFile = c2.source
+        local errLine = c2.currentline
+        err = err:match("%]:%d+:%s*(.*)")
+        return string.format("%s - %s:%s", err, errFile,errLine)
+    end
+
     collectgarbage("collect")
     for _, qf in pairs(qa.files) do
         log("Running '%s'", qf.name)
@@ -301,24 +309,19 @@ local function runner(fc, id)
                 QA.isDead=true
                 return 
             end
-            local c2 = debug.getinfo(2)
-            local errFile = c2.source
-            local errLine = c2.currentline
-            err = err:match("%]:%d+:%s*(.*)")
-            local msg = string.format("%s - %s:%s", err, errFile,errLine)
-            logerr("Running '%s' - %s - restarting in 5s", qf.name, err)
+            logerr("Running '%s' - %s - restarting in 5s", qf.name, errMsg(err))
             QA.restart(id, RESTART_TIME)
         end)
     end
 
-    local stat, err = pcall(function()
-        local qo = env.QuickApp(qa.dev)
-        env.quickApp = qo
-    end)
-    if not stat then
-        logerr(":onInit() %s - restarting in 5s", err)
-        QA.restart(id, RESTART_TIME)
-    end
+    xpcall(function()
+            local qo = env.QuickApp(qa.dev)
+            env.quickApp = qo
+        end,
+        function(err)
+            logerr(":onInit() %s - restarting in 5s", errMsg(err))
+            QA.restart(id, RESTART_TIME)
+        end)
 
     local ok, err
     while true do -- QA coroutine loop

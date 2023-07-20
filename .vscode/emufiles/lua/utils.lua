@@ -72,11 +72,11 @@ function util.timerQueue()
     local timers = sleepers[id]
     sleepers[id] = nil
     if #timers == 0 then return end
-    local i,qs = 1,#queue
+    local i, qs = 1, #queue
     for _, t in ipairs(timers) do
-      while i <= qs and queue[i].t <= t.t do i = i+1 end
+      while i <= qs and queue[i].t <= t.t do i = i + 1 end
       if i > qs then
-        queue[#queue+1] = t
+        queue[#queue + 1] = t
       else
         table.insert(queue, i, t)
         i = i + 1
@@ -306,8 +306,14 @@ os.COLORMAP = COLORMAP
 local colorEnd = '\027[0m'
 
 local fibColors = {
-  ["SYS"] = 'brown', ["SYSERR"] = 'red', ["DEBUG"] = 'green', ["TRACE"] = 'blue', ["WARNING"] = 'orange',
-  ["ERROR"] = 'red', ['TEXT'] = 'black', ['DARKTEXT'] = 'grey82'
+  ["SYS"] = 'brown',
+  ["SYSERR"] = 'red',
+  ["DEBUG"] = 'green',
+  ["TRACE"] = 'blue',
+  ["WARNING"] = 'orange',
+  ["ERROR"] = 'red',
+  ['TEXT'] = 'black',
+  ['DARKTEXT'] = 'grey82'
 }
 
 local function html2color(str, startColor, dflTxt)
@@ -318,7 +324,7 @@ local function html2color(str, startColor, dflTxt)
     else
       local color = s:match("color=([#%w]+)")
       color = COLORMAP[color] or (fibaro.colorMap[color] and COLORMAP[fibaro.colorMap[color] or dflTxt]) or
-      COLORMAP['black']
+          COLORMAP['black']
       p = p + 1; st[p] = color
       return color
     end
@@ -328,8 +334,8 @@ end
 function util.debug(flags, tag, str, typ)
   typ = typ:upper()
   str = flags.html and html2color(str, nil, fibColors['TEXT']) or
-      str:gsub("(</?font.->)", "")   -- Remove color tags
-  str = str:gsub("(&nbsp;)", " ")    -- remove html space
+      str:gsub("(</?font.->)", "") -- Remove color tags
+  str = str:gsub("(&nbsp;)", " ")  -- remove html space
   if flags.color then
     local txt_color = COLORMAP[(fibColors['TEXT'] or "black")]
     local typ_color = COLORMAP[(fibColors[typ] or "black")]
@@ -451,6 +457,25 @@ do -- Used for print device table structs - sortorder for device structs
     return table.concat(res, "")
   end
   util.prettyJson = prettyJsonStruct
+end
+
+function util.getErrCtx(level)
+  return debug.getinfo(level or 2)
+end
+
+function util.betterErrorCall(errmsg,tag,ctx,f, ...)
+  ctx = ctx or debug.getinfo(2)
+  local callLine = ctx.currentline
+  local callFile = ctx.source
+  xpcall(f, function(err)
+    local c2 = debug.getinfo(2)
+    local errFile = c2.source
+    local errLine = c2.currentline
+    err = err:match("%]:%d+:%s*(.*)")
+    local msg = format("%s - %s:%s, called from %s:%s", err, errFile, errLine, callFile, callLine)
+    fibaro.fibemu.syslogerr(tag, "%s: %s", errmsg, msg)
+    return false
+  end)
 end
 
 return util

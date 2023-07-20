@@ -13,7 +13,7 @@
 --%%u={{button='test', text='A', onReleased='testA'},{button='test', text='B', onReleased='testB'}}
 --%%u={slider="slider", max="80", onChanged='sliderA'}
 --%%u={label="lblA", text='This is a text'}
-
+ 
 function QuickApp:onInit()
     self:debug("Started",self.id)
     self:setVariable("test","HELLO")

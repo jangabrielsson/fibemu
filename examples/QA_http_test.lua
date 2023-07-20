@@ -5,7 +5,7 @@
 
 function QuickApp:onInit()
     self:debug("Started",self.id)
-    
+
     net.HTTPClient():request("http://worldtimeapi.org/api/timezone/Europe/Stockholm",{
         options = {
             method = "GET",
