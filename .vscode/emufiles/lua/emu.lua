@@ -119,6 +119,7 @@ local function errMsg(err)
     while true do
         ctx = debug.getinfo(i)
         if ctx.what == 'Lua' and ctx.name and not member(ctx.name,stackSkips) then break end
+        if ctx.name == nil then break end
         i = i + 1
     end
      -- TODO. make this an util function...
@@ -128,12 +129,12 @@ local function errMsg(err)
     return string.format("%s - %s:%s", err, errFile,errLine)
 end
 
-local function errMsg2(err)
-    local i,ctx = 3,nil
+local function errMsg2(err,n)
+    local i,ctx = n or 2,nil
     repeat
         i = i + 1
         ctx = debug.getinfo(i)
-    until ctx.name == "onInit"
+    until ctx.source == "onInit"
      -- TODO. make this an util function...
     local errFile = ctx.source
     local errLine = ctx.currentline
