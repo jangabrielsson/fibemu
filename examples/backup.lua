@@ -11,7 +11,7 @@ fqa = json.decode(fqa)
 local s, c = api.post("/quickApp/", fqa)                             -- Install the QA in the emulator
 fibaro.call(s.id, "updateView", "label1", "text", "Hello World")     -- Set label1 to "Hello World"
 fibaro.call(s.id, "setVariable", "x", "42")                          -- and set variable x to 42
-setTimeout(function()
+setTimeout(function()                                                -- Give a little time for the call to complete...
     fqa = api.get("/quickApp/export/" .. s.id)                       -- export the QA from the emulator
     local vars = api.get("/devices/" .. s.id).properties.quickAppVariables -- get the variables from the emulator
 

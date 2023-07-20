@@ -157,7 +157,7 @@ local function createEnvironment(id)
 
     function env.__fibaroSleep(ms) -- Need to make sure that onAction/onUIEvent are not run...
         local co = coroutine.running()
-        if not coroutine.isyieldable(co) then return end
+        if not coroutine.isyieldable(co) then return end -- Think again. Cause issue from tool download due ti api.get's sleep(0)
         local function f() coroutine.resume(co) end
         timers.save(id)
         DIR[id].addTimer(ms,f,"sleep",true)
