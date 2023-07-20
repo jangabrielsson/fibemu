@@ -8,9 +8,13 @@ end
 
 function bar() error("OK") end
 
+function a1()
+    foo()
+end
+
 function QuickApp:onInit()
     self:debug("Started",self.id)
-    foo()
+    --setTimeout(a1,1000)
     net.HTTPClient():request("http://worldtimeapi.org/api/timezone/Europe/Stockholm",{
         options = {
             method = "GET",

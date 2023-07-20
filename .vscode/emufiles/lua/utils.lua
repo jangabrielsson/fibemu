@@ -467,12 +467,19 @@ function util.getErrCtx(level)
   return debug.getinfo(level or 2)
 end
 
+local stackSkips = {"breakForError","luaError","error","assert" }
+
 function util.betterErrorCall(errmsg,tag,ctx,f, ...)
   ctx = ctx or debug.getinfo(2)
   local callLine = ctx.currentline
   local callFile = ctx.source
   xpcall(f, function(err)
-    local c2 = debug.getinfo(2)
+    local i = 2
+    local c2 = debug.getinfo(i)
+    while c2 and util.member(c2.name, stackSkips) do
+      i = i + 1
+      c2 = debug.getinfo(i)
+    end
     local errFile = c2.source
     local errLine = c2.currentline
     err = err:match("%]:%d+:%s*(.*)")
