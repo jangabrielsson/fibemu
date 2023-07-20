@@ -63,6 +63,7 @@ QA.addDoc("libraryfiles", "true, logs Lua library files loaded (ex. quickApp.lua
 QA.addDoc("userfiles", "true, logs user's QA files loaded (--%%file directive)")
 QA.addDoc("refresh_resource", "true, logs refresh of resource in internal DB")
 QA.addDoc("autoui", "true, will add 2s autorefresh for QA UI web interface page")
+QA.addDoc("callstack", "true, will log callstack at error")
 
 local libs = { 
     devices = devices, resources = resources, files = files, refreshStates = refreshStates, lldebugger = lldebugger,
@@ -110,6 +111,14 @@ function string.split(str, sep)
     return fields
 end
 
+local function errMsg(err)
+    local c2 = debug.getinfo(3)   -- TODO. make this an util function...
+    local errFile = c2.source
+    local errLine = c2.currentline
+    err = err:match("%]:%d+:%s*(.*)")
+    return string.format("%s - %s:%s", err, errFile,errLine)
+end
+
 local function createEnvironment(id)
     local qa = DIR[id]
     local env,dev = {},qa.dev
@@ -125,6 +134,17 @@ local function createEnvironment(id)
         return timers.add(id,t, DIR[id].f, { type = 'timer', fun = f, ms = t, log = log or "" }, nosleep)
     end
 
+    local function callStack2(n)
+        if not debugFlags.callstack then return "" end
+        local i,res,ctx = n,{},debug.getinfo(n)
+        while ctx.name do
+            res[#res+1]=format("-> %s:%s - %s",ctx.name,ctx.currentline,ctx.source)
+            i = i+1
+            ctx = debug.getinfo(i)
+        end
+        return #res> 0 and "\n"..table.concat(res,"\n") or ""
+    end
+
     local function setTimer(f, ms, log)
         assert(type(f) == 'function', "setTimeout first arg must be function")
         assert(type(ms) == 'number', "setTimeout second arg must be a number")
@@ -133,14 +153,8 @@ local function createEnvironment(id)
         local callFile = ctx.source
         local function f2()
             xpcall(f,function(err)
-                local c2 = debug.getinfo(2)
-                local errFile = c2.source
-                local errLine = c2.currentline
-                -- ctx = debug.getinfo(f)
-                -- local funFile = ctx.source
-                -- local funLine = ctx.linedefined
-                local err = err:match("%]:%d+:%s*(.*)")
-                local msg = format("%s - %s:%s, timer called from %s:%s", err, errFile,errLine,callFile,callLine)
+                local msg = errMsg(err)
+                local msg = format("%s, timer called from %s:%s%s", msg, callFile, callLine, callStack2(3))
                 env.fibaro.error(env.__TAG, format("setTimeout: %s", msg))
             end)
         end
@@ -292,12 +306,15 @@ local function runner(fc, id)
         if not ok then env.fibaro.error(env.__TAG, format("%s Error: %s", str, err)) end
     end
 
-    local function errMsg(err)
-        local c2 = debug.getinfo(3)   -- TODO. make this an util function...
-        local errFile = c2.source
-        local errLine = c2.currentline
-        err = err:match("%]:%d+:%s*(.*)")
-        return string.format("%s - %s:%s", err, errFile,errLine)
+    local function callStack()
+        if not debugFlags.callstack then return "" end
+        local i,res,ctx = 2,{},nil
+        repeat
+            i = i+1
+            ctx = debug.getinfo(i)
+            res[#res+1]=format("-> %s:%s - %s",ctx.name,ctx.currentline,ctx.source)
+        until ctx.name == "onInit"
+        return "\n"..table.concat(res,"\n")
     end
 
     collectgarbage("collect")
@@ -309,7 +326,7 @@ local function runner(fc, id)
                 QA.isDead=true
                 return 
             end
-            logerr("Running '%s' - %s - restarting in 5s", qf.name, errMsg(err))
+            logerr("Running '%s' - %s - restarting in 5s", qf.name, errMsg(err), callStack())
             QA.restart(id, RESTART_TIME)
         end)
     end
@@ -319,7 +336,7 @@ local function runner(fc, id)
             env.quickApp = qo
         end,
         function(err)
-            logerr(":onInit() %s - restarting in 5s", errMsg(err))
+            logerr(":onInit() %s - restarting in 5s%s", errMsg(err),callStack())
             QA.restart(id, RESTART_TIME)
         end)
 

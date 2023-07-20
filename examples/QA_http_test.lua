@@ -1,11 +1,11 @@
 
 --%%name=HTTP Test
 --%%type=com.fibaro.binarySwitch
---%%debug=http:true,hc3_http:true,dark:true
+--%%debug=http:true,hc3_http:true,dark:true,callstack:true
 
 function QuickApp:onInit()
     self:debug("Started",self.id)
-
+    setTimeout(foo, 1000)
     net.HTTPClient():request("http://worldtimeapi.org/api/timezone/Europe/Stockholm",{
         options = {
             method = "GET",
