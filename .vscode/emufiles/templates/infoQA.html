@@ -2,6 +2,9 @@
 {% block title %}Index{% endblock %}
 {% block head %}
     {{ super() }}
+    {% if qa.debug.autoui %}
+    <meta http-equiv="refresh" content="2">
+    {% endif %}
     <style>
     @media (min-width: 1200px) {
         .container{
