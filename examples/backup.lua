@@ -1,3 +1,6 @@
+--%%debug=refresh:true
+--%%var=foo:77
+
 local function readFile(fname)
     local f = io.open(fname, "rb")
     assert(f)

@@ -45,12 +45,24 @@ local luaType = function(obj)
     return t == 'table' and obj.__USERDATA and 'userdata' or t
 end
 
-QA, DIR = { config = config, fun = {}, debug={} }, {}
+QA, DIR = { config = config, fun = {}, debug={}, debugDoc={} }, {}
+function QA.addDoc(flag, doc) QA.debugDoc[flag] = doc end
 QA.DIR = DIR
 local debugFlags = QA.debug
 debugFlags.color = true
 debugFlags.refresh = true
 fibaro = { pyhooks = pyhooks, debugFlags = debugFlags, fibemu = QA, config = config }
+
+QA.addDoc("color", "true, uses colors in debug console")
+QA.addDoc("refresh", "true, logs refreshStates (system triggers)")
+QA.addDoc("dark", "true, sets debug console text to a light color (vscode in darkmode)")
+QA.addDoc("debugFlags", "true, logs debugFlags being set in header")
+QA.addDoc("quickVars", "true, logs quickAppVaribles being defined in header")
+QA.addDoc("hc3_http", "true, logs http calls to HC3 or emulator")
+QA.addDoc("libraryfiles", "true, logs Lua library files loaded (ex. quickApp.lua)")
+QA.addDoc("userfiles", "true, logs user's QA files loaded (--%%file directive)")
+QA.addDoc("refresh_resource", "true, logs refresh of resource in internal DB")
+QA.addDoc("autoui", "true, will add 2s autorefresh for QA UI web interface page")
 
 local libs = { 
     devices = devices, resources = resources, files = files, refreshStates = refreshStates, lldebugger = lldebugger,
