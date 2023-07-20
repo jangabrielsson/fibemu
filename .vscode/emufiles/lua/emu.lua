@@ -77,6 +77,7 @@ refreshStates.init(config, libs)
 files.init(config, libs)
 fakes.init(config, libs)
 util.init(config, libs)
+local member = util.member
 
 for k,v in pairs(config.colors or {}) do util.fibColors[k] = v end
 
@@ -111,10 +112,31 @@ function string.split(str, sep)
     return fields
 end
 
+local stackSkips = {"breakForError","luaError","error","assert" }
+
 local function errMsg(err)
-    local c2 = debug.getinfo(3)   -- TODO. make this an util function...
-    local errFile = c2.source
-    local errLine = c2.currentline
+    local i,ctx = 3,nil
+    while true do
+        ctx = debug.getinfo(i)
+        if ctx.what == 'Lua' and ctx.name and not member(ctx.name,stackSkips) then break end
+        i = i + 1
+    end
+     -- TODO. make this an util function...
+    local errFile = ctx.source
+    local errLine = ctx.currentline
+    err = err:match("%]:%d+:%s*(.*)")
+    return string.format("%s - %s:%s", err, errFile,errLine)
+end
+
+local function errMsg2(err)
+    local i,ctx = 3,nil
+    repeat
+        i = i + 1
+        ctx = debug.getinfo(i)
+    until ctx.name == "onInit"
+     -- TODO. make this an util function...
+    local errFile = ctx.source
+    local errLine = ctx.currentline
     err = err:match("%]:%d+:%s*(.*)")
     return string.format("%s - %s:%s", err, errFile,errLine)
 end
@@ -138,7 +160,9 @@ local function createEnvironment(id)
         if not debugFlags.callstack then return "" end
         local i,res,ctx = n,{},debug.getinfo(n)
         while ctx.name do
-            res[#res+1]=format("-> %s:%s - %s",ctx.name,ctx.currentline,ctx.source)
+            if not member(ctx.name,stackSkips) then 
+                res[#res+1]=format("-> %s:%s - %s",ctx.name,ctx.currentline,ctx.source)
+            end
             i = i+1
             ctx = debug.getinfo(i)
         end
@@ -146,8 +170,8 @@ local function createEnvironment(id)
     end
 
     local function setTimer(f, ms, log)
-        assert(type(f) == 'function', "setTimeout first arg must be function")
-        assert(type(ms) == 'number', "setTimeout second arg must be a number")
+        assert(type(f) == 'function', "setTimeout first arg must be function",2)
+        assert(type(ms) == 'number', "setTimeout second arg must be a number",2)
         local ctx = debug.getinfo(2)
         local callLine = ctx.currentline
         local callFile = ctx.source
@@ -308,11 +332,14 @@ local function runner(fc, id)
 
     local function callStack()
         if not debugFlags.callstack then return "" end
-        local i,res,ctx = 2,{},nil
+        local i,res,ctx = 3,{},nil
         repeat
             i = i+1
             ctx = debug.getinfo(i)
+            if ctx.currentline < 0 then break end
+            if not member(ctx.name,stackSkips) then 
             res[#res+1]=format("-> %s:%s - %s",ctx.name,ctx.currentline,ctx.source)
+            end
         until ctx.name == "onInit"
         return "\n"..table.concat(res,"\n")
     end
@@ -336,7 +363,7 @@ local function runner(fc, id)
             env.quickApp = qo
         end,
         function(err)
-            logerr(":onInit() %s - restarting in 5s%s", errMsg(err),callStack())
+            logerr(":onInit() %s - restarting in 5s%s", errMsg2(err),callStack())
             QA.restart(id, RESTART_TIME)
         end)
 

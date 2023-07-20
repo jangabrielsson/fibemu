@@ -400,6 +400,10 @@ function util.append(a, b)
   return res
 end
 
+function util.member(e, t)
+  for _,e0 in ipairs(t) do if e==e0 then return true end end
+end
+
 do -- Used for print device table structs - sortorder for device structs
   local sortKeys = {
     'id', 'name', 'roomID', 'type', 'baseType', 'enabled', 'visible', 'isPlugin', 'parentId', 'viewXml', 'configXml',
