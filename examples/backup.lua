@@ -1,4 +1,3 @@
-
 local function readFile(fname)
     local f = io.open(fname, "rb")
     assert(f)
@@ -7,11 +6,14 @@ local function readFile(fname)
     return content
 end
 
-local fqa = readFile("examples/QA.fqa") -- read in the fqa file
+local fqa = readFile("examples/QA.fqa")                              -- read in the fqa file
 fqa = json.decode(fqa)
-local s,c = api.post("/quickApp/",fqa)  -- Install the QA in the emulator
-fibaro.call(s.id,"updateView","label1","text","Hello World") -- Set label1 to "Hello World"
-fibaro.call(s.id,"setVariable","x","42")                     -- and set variable x to 42
-fqa = api.get("/quickApp/export/"..s.id) -- export the QA from the emulator
+local s, c = api.post("/quickApp/", fqa)                             -- Install the QA in the emulator
+fibaro.call(s.id, "updateView", "label1", "text", "Hello World")     -- Set label1 to "Hello World"
+fibaro.call(s.id, "setVariable", "x", "42")                          -- and set variable x to 42
+setTimeout(function()
+    fqa = api.get("/quickApp/export/" .. s.id)                       -- export the QA from the emulator
+    local vars = api.get("/devices/" .. s.id).properties.quickAppVariables -- get the variables from the emulator
 
-print(json.encode(fqa.initialProperties.quickAppVariables)) -- Have a look at the quickAppVariables
+    print(json.encode(fqa.initialProperties.quickAppVariables))      -- Have a look at the quickAppVariables
+end, 0)

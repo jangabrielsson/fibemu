@@ -435,6 +435,7 @@ function r.updateDeviceProp(d, remote)
     if rsrcs.devices[id] == nil then return nil, 404 end
     local d = rsrcs.devices[id]
     if d.properties[prop] == newValue then return nil, 200 end
+    local oldValue = d.properties[prop]
     if not d._local then
         -- sync back to hc3
         api.put("/devices/" .. id, { properties = { [prop] = newValue } }, "hc3")
@@ -443,10 +444,10 @@ function r.updateDeviceProp(d, remote)
     else
         --print("DDD2",json.encode(d),tostring(QA.DIR[id].dev.properties[prop]),tostring(newValue))
         if QA.DIR[id] then
+            local dev = QA.DIR[id].dev
             QA.DIR[id].dev.properties[prop] = newValue
         end
     end
-    local oldValue = d.properties[prop]
     d.properties[prop] = newValue
     postEvent("DevicePropertyUpdatedEvent", { id = id, property = prop, newValue = newValue, oldValue = oldValue })
     return nil, 200

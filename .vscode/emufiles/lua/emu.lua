@@ -157,6 +157,7 @@ local function createEnvironment(id)
 
     function env.__fibaroSleep(ms) -- Need to make sure that onAction/onUIEvent are not run...
         local co = coroutine.running()
+        if not coroutine.isyieldable(co) then return end
         local function f() coroutine.resume(co) end
         timers.save(id)
         DIR[id].addTimer(ms,f,"sleep",true)
