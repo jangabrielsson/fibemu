@@ -1,16 +1,6 @@
-
 --%%name=HTTP Test
 --%%type=com.fibaro.binarySwitch
 --%%debug=http:true,hc3_http:true,dark:true,callstack:true
-function foo()
-    bar()
-end
-
-function bar() error("OK") end
-
-function a1()
-    foo()
-end
 
 function QuickApp:onInit()
     self:debug("Started",self.id)
@@ -35,5 +25,5 @@ function QuickApp:onInit()
 end
 
 function QuickApp:turnOn()
-    self:debug("Turned on")
+    self:debug4("Turned on")
 end

@@ -70,6 +70,7 @@ function util.timerQueue()
 
   local function restoreTimers(id)
     local timers = sleepers[id]
+    if timers == nil then return end
     sleepers[id] = nil
     if #timers == 0 then return end
     local i, qs = 1, #queue
@@ -467,26 +468,62 @@ function util.getErrCtx(level)
   return debug.getinfo(level or 2)
 end
 
-local stackSkips = {"breakForError","luaError","error","assert" }
+local stackSkips2 = {"breakForError","luaError","error","assert" }
 
-function util.betterErrorCall(errmsg,tag,ctx,f, ...)
-  ctx = ctx or debug.getinfo(2)
-  local callLine = ctx.currentline
-  local callFile = ctx.source
-  xpcall(f, function(err)
-    local i = 2
-    local c2 = debug.getinfo(i)
-    while c2 and util.member(c2.name, stackSkips) do
-      i = i + 1
-      c2 = debug.getinfo(i)
+local stackSkips = { ["breakForError"] = true, ["luaError"] = true, ["error"] = true, ["assert"] = true }
+local unpack = table.unpack
+function util.epcall(fib,TAG,pre,stackPrint,cctx,f, ...)
+    local args,calledFrom = {...},""
+    if cctx then
+      calledFrom = format(" called from %s:%s",cctx.source,cctx.currentline)
     end
-    local errFile = c2.source
-    local errLine = c2.currentline
-    err = err:match("%]:%d+:%s*(.*)")
-    local msg = format("%s - %s:%s, called from %s:%s", err, errFile, errLine, callFile, callLine)
-    fibaro.fibemu.syslogerr(tag, "%s: %s", errmsg, msg)
-    return false
-  end)
+    return xpcall(function() f(unpack(args)) end, function(err)
+        local i = 2
+        local ctx = os.debug.getinfo(i)
+        while ctx and (ctx.what and ctx.what == 'C' or ctx.name and stackSkips[ctx.name or ""]) do
+            --print("SKIP, ", ctx.name)
+            i = i + 1
+            ctx = os.debug.getinfo(i)
+        end
+        local res = {}
+        while ctx.func ~= f do
+            table.insert(res, ctx)
+            i = i + 1
+            ctx = os.debug.getinfo(i)
+        end
+        res[#res + 1] = ctx
+        local line, errmsg = err:match(".-:(%d+):%s*(.*)")
+        local c = table.remove(res, 1)
+        local name = c.name and (c.name .. ":") or ""
+        errmsg = format("%s, %s:%s%s%s", errmsg, c.source, name, c.currentline, calledFrom)
+        local out = { pre and (pre..":"..errmsg) or errmsg }
+        if stackPrint then
+            local last = nil
+            if #res == 0 then 
+              fib.error(TAG,out[1])
+              return 
+            end
+            local c = res[1]
+            local name = c.name and (c.name .. ":") or ""
+            local last = format("--> %s:%s%s", c.source, name, c.currentline)
+            local rep = 0
+            for i = 2, #res do
+                local c = res[i]
+                local name = c.name and (c.name .. ":") or ""
+                local new = format("--> %s:%s%s", c.source, name, c.currentline)
+                if new ~= last then
+                    out[#out + 1] = last .. (rep > 0 and format(" (%s)", rep) or "")
+                    last = new
+                    rep = 0
+                else
+                    rep = rep + 1
+                end
+            end
+            fib.error(TAG,table.concat(out, "\n"))
+        else
+            fib.error(TAG,out[1])
+        end
+    end)
 end
 
 return util

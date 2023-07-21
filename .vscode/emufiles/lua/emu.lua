@@ -77,7 +77,7 @@ refreshStates.init(config, libs)
 files.init(config, libs)
 fakes.init(config, libs)
 util.init(config, libs)
-local member = util.member
+local member,epcall = util.member,util.epcall
 
 for k,v in pairs(config.colors or {}) do util.fibColors[k] = v end
 
@@ -114,34 +114,6 @@ end
 
 local stackSkips = {"breakForError","luaError","error","assert" }
 
-local function errMsg(err)
-    local i,ctx = 3,nil
-    while true do
-        ctx = debug.getinfo(i)
-        if ctx.what == 'Lua' and ctx.name and not member(ctx.name,stackSkips) then break end
-        if ctx.name == nil then break end
-        i = i + 1
-    end
-     -- TODO. make this an util function...
-    local errFile = ctx.source
-    local errLine = ctx.currentline
-    err = err:match("%]:%d+:%s*(.*)")
-    return string.format("%s - %s:%s", err, errFile,errLine)
-end
-
-local function errMsg2(err,n)
-    local i,ctx = n or 2,nil
-    repeat
-        i = i + 1
-        ctx = debug.getinfo(i)
-    until ctx.source == "onInit"
-     -- TODO. make this an util function...
-    local errFile = ctx.source
-    local errLine = ctx.currentline
-    err = err:match("%]:%d+:%s*(.*)")
-    return string.format("%s - %s:%s", err, errFile,errLine)
-end
-
 local function createEnvironment(id)
     local qa = DIR[id]
     local env,dev = {},qa.dev
@@ -157,32 +129,9 @@ local function createEnvironment(id)
         return timers.add(id,t, DIR[id].f, { type = 'timer', fun = f, ms = t, log = log or "" }, nosleep)
     end
 
-    local function callStack2(n)
-        if not debugFlags.callstack then return "" end
-        local i,res,ctx = n,{},debug.getinfo(n)
-        while ctx.name do
-            if not member(ctx.name,stackSkips) then 
-                res[#res+1]=format("-> %s:%s - %s",ctx.name,ctx.currentline,ctx.source)
-            end
-            i = i+1
-            ctx = debug.getinfo(i)
-        end
-        return #res> 0 and "\n"..table.concat(res,"\n") or ""
-    end
-
     local function setTimer(f, ms, log)
-        assert(type(f) == 'function', "setTimeout first arg must be function",2)
-        assert(type(ms) == 'number', "setTimeout second arg must be a number",2)
         local ctx = debug.getinfo(2)
-        local callLine = ctx.currentline
-        local callFile = ctx.source
-        local function f2()
-            xpcall(f,function(err)
-                local msg = errMsg(err)
-                local msg = format("%s, timer called from %s:%s%s", msg, callFile, callLine, callStack2(3))
-                env.fibaro.error(env.__TAG, format("setTimeout: %s", msg))
-            end)
-        end
+        local function f2() epcall(env.fibaro,env.__TAG,"setTimeout",true,ctx,f) end
         return qa.addTimer(ms, f2, log)
     end
     local function clearTimer(ref)
@@ -203,8 +152,8 @@ local function createEnvironment(id)
     env._ENV = env
     env.type = luaType
 
-    env.setTimeout = setTimer
-    env.clearTimeout = clearTimer
+    env.__setTimeout = setTimer
+    env.__clearTimeout = clearTimer
 
     function env.__fibaroSleep(ms) -- Need to make sure that onAction/onUIEvent are not run...
         local co = coroutine.running()
@@ -324,49 +273,35 @@ local function runner(fc, id)
     debugFlags = env.fibaro.debugFlags
 
     local function log(fmt, ...) util.debug(debugFlags, env.__TAG, format(fmt, ...), "SYS") end
-    local function logerr(fmt, ...) env.fibaro.error(env.__TAG, format("Error : %s", format(fmt, ...))) end
 
     local function checkErr(str, f, ...)
         local ok, err = pcall(f, ...)
         if not ok then env.fibaro.error(env.__TAG, format("%s Error: %s", str, err)) end
     end
 
-    local function callStack()
-        if not debugFlags.callstack then return "" end
-        local i,res,ctx = 3,{},nil
-        repeat
-            i = i+1
-            ctx = debug.getinfo(i)
-            if ctx.currentline < 0 then break end
-            if not member(ctx.name,stackSkips) then 
-            res[#res+1]=format("-> %s:%s - %s",ctx.name,ctx.currentline,ctx.source)
-            end
-        until ctx.name == "onInit"
-        return "\n"..table.concat(res,"\n")
-    end
-
     collectgarbage("collect")
     for _, qf in pairs(qa.files) do
         log("Running '%s'", qf.name)
-        local stat, err = xpcall(qf.qa,function(err) -- Start QA
+        local stat, err = epcall(env.fibaro,env.__TAG,qf.name.." ",true,nil,qf.qa) -- run QA file
+        if not stat then
             if type(err)=='userdata' then
                 if lldebugger then lldebugger.stop() end
                 QA.isDead=true
                 return 
             end
-            logerr("Running '%s' - %s - restarting in 5s", qf.name, errMsg(err), callStack())
+            env.fibaro.error(env.__TAG,format("will restart in %ds",RESTART_TIME/1000))
             QA.restart(id, RESTART_TIME)
-        end)
+        end
     end
 
-    xpcall(function()
+    local stat,_ = epcall(env.fibaro,env.__TAG,":onInit() ",true,nil,function()
             local qo = env.QuickApp(qa.dev)
             env.quickApp = qo
-        end,
-        function(err)
-            logerr(":onInit() %s - restarting in 5s%s", errMsg2(err),callStack())
-            QA.restart(id, RESTART_TIME)
         end)
+    if not stat then 
+        QA.restart(id, RESTART_TIME)
+        env.fibaro.error(env.__TAG,format("will restart in %ds",RESTART_TIME/1000))
+    end
 
     local ok, err
     while true do -- QA coroutine loop

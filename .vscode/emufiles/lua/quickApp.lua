@@ -37,15 +37,9 @@ function QuickAppBase:callAction(name,...)
     return
   end
   local f,args = self[name],{...}
-  xpcall(function() f(self,table.unpack(args)) end,function(err)
-          local c2 = os.debug.getinfo(2)
-          local errFile = c2.source
-          local errLine = c2.currentline
-          err = err:match("%]:%d+:%s*(.*)")
-          local msg = string.format("QuickApp:%s(...), %s - %s:%s", name, err, errFile,errLine)
-          self:error("onAction:",msg)
-      end)
-  --self[name](self,...)
+  local epcall = fibaro.fibemu.libs.util.epcall
+  local msg = string.format("onAction: QuickApp:%s(...)", name)
+  epcall(fibaro,__TAG,msg,true,nil,f,self,table.unpack(args))
 end
 
 function QuickAppBase:setupUICallbacks()

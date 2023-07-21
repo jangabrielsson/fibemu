@@ -9,6 +9,17 @@ function __assert_type(value, typeOfValue)
     end
 end
 
+function setTimeout(fun, ms)
+    if type(fun) ~= 'function' then error("setTimeout first arg must be function",2) end
+    assert(type(ms) == 'number', "setTimeout second arg must be a number",2)
+    return __setTimeout(fun, ms)
+end
+
+function clearTimeout(ref)
+    if type(ref) ~= 'number' then error("clearTimeout arg must be number (ref)",2) end
+    __clearTimeout(ref) 
+end
+
 function setInterval(fun, ms)
     local ref = {}
     local function loop()
