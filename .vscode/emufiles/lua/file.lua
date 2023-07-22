@@ -293,6 +293,12 @@ customUI = {
     ['com.fibaro.powerMeter'] = {
         { label = '__power', text = '...' }
     },
+    ['com.fibaro.temperatureSensor'] = {
+        { label = '__temperature', text = '...' }
+    },
+    ['com.fibaro.humiditySensor'] = {
+        { label = '__humidity', text = '...' }
+    },
     ['com.fibaro.colorController'] =
     { { { button = '__turnon', text = "Turn On", onReleased = "turnOn" },
                                                                    { button = '__turnoff', text = "Turn Off",

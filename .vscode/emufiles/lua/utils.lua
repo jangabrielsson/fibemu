@@ -468,8 +468,6 @@ function util.getErrCtx(level)
   return debug.getinfo(level or 2)
 end
 
-local stackSkips2 = {"breakForError","luaError","error","assert" }
-
 local stackSkips = { ["breakForError"] = true, ["luaError"] = true, ["error"] = true, ["assert"] = true }
 local unpack = table.unpack
 function util.epcall(fib,TAG,pre,stackPrint,cctx,f, ...)

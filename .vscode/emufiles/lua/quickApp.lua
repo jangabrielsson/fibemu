@@ -117,7 +117,7 @@ function QuickAppBase:updateProperty(prop,val)
     api.post("/plugins/updateProperty", {deviceId=self.id, propertyName=prop, value=val})
     self.properties[prop] = val
   else
-    self:debug(string.format("updateProperty(%s,%s) was %s",prop,tostring(val),tostring(old)))
+    --self:debug(string.format("updateProperty(%s,%s) was %s",prop,tostring(val),tostring(old)))
   end
 end
 

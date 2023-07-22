@@ -43,9 +43,10 @@ local function callHC3(method, path, data, hc3)
     return res and type(res) == 'string' and res ~= "" and json.decode(res) or nil, status, headers
 end
 
-function net.HTTPClient()
+function net.HTTPClient(opts)
     local debugFlags = net._debugFlags or {}
     local util = fibaro.fibemu.libs.util
+    local timeout = opts.timeout
     local epcall = util.epcall
     local self2 = {
         request = function(_, url, opts)
@@ -70,6 +71,7 @@ function net.HTTPClient()
             end
             local opts = {
                 headers = options.headers or {},
+                timeout = options.timeout and options.timeout/1000 or timeout and timeout/1000 or nil,
                 callback = callback,
                 id = plugin.mainDeviceId or -1
             }

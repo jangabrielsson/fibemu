@@ -35,7 +35,7 @@ local ELMS = {
     return {name=d.name, type="option", value=d.value or "Hupp"}
   end,
   slider = function(d,w)
-    return {name=d.name,step=tostring(d.step),value=tostring(d.value),max=tostring(d.max),min=tostring(d.min),style={weight=d.weight or w or "1.2"},text=d.text,type="slider"}
+    return {name=d.name,step=tostring(d.step or 1),value=tostring(d.value or 0),max=tostring(d.max or 100),min=tostring(d.min or 0),style={weight=d.weight or w or "1.2"},text=d.text,type="slider"}
   end,
   label = function(d,w)
     return {name=d.name,style={weight=d.weight or w or "1.2"},text=d.text,type="label"}

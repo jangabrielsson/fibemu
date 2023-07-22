@@ -17,7 +17,7 @@ end
 
 function clearTimeout(ref)
     if type(ref) ~= 'number' then error("clearTimeout arg must be number (ref)",2) end
-    __clearTimeout(ref) 
+    __clearTimeout(ref)
 end
 
 function setInterval(fun, ms)

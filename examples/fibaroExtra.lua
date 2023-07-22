@@ -1952,7 +1952,7 @@ end
             action = "RunAction", 
             mobileDevices = { mobileId }, 
           })
-        timeout = timeout or 20*60
+        timeout = timeout or (20*60)
         local timer = setTimeout(function()
             local r
             r,refs[ref] = refs[ref],nil

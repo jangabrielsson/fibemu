@@ -15,19 +15,20 @@ def callCB(fibemu,cb,*args):
 def httpCall(method, url, options, data, local):
     ''' http called from lua, async-wait if we call our own api (local, Fast API) '''
     headers = options['headers']
+    timeout = options['timeout'] if options['timeout'] else 60 
     req = requests if not local else requests_async.ASGISession(fibapi.app)
     if data:
         if headers and 'Content-Type' in headers and 'utf-8' in headers['Content-Type']:
             data = data.encode('utf-8')
     match method:
         case 'GET':
-            res = req.get(url, headers = headers)
+            res = req.get(url, headers = headers, timeout = timeout)
         case 'PUT':
-            res = req.put(url, headers = headers, data = data)
+            res = req.put(url, headers = headers, data = data, timeout = timeout)
         case 'POST':
-            res = req.post(url, headers = headers, data = data)
+            res = req.post(url, headers = headers, data = data, timeout = timeout)
         case 'DELETE':
-            res = req.delete(url, headers = headers, data = data)
+            res = req.delete(url, headers = headers, data = data, timeout = timeout)
     try:
         res = asyncio.run(res) if local else res
         return res.status_code, res.text , res.headers

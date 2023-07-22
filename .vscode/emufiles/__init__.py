@@ -11,7 +11,7 @@ app = fibapi.app
 # main startup
 if __name__ == "__main__":
     global config
-    version = "0.32"
+    version = "0.33"
     parser = argparse.ArgumentParser(
                     prog='fibemu',
                     description='QA/HC3 emulator for HC3',
