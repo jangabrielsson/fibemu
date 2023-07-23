@@ -133,6 +133,8 @@ class FibaroEnvironment:
                 'createTCPSocket':lambda: fibnet.LuaTCPSocket(self),
                 'createUDPSocket':lambda: fibnet.LuaUDPSocket(self),
                 'createWebSocket':lambda url,headers,cb: fibnet.LuaWebSocket(self,url,headers,cb),
+                'listDir':lambda d: json.dumps(os.listdir(d)),
+                'deletFile':os.remove,
                 'setLogLevel':setLogLevel,
                 'exit':lambda code: sys.exit(code)
             }

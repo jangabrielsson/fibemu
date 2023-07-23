@@ -1,26 +1,46 @@
 --%%debug=refresh:true
---%%var=foo:77
 
--- local function readFile(fname)
---     local f = io.open(fname, "rb")
---     assert(f)
---     local content = f:read("*all")
---     f:close()
---     return content
--- end
+local filesToKeep = 3
+local remote = 'hc3'
 
--- local fqa = readFile("examples/QA.fqa")                                    -- read in the fqa file
--- fqa = json.decode(fqa)
--- local s, c = api.post("/quickApp/", fqa)                                   -- Install the QA in the emulator
--- fibaro.call(s.id, "updateView", "label1", "text", "Hello World")           -- Set label1 to "Hello World"
--- fibaro.call(s.id, "setVariable", "x", "42")                                -- and set variable x to 42
--- setTimeout(
--- function()                                                                 -- Give a little time for the call to complete...
---     fqa = api.get("/quickApp/export/" .. s.id)                             -- export the QA from the emulator
---     local vars = api.get("/devices/" .. s.id).properties.quickAppVariables -- get the variables from the emulator
+local function writeFile(fname, content)
+    local f = io.open(fname, "w")
+    assert(f)
+    f:write(content)
+    f:close()
+end
 
---     print(json.encode(fqa.initialProperties.quickAppVariables))            -- Have a look at the quickAppVariables
--- end, 0)
+local format = string.format 
 
-local f = fibaro.fibemu.libs.files.file2FQA("examples/QA_include_file.lua")
-f0 = f
+local destDir = './dev/backup/'
+local QAs = api.get("/devices?interface=quickApp",remote)
+local QAs = api.get("/devices/1189",remote)
+QAs = {QAs}
+
+local listDir = fibaro.pyhooks.listDir
+
+table.sort(QAs,function(a,b) return a.modified < b.modified end)
+for _,qa in ipairs(QAs) do
+    local name = qa.name:gsub('[^%w]','_')
+    local date = os.date("%y%m%d_%H%M%S",qa.modified)
+    local id = qa.id
+    local name = format("%s_%s_%s.fqa",name,id,date) 
+    local fqa = api.get("/quickApp/export/"..id,remote)
+    print("Writing "..destDir..name)
+    writeFile(destDir..name,json.encode(fqa))
+end
+local files = json.decode(listDir(destDir))
+local keeps = {}
+for _,f in ipairs(files) do
+    local name = f:match('(.-)_%d+_%d+.fqa')
+    if name then keeps[name] = keeps[name] or {}; table.insert(keeps[name],f) end
+end
+for name,files in pairs(keeps) do
+    table.sort(files,function(a,b) return a > b end)
+    if #files > filesToKeep then
+        for i=filesToKeep+1,#files do
+            print("Removing "..destDir..files[i])
+            os.remove(destDir..files[i])
+        end
+    end
+end
