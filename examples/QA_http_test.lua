@@ -20,10 +20,4 @@ function QuickApp:onInit()
         end
     })
     print("HTTP called") -- async, so we get answer later
-
-    fibaro.call(self.id,"turnOn")
-end
-
-function QuickApp:turnOn()
-    self:debug4("Turned on")
 end

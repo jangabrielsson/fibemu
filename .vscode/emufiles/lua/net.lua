@@ -44,6 +44,7 @@ local function callHC3(method, path, data, hc3)
 end
 
 function net.HTTPClient(opts)
+    opts = opts or {}
     local debugFlags = net._debugFlags or {}
     local util = fibaro.fibemu.libs.util
     local timeout = opts.timeout
