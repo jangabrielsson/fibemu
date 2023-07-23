@@ -98,7 +98,7 @@ local function installQA(fname, id, silent)
     local code = f:read("*all")
     f:close()
 
-    local name, ftype = fname:match("([%w_]+)%.([luafq]+)$")
+    local name, ftype = fname:match("([%w%-%(%)%[%]_]+)%.([luafq]+)$")
     if ftype ~= "lua" then
         QA.syslogerr("install", " Unsupported file type - %s", tostring(fname))
         return
