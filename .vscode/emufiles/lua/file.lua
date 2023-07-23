@@ -482,6 +482,36 @@ end
 local function importFQA(file)
 end
 
+local function file2fqa(fname)
+    local qa = installQA(fname, nil, true)
+    assert(qa, "File not found:" .. fname)
+    local dev = qa.dev
+    local files = qa.files
+    loadFiles(qa.dev.id)
+    for _, f in ipairs(files) do
+        f.qa = nil
+        f.fname = nil
+        f.isOpen = false
+        f.type = "lua"
+    end
+    local props = {
+        apiVersion = "1.2",
+        quickAppVariables = dev.properties.quickAppVariables or {},
+        uiCallbacks = #dev.properties.uiCallbacks > 0 and dev.properties.uiCallbacks or nil,
+        viewLayout = dev.properties.viewLayout,
+        typeTemplateInitialized = true,
+    }
+    local fqa = {
+        apiVersion = "1.2",
+        name = dev.name,
+        type = dev.type,
+        files = files,
+        initialProperties = props,
+        initialInterfaces = dev.interfaces,
+    }
+    return fqa
+end
+
 local function deleteQAfile(id, name)
     if not DIR[id] then return nil, 404 end
     local files = DIR[id].files
@@ -505,6 +535,7 @@ exports = {
     exportFQA = exportFQA,
     createFQA = createFQA,
     installFQA = installFQA,
+    file2FQA = file2fqa,
     deleteQAfile = deleteQAfile,
     createChildDevice = createChildDevice,
 }

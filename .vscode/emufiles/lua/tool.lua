@@ -52,9 +52,10 @@ function tool.download_fqa(file, rsrc, name, path)
 end
 
 local function writeFile(fname, content, silent)
-    local f = io.open(fname, "w")
+    local f,err = io.open(fname, "w")
     if not f then
         printerrf("Error opening %s: %s", fname, err)
+        printerrf("Does the path exist?")
         return nil
     end
     f:write(content)
@@ -99,7 +100,7 @@ function tool.download_unpack(file, rsrc, id, path)
     printf("Downloading QA %s to %s", name, path)
     local fqa, code = api.get("/quickApp/export/" .. id, "hc3")
     if not fqa then
-        printerrf("Downloading fqa %s: %s", id, code)
+        printerrf("Downloading QA %s: %s", id, code)
         return true
     end
     local name = fqa.name or "QA"
