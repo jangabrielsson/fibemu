@@ -2,9 +2,11 @@
    Simple websocket test
 --]]
 
---%%name=TCP Test
+--%%name=Websocket Test
+--%%type=com.fibaro.binarySwitch
 --%%var=url:"wss://echo.websocket.events/"
 
+local version = "0.5"
 function QuickApp:onInit()
     self:debug("onInit")
     local url = self:getVariable("url")
@@ -35,4 +37,17 @@ end
 
 function QuickApp:handleDataReceived(data)
     self:trace("dataReceived:", data)
+end
+
+
+--EXPORT
+function QuickApp:turnOn() -- turns on the device
+end
+
+--EXPORT
+function QuickApp:turnOff() -- turns on the device
+end
+
+--EXPORT
+function QuickApp:secretFun(x,y) -- takes 2 arguments, try if you dare
 end

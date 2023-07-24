@@ -7,7 +7,7 @@
 --]]
 
 PORT = 8986
---%%name=TCP Test
+--%%name=UDP Test
 function QuickApp:onInit()
     self.udp = net.UDPSocket({ 
         broadcast = true,
