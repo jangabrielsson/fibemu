@@ -210,9 +210,9 @@ function QuickAppBase:internalStorageGet(key)
   end
 end
 
-function QuickAppBase:internalStorageRemove(key) api.delete("/plugins/"..self.id.."/variables/"..key) end
+function QuickAppBase:internalStorageRemove(key) return api.delete("/plugins/"..self.id.."/variables/"..key) end
 
-function QuickAppBase:internalStorageClear() api.delete("/plugins/"..self.id.."/variables") end
+function QuickAppBase:internalStorageClear() return api.delete("/plugins/"..self.id.."/variables") end
 
 class 'QuickAppChild'(QuickAppBase)
 
