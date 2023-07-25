@@ -15,7 +15,7 @@ Steps to run
 
 It's tested on MacOS and Windows 11.
 
-All the emulator files lives in .vscode/emufiles.
+All the emulator files lives in .vscode/emufiles/.
 
 The trick here is that we have a python wrapper for the lua runtime so we solve dependencies on luasocket etc. and we don't need any special headers in the QA lua file to invoke/include the emulator/apis to make the QA being able to execute.
 
