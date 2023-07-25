@@ -13,6 +13,8 @@ Steps to run
 * Create a QA file in the directory, select launcher "Fibenv QA file (remote)" and run debug F5
 * See files in the examples/ directory
 
+It's tested on MacOS and Windows 11.
+All the emulator files lives in .vscode/emufiles.
 The trick here is that we have a python wrapper for the lua runtime so we solve dependencies on luasocket etc. and we don't need any special headers in the QA lua file to invoke/include the emulator/apis to make the QA being able to execute.
 
 To give some hints to the emulator what type of QA we have etc. we can give directives similar to TQAE (but a bit different)
