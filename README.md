@@ -40,8 +40,7 @@ Ex.
 * --%%type sets the type of the QA
 * --%%file includes extra QA files in the QA, libraries etc. In this example, 'qa3_1.lua' and the QA file will be named 'extra'
 * --%%debug set some of the many debug flags
-* --%%remote directive
-It instructs the emulator that it's ok to call device 788,789 on the HC3. As a default, the emulator treats all resources as local and we enable resources we want to interact with on the HC3 as 'remote'. This goes for other resources also like 'globalVariables'.
+* --%%remote directive that instructs the emulator that it's ok to call device 788,789 on the HC3. As a default, the emulator treats all resources as local and we enable resources we want to interact with on the HC3 as 'remote'. This goes for other resources also like 'globalVariables'.
 
-It integrates with the lua debugger so we can set breakpoints etc. Tested on MacOS and WIndows11
-Still work in progress but it's starting to be really useful...
+It integrates with the lua debugger so we can set breakpoints etc. 
+Still work in progress but it's already really useful...
