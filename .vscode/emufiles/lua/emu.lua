@@ -365,6 +365,7 @@ function QA.install(fname, id)
     if qa then
         QA.restart(qa.dev.id)
     end
+    return qa.dev
 end
 
 function QA.installFQA(data, roomId)
@@ -486,9 +487,10 @@ function Events.onAction(event)
         end
         return
     end
-    DIR[target_id].addTask(0,{ 
+    if DIR[target_id].addTask then DIR[target_id].addTask(0,{ 
         type = 'onAction', deviceId = arg_id, actionName = event.actionName, args = args 
         })
+    end
 end
 
 function Events.uiEvent(event)

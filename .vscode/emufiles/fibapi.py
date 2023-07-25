@@ -153,6 +153,18 @@ async def load_emulator_resources(response: Response, fname: str = Body(...)):
     response.status_code = code
     return res
 
+# @app.get("/emu/test", tags=["Emulator methods"])
+# async def load_emulator_resources(response: Response):
+#     res,code = {},200
+#     response.status_code = code
+#     response.headers['Via'] = '1.1 google'
+#     response.headers['X-RateLimit-Limit'] = '131072'
+#     response.headers['X-RateLimit-Remaining'] = '130794'
+#     response.headers['X-RateLimit-Reset'] = '1690014525'
+#     response.headers['Content-Type'] = 'application/json; charset=utf-8'
+#     response.headers['Alt-Svc'] = 'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'
+#     return res
+
 @app.get("/emu/button/{id}/{elm}/{val}", tags=["Emulator methods"])
 async def invoke_ui_button(id:int, elm: str, val:int, response: Response):
     eventType = "onReleased" if val == 0 else "onChanged"

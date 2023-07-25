@@ -372,3 +372,26 @@ function fibaro.callUI(id, action, element, value)
         error(fmt("Device %s does not exists.", id), 3)
     end
 end
+
+local getRemoteLogRef
+function fibaro.getRemoteLog(delay)
+  delay = delay or 1000
+  assert(type(delay)=='number',"Delay needs to be a number > 500")
+  if delay < 500 then delay = 500 end
+  local timestamp
+  local function loop()
+    local msg = api.get("/debugMessages?from=" .. timestamp, "hc3") -- fetch new logs from the HC3
+    if msg and msg.messages then
+      for i = #msg.messages, 1, -1 do
+        local m = msg.messages[i]
+        timestamp = m.timestamp
+        __fibaro_add_debug_message(m.tag, m.message, m.type) -- and add them the vscode log
+      end
+      timestamp = msg.timestamp and msg.timestamp or timestamp
+    end
+  end
+  if not getRemoteLogRef then
+    timestamp = os.time()
+    getRemoteLogRef = setInterval(loop, delay)
+  end
+end
