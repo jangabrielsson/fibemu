@@ -32,10 +32,10 @@ Ex.
         end
 ```
 
---%%name sets the name of the QA
---%%type set the type of the QA
---%%file includes extra QA files in the QA, libraries etc. In this example, 'qa3_1.lua' and the QA file will be named 'extra'
---%%deug set some of the many debug flags
+* --%%name sets the name of the QA
+* --%%type set the type of the QA
+* --%%file includes extra QA files in the QA, libraries etc. In this example, 'qa3_1.lua' and the QA file will be named 'extra'
+* --%%debug set some of the many debug flags
 
 Note the --%%remote directive
 It instructs the emulator that it's ok to call device 788,789 o the HC3. As a default, the emulator treats all resources as local and we enable resources we want to interact with on the HC3 as 'remote'. This goes for other resources also like 'globalVariables'.
