@@ -333,6 +333,11 @@ local function html2color(str, startColor, dflTxt)
 end
 
 function util.debug(flags, tag, str, typ)
+  if flags.logFilters and #flags.logFilters > 0 then
+    for _,filter in ipairs(flags.logFilters or {}) do
+        if str:match(filter) then return end
+    end
+  end
   typ = typ:upper()
   str = flags.html and html2color(str, nil, fibColors['TEXT']) or
       str:gsub("(</?font.->)", "") -- Remove color tags

@@ -1,6 +1,7 @@
 --%%name=HTTP Test
 --%%type=com.fibaro.binarySwitch
 --%%debug=http:true,hc3_http:true,dark:true,callstack:true
+--%%debug=logFilters:{"DeviceActionRanEvent"}
 
 local function http(method,url,data)
     print("OK",method,url)
@@ -42,4 +43,4 @@ function QuickApp:onInit()
     print("HTTP called") -- async, so we get answer later
 end
 
-http("POST","https://httpbin.org/anything",{a=1,b=2})
+http("POST","https://httpbin.org/anything",{a=1,b=2}) -- This is slow - can take >10s to complete
