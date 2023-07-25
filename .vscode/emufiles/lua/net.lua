@@ -57,7 +57,7 @@ function net.HTTPClient(opts)
             end
             url = patch(url)
             local options = (opts or {}).options or {}
-            local data = options.data and json.encode(options.data) or nil
+            local data = options.data or nil
             local errH = opts.error
             local succH = opts.success
             local function callback(status, data, headers)

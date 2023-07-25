@@ -26,7 +26,7 @@ def httpCall(method, url, options, data, local):
         case 'PUT':
             res = req.put(url, headers = headers, data = data, timeout = timeout)
         case 'POST':
-            res = req.post(url, headers = headers, data = data, timeout = timeout)
+            res = req.post(url, data=data, headers = headers, timeout = timeout)
         case 'DELETE':
             res = req.delete(url, headers = headers, data = data, timeout = timeout)
     try:

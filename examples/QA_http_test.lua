@@ -3,11 +3,13 @@
 --%%debug=http:true,hc3_http:true,dark:true,callstack:true
 
 local function http(method,url,data)
+    print("OK",method,url)
     net.HTTPClient():request(url,{
         options = {
             method = method,
             headers = {
-                ["Accept"] = "application/json"
+                ["Accept"] = "*/*",
+                ["Content-Type"] = "application/json; utf-8",
             },
             data = data and json.encode(data) or nil
         }, 
@@ -15,7 +17,7 @@ local function http(method,url,data)
             print("Response",response.data)
         end,
         error = function(err)
-            print("Error",err)
+            print("Error2",url,err)
         end
     })
     print("HTTP called") -- async, so we get answer later
