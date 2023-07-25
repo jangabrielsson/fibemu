@@ -2,9 +2,27 @@
 --%%type=com.fibaro.binarySwitch
 --%%debug=http:true,hc3_http:true,dark:true,callstack:true
 
+local function http(method,url,data)
+    net.HTTPClient():request(url,{
+        options = {
+            method = method,
+            headers = {
+                ["Accept"] = "application/json"
+            },
+            data = data and json.encode(data) or nil
+        }, 
+        success = function(response)
+            print("Response",response.data)
+        end,
+        error = function(err)
+            print("Error",err)
+        end
+    })
+    print("HTTP called") -- async, so we get answer later
+end
+
 function QuickApp:onInit()
     self:debug("Started",self.id)
-    --setTimeout(a1,1000)
     net.HTTPClient():request("http://worldtimeapi.org/api/timezone/Europe/Stockholm",{
         options = {
             method = "GET",
@@ -21,3 +39,5 @@ function QuickApp:onInit()
     })
     print("HTTP called") -- async, so we get answer later
 end
+
+http("POST","https://httpbin.org/anything",{a=1,b=2})
