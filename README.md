@@ -33,7 +33,7 @@ Ex.
 ```
 
 * --%%name sets the name of the QA
-* --%%type set the type of the QA
+* --%%type sets the type of the QA
 * --%%file includes extra QA files in the QA, libraries etc. In this example, 'qa3_1.lua' and the QA file will be named 'extra'
 * --%%debug set some of the many debug flags
 
