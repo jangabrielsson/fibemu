@@ -49,7 +49,7 @@ function fibaro.emitCustomEvent(name) end
 ---@return nil
 function fibaro.call(deviceId, actionName, ...) end
 
----Retrieves a QuickApp variable.
+---Calls a device group.
 ---
 ---@param actionName string Name of method to call.
 ---@param actionData table 
