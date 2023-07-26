@@ -13,7 +13,7 @@ local function http(method,url,data)
                 ["Content-Type"] = "application/json; utf-8",
             },
             data = data and json.encode(data) or nil
-        }, 
+        },
         success = function(response)
             print("Response",response.data)
         end,
@@ -32,7 +32,7 @@ function QuickApp:onInit()
             headers = {
                 ["Accept"] = "application/json"
             }
-        }, 
+        },
         success = function(response)
             self:debug("Response",response.data)
         end,

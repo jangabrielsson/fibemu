@@ -41,6 +41,7 @@ end
 --%%name=TCP Test
 function QuickApp:onInit()
 
+---@diagnostic disable-next-line: undefined-global
     local server = UDPServer(PORT, function(self, data, ip, port)
         print("Recieved", data, ip, port)
         self.udp:sendTo("OK", ip, port, {
