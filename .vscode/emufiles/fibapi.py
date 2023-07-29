@@ -124,6 +124,14 @@ async def read_item(request: Request):
 async def read_item(request: Request):
     return templates.TemplateResponse("about.html", {"request": request, "emu": fibenv.get('fe')})
 
+@app.get("/js/{file}", response_class=HTMLResponse,include_in_schema=False)
+async def read_item(file,request: Request):
+    return templates.TemplateResponse(file, {"request": request, "emu": fibenv.get('fe')})
+
+@app.get("/test", response_class=HTMLResponse,include_in_schema=False)
+async def read_item(request: Request):
+    return templates.TemplateResponse("test.html", {"request": request, "emu": fibenv.get('fe')})
+
 @app.get("/info/qa/{id}", response_class=HTMLResponse,include_in_schema=False)
 async def read_item(id: int, request: Request):
     emu = fibenv.get('fe')
