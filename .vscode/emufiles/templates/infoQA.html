@@ -70,10 +70,10 @@
         Interfaces: 
         {%for i,j in qa.dev.interfaces.items() %}{{j}},{% endfor %}
         <div class="p-1 container-xs">
-        <button type="button" class="btn btn-primary"
-               onclick='btnPost({{qa.dev.id}})'>
-               Restart QA
-              </button>
+          <button type="button" class="btn btn-primary"
+            onclick='btnPost({{qa.dev.id}})'>
+              Restart QA
+          </button>
         </div>
         <div class="card" style="width: 28rem;">
         <div class="p-1 container-xs border border-2 border-primary">
