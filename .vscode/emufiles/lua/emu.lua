@@ -52,6 +52,8 @@ local debugFlags = QA.debug
 debugFlags.color = true
 debugFlags.refresh = true
 fibaro = { pyhooks = pyhooks, debugFlags = debugFlags, fibemu = QA, config = config }
+QA.loadstring = load
+QA.loadfile = loadfile
 
 QA.addDoc("color", "true, uses colors in debug console")
 QA.addDoc("refresh", "true, logs refreshStates (system triggers)")

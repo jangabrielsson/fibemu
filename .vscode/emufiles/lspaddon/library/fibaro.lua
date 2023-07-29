@@ -237,3 +237,24 @@ function fibaro.getPartitions() end
 ---@param value table {value={<value>}}
 ---@return nil
 function fibaro.callUI(id, action, element, value) end
+
+-------------------------------
+
+---@table net
+net = {}
+
+---@class HTTPClient
+HTTPClient = {}
+
+---Creates an HTTP client object
+---
+---@param options? table Options for HTTP request. The only option that can be set is a timeout expressed in milliseconds.
+---@return HTTPClient
+function net.HTTPClient(options) end
+
+---Method to execute HTTP/HTTPS queries.
+---
+---@param address string the address to which the query is to be executed. e.g. http://127.0.0.1/api/users, https://google.com
+---@param params? table The argument of the table type. The argument may contain options for the query and/or feedback functions.
+---@return nil
+function HTTPClient:request(address, params) end

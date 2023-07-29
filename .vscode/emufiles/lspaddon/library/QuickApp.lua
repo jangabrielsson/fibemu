@@ -15,8 +15,15 @@ QuickAppChild = {}
 ---@field childDevices table<number,QuickAppBase> Mapping of childDevieIDs to QuickAppChild objects
 QuickApp = {}
 
----Sets a QuickApp variable.
+---Called when QuickApp starts.
 ---
+---@return nil
+function QuickAppBase:onInit() end
+
+
+---The method for setting device variables.
+---
+-- The variable is created if it's not already defined. The variable can be used in the device configuration or in the code of the device. The variable's value can be of any type.
 ---@param name string Name of variable.
 ---@param value any Value to assign variable.
 ---@return nil
@@ -24,38 +31,43 @@ function QuickAppBase:setVariable(name,value) end
 
 ---Retrives a QuickApp variable.
 ---
+-- The method is used to get the Quick App variables. Variables can be added from the device configuration or the method QuickApp:setVariable. If the variable doesn't exist, the method returns "".
 ---@param name string Name of variable.
----@return nil
+---@return any
 function QuickAppBase:getVariable(name) end
 
 ---Update UI element of QuickApp.
 ---
----@param label string Element name
----@param field string Element field
----@param value string Element field value
+---@param label string Element name. ID of element
+---@param field string Element field, "text" or "value"
+---@param value string Element field value. Must be string
 ---@return nil
 function QuickAppBase:updateView(label,field,value) end
 
 ---Log to console with DEBUG level.
 ---
+---A method for displaying messages of type DEBUG in the log window (under the code editor). The values can be of any type, as they will be converted into text using the tostring function and separated by a single space.
 ---@param ... any Arguments to log.
 ---@return nil
 function QuickAppBase:debug(...)  end
 
 ---Log to console with ERROR level.
 ---
+---A method for displaying messages of type ERROR in the log window (under the code editor). The values can be of any type, as they will be converted into text using the tostring function and separated by a single space.
 ---@param ... any Arguments to log.
 ---@return nil
 function QuickAppBase:error(...) end
 
 ---Log to console with WARNING level.
 ---
+---A method for displaying messages of type WARNING in the log window (under the code editor). The values can be of any type, as they will be converted into text using the tostring function and separated by a single space.
 ---@param ... any Arguments to log.
 ---@return nil
 function QuickAppBase:warning(...) end
 
 ---Log to console with TRACE level.
 ---
+---A method for displaying messages of type TRACE in the log window (under the code editor). The values can be of any type, as they will be converted into text using the tostring function and separated by a single space.
 ---@param ... any Arguments to log.
 ---@return nil
 function QuickAppBase:trace(...)   end
@@ -102,12 +114,29 @@ function QuickAppBase:addInterfaces(ifs) end
 ---@return nil
 function QuickAppBase:deleteInterfaces(ifs) end
 
+---Update property of QA
+---
+---@param prop string Property to update.
+---@param val any Value to set property to.
+---@return nil
 function QuickAppBase:updateProperty(prop,val) end
 
+---Create a child device QA
+---
+---@param props table Initial data for child.
+---@param deviceClass QuickAppChild Class of child device
+---@return table Child object
 function QuickApp:createChildDevice(props,deviceClass) end
 
+---Remove child device
+---
+---@param id number DeviceID of child to remove
+---@return nil
 function QuickApp:removeChildDevice(id) end
 
+---Remove child device
+---@param map table of child devices to add
+---@return nil
 function QuickApp:initChildDevices(map) end
 
 function QuickAppBase:internalStorageSet(key, val, hidden) end

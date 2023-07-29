@@ -296,6 +296,7 @@ end
 
 function r.logEvent(event)
     local h = EventTypes[event.type]
+    if QA.triggerHook then QA.triggerHook(event) end
     if h and h.l and emu.debug.refresh then
         local m = h.l(event.data, event)
         if m then QA.syslog("refresh",m) end
