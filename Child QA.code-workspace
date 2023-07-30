@@ -1,0 +1,14 @@
+{
+    "folders": [
+        {
+            "path": "dev/WAC_Fans"
+        },
+        {
+            "path": "."
+        },
+        {
+            "name": "fibemu",
+            "path": "fibemu"
+        }
+    ]
+}
