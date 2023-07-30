@@ -4,6 +4,7 @@
     "password": "yyy",
     "secret": "kaka",
     "dark": true,
+    "fibemuvar": true,
     "colors": {
         "SYS":      "brown", 
         "SYSERR":   "red", 

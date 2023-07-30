@@ -606,4 +606,4 @@ end
 if not config.nogreet then
     QA.syslog("boot","QA emulator started")
 end
-if not config.lcl then refreshStates.hc3HookVar() end
+if (not config.lcl) and config.fibemuvar then refreshStates.hc3HookVar() end
