@@ -376,7 +376,7 @@ local function modifyResource_from_hc3(typ, id, nd)
     nd = type(nd) == 'string' and json.decode(nd) or nd
     initr(typ)
     local rs = rsrcs[typ] or {}
-    if rs[id] and rs[id]._local then return end -- local shadow, ignore
+    if rs[id] and rs[id]._local then return true end -- local shadow, ignore
     rs[id] = api.get("/" .. typ .. "/" .. id, "hc3") or {}
     return true
 end

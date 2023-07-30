@@ -54,7 +54,8 @@ class FibaroEnvironment:
     
     def luaCall(self,method,*args): # called from another thread
         try: # unsafe call to lua function in other thread
-            fun = self.QA.fun              
+            QA = self.globals.QA[1]
+            fun = QA.fun              
             fun = tofun(fun)[method]
             res,code = tofun(fun)(*args)
             res = convertLuaTable(res)
@@ -124,6 +125,7 @@ class FibaroEnvironment:
         def runner():
             config = self.config
             globals = self.lua.globals()
+            self.globals = globals
             self.events = deque()
             hooks = {
                 'clock':time.time,

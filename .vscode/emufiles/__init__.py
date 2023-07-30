@@ -1,6 +1,6 @@
 import uvicorn
 import sys
-import os
+import os, socket
 import argparse
 import fibapi
 import json
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     parser.add_argument('-nw', '--noweb', help='no web api', action='store_true')
     parser.add_argument('-ng', "--nogreet", help='No emulator greet message', action='store_true')
     parser.add_argument('-wp', '--wport', default=5004, help='port for web/api interface', type=int)
-    parser.add_argument('-wh', '--whost', default='127.0.0.1', help='host for webserver')
+    parser.add_argument('-wh', '--whost', default='0.0.0.0', help='host for webserver')
     parser.add_argument('-wlv', '--web_log_level', default='warning', help='log level for webserver',choices=['debug', 'info', 'trace', 'warning', 'error', 'critical'])
     parser.add_argument('-extra', '--extra', nargs='*', help='extra arguments for QA', default=[]) 
 
@@ -70,10 +70,14 @@ if __name__ == "__main__":
     config['argv'] = sys.argv
     config['extra'] = args.extra
     config['nogreet'] = args.nogreet
+    hostname=socket.gethostname()
+    config['hostIP'] = socket.gethostbyname(hostname)
+    config['hostName']= socket.gethostname()   
 
-    config['apiURL'] =  f"http://{config['whost']}:{config['wport']}/api"
-    config['apiDocURL'] =  f"http://{config['whost']}:{config['wport']}/docs"
-    config['webURL'] =  f"http://{config['whost']}:{config['wport']}/"
+
+    config['apiURL'] =  f"http://localhost:{config['wport']}/api"
+    config['apiDocURL'] =  f"http://localhost:{config['wport']}/docs"
+    config['webURL'] =  f"http://localhost:{config['wport']}/"
     
     f = FibaroEnvironment(config)
     fibapi.fibenv['fe'] = f

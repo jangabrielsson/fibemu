@@ -23,7 +23,7 @@ local function callHC3(method, path, data, hc3)
     local port = hc3 and conf.port or conf.wport
     local creds = hc3 and conf.creds or nil
     local url = fmt("http://%s:%s/api%s", host, port, path)
-    if fibaro.debugFlags.hc3_http then
+    if fibaro.debugFlags.hc3_http and not path=="/globalVariables/FIBEMU" then
         fibaro.fibemu.syslog(__TAG or "HC3", "%s: %s", method, url)
     end
     local options = {

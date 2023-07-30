@@ -37,10 +37,14 @@ function QuickApp:onInit()
             self:debug("Response",response.data)
         end,
         error = function(err)
-            self:error("Error",err)
+            self:error("Error3",err)
         end
     })
     print("HTTP called") -- async, so we get answer later
 end
 
 http("POST","https://httpbin.org/anything",{a=1,b=2}) -- This is slow - can take >10s to complete
+
+function QuickApp:turnOn()
+    print("Turned on")
+end

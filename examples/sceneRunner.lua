@@ -110,7 +110,7 @@ function cfs.device(c)
     local op = ops[c.operator]
     local value = c.value
     local id = c.id
-    return function(ev) return op((__fibaro_get_device_property(c.id, prop) or {}).value, value) end
+    return function(ev) return ev.id == id and op((__fibaro_get_device_property(c.id, prop) or {}).value, value) end
 end
 
 function cfs.date(c)
@@ -161,7 +161,7 @@ cfs['global-variable'] = function(c)
     local name = c.property
     local op = ops[c.operator]
     local value = c.value
-    return function(ev) return op((__fibaro_get_global_variable(name) or {}).value, value) end
+    return function(ev) return ev.name==name and op((__fibaro_get_global_variable(name) or {}).value, value) end
 end
 function cfs.profile(c)
     error("not implemented")

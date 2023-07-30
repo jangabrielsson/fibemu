@@ -2,6 +2,7 @@ local pconfig,hooks,luapath = ...
 local function doload(fname) return dofile(luapath .. fname) end
 
 local RESTART_TIME = 5000 -- 5s wait before restarting QA
+local EMU_GLOBAL = "FIBEMU"
 
 doload("json.lua")
 doload("net.lua")
@@ -45,7 +46,7 @@ local luaType = function(obj)
     return t == 'table' and obj.__USERDATA and 'userdata' or t
 end
 
-QA, DIR = { config = config, fun = {}, debug={}, debugDoc={} }, {}
+QA, DIR = { config = config, fun = {}, debug={}, debugDoc={}, FIBEMUVAR=EMU_GLOBAL }, {}
 function QA.addDoc(flag, doc) QA.debugDoc[flag] = doc end
 QA.DIR = DIR
 local debugFlags = QA.debug
@@ -107,6 +108,7 @@ local function systemTimer(fun, ms, msg)
     local t = clock() + ms / 1000
     return timers.add(-1, t, fun, { type = 'timer', fun = fun, ms = t, log = "system"..(msg and msg or "") })
 end
+QA.systemTimer = systemTimer
 
 function string.split(str, sep)
     local fields, s = {}, sep or "%s"
@@ -604,3 +606,4 @@ end
 if not config.nogreet then
     QA.syslog("boot","QA emulator started")
 end
+if not config.lcl then refreshStates.hc3HookVar() end

@@ -32,7 +32,9 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         l=function(d,e) return fmt("%s %s %s",e.type,d.change,d.newValue) end
     },
     GlobalVariableChangedEvent = {
-        f = function(d,e) return resources.modifyResource(
+        f = function(d,e) 
+            if d.variableName == QA.FIBEMUVAR then return end
+            return resources.modifyResource(
             "globalVariables",
             d.variableName,
             nil,
@@ -328,6 +330,17 @@ function r.start()
         }
     }
     fibaro.pyhooks.refreshStates(true, url, options) -- Python function 
+end
+
+function r.hc3HookVar()
+    api.post("/globalVariables", {name=QA.FIBEMUVAR,value=tostring(os.time())}, "hc3")
+    local data = {url=string.format("http://%s:%s",config.hostIP,config.wport)}
+    local function loop()
+        data.time=os.time()
+        api.put("/globalVariables/"..QA.FIBEMUVAR, {name=QA.FIBEMUVAR, value=(json.encode(data))}, "hc3")
+        QA.systemTimer(loop, 3000,'hc3hook')
+    end
+    loop()
 end
 
 r.eventTypes = EventTypes
