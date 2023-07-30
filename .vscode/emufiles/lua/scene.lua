@@ -2,6 +2,9 @@ local scenes, loadScene, sceneRunner, compileCondition, dateTest = {}, nil, nil,
 local Events = {}
 local fibemu
 __TAG = "SceneRunner"
+local DEBUG = true
+local function printf(...) print(string.format(...)) end
+
 
 local triggerFilter = {
     device = true,
@@ -15,7 +18,7 @@ local triggerFilter = {
     location = true,
 }
 
-function fibaro.loadScenes(s,...)
+function fibaro.loadScenes(s, ...)
     fibemu = fibaro.fibemu
     function fibemu.triggerHook(ev)
         local st = Events[ev.type] and Events[ev.type](ev, ev.data) or ev
@@ -23,12 +26,12 @@ function fibaro.loadScenes(s,...)
         if not triggerFilter[st.type] then return end
         local timestamp = os.time()
         for _, scene in ipairs(scenes) do
-            local event = { event = st, timestamp = timestamp }
+            local event = { event = st, timestamp = timestamp, scene = scene }
             if scene.cond(event) then scene.run(event) end
         end
     end
 
-    local sceneNames = type(s)=='table' and s or { ... }
+    local sceneNames = type(s) == 'table' and s or { ... }
     for i, sn in ipairs(sceneNames) do
         scenes[#scenes + 1] = loadScene(sn, i)
     end
@@ -42,7 +45,7 @@ function loadScene(fname, id)
     f:close()
     local cond = scene.code:match("COND[%s%c]*=[%s%c]*(%b{})")
     cond = fibemu.loadstring("return " .. cond)()
-    scene.cond = compileCondition(cond)
+    scene.cond = compileCondition(cond, scene)
     local env = { _sceneId = "SCENE" .. id, __TAG = "SCENE" .. id }
     local funs = {
         "os", "io", "pairs", "ipairs", "select", "math", "string", "pcall", "xpcall", "table", "error",
@@ -98,6 +101,12 @@ local function map(f, l)
     return r
 end
 
+local function copy(t)
+    local r = {}
+    for k, v in pairs(t) do r[k] = v end
+    return r
+end
+
 local cfs = {}
 local ops = {}
 ops['=='] = function(a, b) return tostring(a) == tostring(b) end
@@ -123,6 +132,7 @@ function cfs.device(c)
 end
 
 function cfs.date(c)
+    local isTrigger = c.isTrigger
     local prop = c.property
     local op = c.operator
     local value = c.value
@@ -135,13 +145,7 @@ function cfs.date(c)
             return v == h
         end
     elseif prop == 'cron' then
-        if op == 'match' then
-            local dateStr = table.concat(value, " ")
-            local test = dateTest(dateStr)
-            return function(ev) return test(ev.timestamp) end
-        else
-            local t = os.date("*t")
-            op = ops[op]
+        local function timePattern(value)
             local tp = {}
             if value[1] ~= '*' then tp.min = tonumber(value[1]) end
             if value[2] ~= '*' then tp.hour = tonumber(value[2]) end
@@ -149,11 +153,46 @@ function cfs.date(c)
             if value[4] ~= '*' then tp.month = tonumber(value[4]) end
             if value[5] ~= '*' then tp.wday = tonumber(value[5]) end
             if value[6] ~= '*' then tp.year = tonumber(value[6]) end
+            return tp
+        end
+        if op == 'match' then
+            local dateStr = table.concat(value, " ")
+            local test = dateTest(dateStr)
+            return function(ev)
+                if isTrigger and ev.event.type ~= 'date' and ev.event.property ~= 'cron' and ev.event.operator ~= 'match' then return false end --???
+                local t = test(ev.timestamp) 
+                if DEBUG then printf("MATCH: %s => %s", os.date("%c", ev.timestamp),t) end
+                return t
+            end
+        elseif op == 'matchInterval' then
+            local interval = tonumber(value.interval)
+            local time = value.date
+            assert(interval, "matchInterval: missing interval")
+            assert(type(time) == 'table', "matchInterval: missing date")
+            local tp = timePattern(time)
             return function(ev)
                 local tn = os.date("*t", ev.timestamp)
                 for k, v in pairs(tp) do tn[k] = v end
-                print("D1:", os.date("%c", ev.timestamp), "D2:", os.date("%c", os.time(tn)))
-                return op(ev.timestamp, os.time(tn))
+                local t = os.time(tn)
+                if ev.scene.intervalStart then clearTimeout(ev.scene.intervalStart) end
+                if ev.scene.intervalRef then clearInterval(ev.scene.intervalRef) end
+                ev.scene.intervalStart = setTimeout(function()
+                    ev.scene.intervalStart = nil
+                    ev.scene.intervalRef = setInterval(function()
+                        ev.scene.run(ev)
+                    end, 1000 * interval)
+                end, 1000 * (t - os.time()))
+            end
+        else
+            local t = os.date("*t")
+            local op2 = ops[op]
+            assert(op2, "Unknown operator: " .. op)
+            local tp = timePattern(value)
+            return function(ev)
+                local tn = os.date("*t", ev.timestamp)
+                for k, v in pairs(tp) do tn[k] = v end
+                --print("D1:", os.date("%c", ev.timestamp), "D2:", os.date("%c", os.time(tn)))
+                return op2(ev.timestamp, os.time(tn))
             end
         end
     else
@@ -193,7 +232,7 @@ function cfs.profile(c)
     error("not implemented")
 end
 
-function compileCondition(c)
+function compileCondition(c, scene)
     local triggers = {}
     local function compile(c)
         if c.operator and c.conditions then
@@ -222,6 +261,19 @@ function compileCondition(c)
         end
     end
     local condFun = compile(c)
+    local triggers2 = copy(triggers)
+    for _, t in ipairs(triggers2) do
+        if t.type == 'date' and t.property == 'cron' and t.operator == 'match' then
+            local cron = compile(t)
+            local t0 = t
+            setInterval(function()
+                local ev = { timestamp = os.time(), event = t0, scene = scene }
+                 if cron(ev) then
+                    scene.run(ev)
+                end
+            end, 60 * 1000)
+        end
+    end
     local triggerFun = function(ev) return true end -- ToDo
     return function(ev)
         return triggerFun(ev) and condFun(ev)
@@ -303,7 +355,7 @@ function dateTest(dateStr0)
     end
 
     local function parseDateStr(dateStr)       --,last)
-        local map = table.map
+        --local map = table.map
         local seq = string.split(dateStr, " ") -- min,hour,day,month,wday
         local lim = { { min = 0, max = 59 }, { min = 0, max = 23 }, { min = 1, max = 31 }, { min = 1, max = 12 },
             { min = 1, max = 7 }, { min = 2000, max = 3000 } }
