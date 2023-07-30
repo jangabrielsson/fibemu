@@ -1,6 +1,6 @@
 COND =
 {
-    operator = "all",
+    operator = "any",
     conditions = {
         {
             type = "global-variable",
@@ -17,23 +17,44 @@ COND =
         --     value = true,
         --     isTrigger = true
         -- },
+        -- {
+        --     operator = "all",
+        --     conditions = { --Every day between 9:00 and 10:00.
+        --         {
+        --             type = "date",
+        --             property = "cron",
+        --             operator = "match>=",
+        --             value = { "0", "9", "*", "*", "*", "*" }
+        --         },
+        --         {
+        --             type = "date",
+        --             property = "cron",
+        --             operator = "match<=",
+        --             value = { "40", "12", "*", "*", "*", "*" }
+        --         }
+        --     }
+        -- },
+        -- {
+        --     operator = "any",
+        --     conditions = { --Every day between 9:00 and 10:00.
+        --         {
+        --             type = "date",
+        --             property = "cron",
+        --             operator = "matchInterval",
+        --             value = {
+        --                 date = { "*", "*", "*", "*", "*", "*" },
+        --                 interval = 5
+        --             }
+        --         },
+        --     }
+        -- },
         {
-            operator = "all",
-            conditions = { --Every day between 9:00 and 10:00.
-                {
-                    type = "date",
-                    property = "cron",
-                    operator = "match>=",
-                    value = { "0", "9", "*", "*", "*", "*" }
-                },
-                {
-                    type = "date",
-                    property = "cron",
-                    operator = "match<=",
-                    value = { "05", "12", "*", "*", "*", "*" }
-                }
-            }
-        }
+            type = "date",
+            property = "cron",
+            operator = "match",
+            value = {"*", "*", "*", "*", "*", "*"},
+            isTrigger = true
+        },
     }
 }
 
