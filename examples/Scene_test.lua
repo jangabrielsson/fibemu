@@ -1,6 +1,6 @@
 COND =
 {
-    operator = "any",
+    operator = "all",
     conditions = {
         {
             type = "global-variable",
@@ -9,41 +9,36 @@ COND =
             value = "57",
             isTrigger = true
         },
+        -- {
+        --     type = "device",
+        --     id = 25,
+        --     property = "value",
+        --     operator = "==",
+        --     value = true,
+        --     isTrigger = true
+        -- },
         {
-            type = "device",
-            id = 25,
-            property = "value",
-            operator = "==",
-            value = true,
-            isTrigger = true
-        },
-        {
-            operator = "any",
-            conditions = {
+            operator = "all",
+            conditions = { --Every day between 9:00 and 10:00.
                 {
-                    type = "device",
-                    id = 26,
-                    property = "value",
-                    operator = "==",
-                    value = true,
-                    isTrigger = true
+                    type = "date",
+                    property = "cron",
+                    operator = "match>=",
+                    value = { "0", "9", "*", "*", "*", "*" }
                 },
                 {
-                    type = "device",
-                    id = 27,
-                    property = "value",
-                    operator = "==",
-                    value = true,
-                    isTrigger = true
+                    type = "date",
+                    property = "cron",
+                    operator = "match<=",
+                    value = { "05", "12", "*", "*", "*", "*" }
                 }
             }
         }
     }
 }
 
-fibaro.debug(_sceneId,"Hello")
+fibaro.debug(_sceneId, "Hello, the condition did match!")
 setTimeout(function()
-    fibaro.debug(_sceneId,"Hello2")
-end,1000)
-print("OK")
+    fibaro.debug(_sceneId, "Hello2 -  one second later")
+end, 1000)
 print(sourceTrigger and json.encode(sourceTrigger))

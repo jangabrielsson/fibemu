@@ -200,12 +200,12 @@ local function createEnvironment(id)
     env.plugin = { mainDeviceId = dev.id }
     env.__TAG = "QUICKAPP" .. dev.id
 
-    for _, l in ipairs({ "json.lua", "class.lua", "fibaro.lua", "net.lua", "quickApp.lua" }) do
+    for _, l in ipairs({ "json.lua", "class.lua", "fibaro.lua", "net.lua", "quickApp.lua", "scene.lua" }) do
         local fn = luapath .. l
         if qa.debug.libraryfiles then
             QA.syslog(qa.tag,"Loading library " .. fn)
         end
-        local stat, res = pcall(function() loadfile(fn, "t", env)() end)
+        local stat, res = pcall(function() return loadfile(fn, "t", env)() end)
         if not stat then
             QA.syslogerr(qa.tag,"%s - %s", fn, res)
             qa.env = nil
