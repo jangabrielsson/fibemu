@@ -272,23 +272,22 @@ function DE.devices(d) return "DeviceRemovedEvent", { id = d.id } end
 
 function DE.customEvents(d) return "CustomEventRemovedEvent", { id = d.name } end
 
-function ME.globalVariables(d, ov)
+function ME.globalVariables(id, p, nv, ov)
     return "GlobalVariableChangedEvent",
-        { variableName = d.name, newValue = d.value, oldValue = ov }
+        { variableName = id, newValue = nv, oldValue = ov }
 end
 
-function ME.rooms(d) return "RoomModifiedEvent", { id = d.id } end
+function ME.rooms(id) return "RoomModifiedEvent", { id = id } end
 
-function ME.sections(d) return "SectionModifiedEvent", { id = d.id } end
+function ME.sections(id) return "SectionModifiedEvent", { id = id } end
 
-function ME.devices(d) return "DeviceModifiedEvent", { id = d.id } end
+function ME.devices(id,p,nv,ov) return "DeviceModifiedEvent", { id = id, property=p, newValue=nv, oldValue=ov } end
 
-function ME.weather(d, ov)
-    local p, v = next(d)
-    return "WeatherChangedEvent", { change = p, newValue = v, oldValue = ov }
+function ME.weather(id, nv, ov)
+    return "WeatherChangedEvent", { change = id, newValue = nv, oldValue = ov }
 end
 
-function ME.customEvents(d) return "CustomEventModifiedEvent", d end
+function ME.customEvents(id,nv,ov) return "CustomEventModifiedEvent", {id=id} end
 
 local UA = { -- properties we can modify
     globalVariables = { name = true, value = true },
@@ -387,14 +386,14 @@ local function modifyResource_from_emu(typ, id, nd)
     initr(typ)
     local key = keys[typ]
     local rs = rsrcs[typ] or {}
-    local ed, oldValue = key == nil and rs or rs[id], nil
+    local ed, oldValues = key == nil and rs or rs[id], {}
     if key then rs[id] = nil end
     if ed == nil then return nil, 404 end
     local flag = false
-    local props = {}
+    local props,newProps = {},{}
     for k, v in pairs(nd) do
         if UA[typ][k] and ed[k] ~= v then
-            oldValue = ed[k]
+            newProps[k] = {newValue=v,oldValue=ed[k]}
             props[k] = v
             ed[k] = v
             flag = true
@@ -407,7 +406,9 @@ local function modifyResource_from_emu(typ, id, nd)
         local r, c = api.put("/" .. typ .. "/" .. id, props, "hc3")
         return r, c
     end
-    if ME[typ] then postEvent(ME[typ](props, oldValue)) end
+    if ME[typ] then 
+        for p,vs in pairs(newProps) do postEvent(ME[typ](id, p, vs.newValue, vs.oldValue)) end
+    end
     return ed, 200
 end
 

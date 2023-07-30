@@ -1,7 +1,14 @@
 COND =
 {
-    operator = "all",
+    operator = "any",
     conditions = {
+        {
+            type = "global-variable",
+            property = "A",
+            operator = "==",
+            value = "57",
+            isTrigger = true
+        },
         {
             type = "device",
             id = 25,
@@ -39,4 +46,4 @@ setTimeout(function()
     fibaro.debug(_sceneId,"Hello2")
 end,1000)
 print("OK")
-print(sourceTrigger)
+print(sourceTrigger and json.encode(sourceTrigger))

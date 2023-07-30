@@ -19,7 +19,7 @@ local triggerFilter = {
     location = true,
 }
 function fibemu.triggerHook(ev)
-    local st = Events[ev.type] and Events[ev.type](ev) or ev
+    local st = Events[ev.type] and Events[ev.type](ev,ev.data) or ev
     if ev == st then return end
     if not triggerFilter[st.type] then return end
     for _, scene in ipairs(scenes) do
@@ -69,14 +69,18 @@ Events = { -- There are more, but these are what I seen so far...
     HomeDisarmStateChangedEvent = function(t) return t end,
     HomeBreachedEvent = function(t) return t end,
     WeatherChangedEvent = function(t) return t end,
-    GlobalVariableChangedEvent = function(t) return t end,
-    GlobalVariableAddedEvent = function(t) return t end,
+    GlobalVariableChangedEvent = function(t,d) 
+        return { type='global-variable', name=d.variableName, value=d.newValue, oldValue=d.oldValue }
+    end,
+    GlobalVariableAddedEvent = function(t,d) 
+        return { type='global-variable', name=d.navariableNameme, value=d.newValue}
+    end,
     CentralSceneEvent = function(t) return t end,
     SceneActivationEvent = function(t) return t end,
     AccessControlEvent = function(t) return t end,
     CustomEvent = function(t) return t end,
-    DevicePropertyUpdatedEvent = function(t) 
-        return { type='device', id=t.deviceID, property=t.property, value=t.value }
+    DevicePropertyUpdatedEvent = function(t,d) 
+        return { type='device', id=d.deviceID, property=d.propertyName, value=d.value }
     end,
     OnlineStatusUpdatedEvent = function(t) return t end,
     ActiveProfileChangedEvent = function(t) return t end,
@@ -94,6 +98,7 @@ end
 local cfs = {}
 local ops = {}
 ops['=='] = function(a, b) return tostring(a) == tostring(b) end
+ops['anyValue'] = function(a, b) return true end
 ops['!='] = function(a, b) return tostring(a) ~= tostring(b) end
 ops['>'] = function(a, b) return tostring(a) > tostring(b) end
 ops['<'] = function(a, b) return tostring(a) < tostring(b) end
@@ -105,7 +110,7 @@ function cfs.device(c)
     local op = ops[c.operator]
     local value = c.value
     local id = c.id
-    return function(ev) return op(__fibaro_get_device_property(c.id, prop), value) end
+    return function(ev) return op((__fibaro_get_device_property(c.id, prop) or {}).value, value) end
 end
 
 function cfs.date(c)
@@ -123,7 +128,7 @@ function cfs.date(c)
     elseif prop == 'cron' then
         local dateStr = table.concat(value, " ")
         local test = dateTest(dateStr)
-        assert(op == 'match',"Unsopported date operator: " .. op)
+        assert(op == 'match',"Unsupported date operator: " .. op)
         return function(ev) return test(ev.timestamp) end
     else
         error("Unknown date property: " .. prop)
@@ -156,7 +161,7 @@ cfs['global-variable'] = function(c)
     local name = c.property
     local op = ops[c.operator]
     local value = c.value
-    return function(ev) return op(__fibaro_get_global_variable(name), value) end
+    return function(ev) return op((__fibaro_get_global_variable(name) or {}).value, value) end
 end
 function cfs.profile(c)
     error("not implemented")
@@ -288,8 +293,8 @@ function dateTest(dateStr0)
         end
     end
     local dateSeq = parseDateStr(dateStr0)
-    return function()                                                                               -- Pretty efficient way of testing dates...
-        local t = os.date("*t", os.time())
+    return function(t0)                                                                               -- Pretty efficient way of testing dates...
+        local t = os.date("*t", t0 or os.time())
         if month and month ~= t.month then dateSeq = parseDateStr(dateStr0) end                     -- Recalculate 'last' every month
         if sunPatch and (month and month ~= t.month or day ~= t.day) then
             sunPatch(dateSeq)
@@ -304,4 +309,4 @@ function dateTest(dateStr0)
     end
 end
 
-fibaro.setGlobalVariable("A", os.date("%c"))
+fibaro.setGlobalVariable("A", "57")
