@@ -1,7 +1,6 @@
 local scenes, loadScene, sceneRunner, compileCondition, dateTest = {}, nil, nil, nil, nil
 local Events = {}
 local fibemu
-__TAG = "SceneRunner"
 local DEBUG = true
 local function printf(...) print(string.format(...)) end
 
