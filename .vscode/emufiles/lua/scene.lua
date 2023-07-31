@@ -123,6 +123,24 @@ ops['match<'] = function(a, b) return a < b end
 ops['match>='] = function(a, b) return a >= b end
 ops['match<='] = function(a, b) return a <= b end
 
+local minuteTimers,minuteRef = {},nil
+local function addMinuteTimer(f)
+    minuteTimers[#minuteTimers+1] = f
+    if minuteRef then return end
+    local nxt = (os.time() // 60 + 1) * 60
+    local function loop()
+        nxt = nxt + 60
+        for _,f in ipairs(minuteTimers) do f() end
+        minuteRef = setTimeout(loop, 1000 * (nxt - os.time())
+    end
+    minuteRef = setTimeout(loop, 1000 * (nxt - os.time())
+end
+
+local function clearMinuteTimers()
+    if minuteRef then clearTimeout(minuteRef) end
+    minuteTimers,minuteRef = {},nil
+end
+
 function cfs.device(c)
     local prop = c.property
     local op = ops[c.operator]
@@ -184,7 +202,6 @@ function cfs.date(c)
                 end, 1000 * (t - os.time()))
             end
         else
-            local t = os.date("*t")
             local op2 = ops[op]
             assert(op2, "Unknown operator: " .. op)
             local tp = timePattern(value)
@@ -266,12 +283,12 @@ function compileCondition(c, scene)
         if t.type == 'date' and t.property == 'cron' and t.operator == 'match' then
             local cron = compile(t)
             local t0 = t
-            setInterval(function()
+            addMinuteTimer(function()
                 local ev = { timestamp = os.time(), event = t0, scene = scene }
                  if cron(ev) then
                     scene.run(ev)
                 end
-            end, 60 * 1000)
+            end)
         end
     end
     local triggerFun = function(ev) return true end -- ToDo
