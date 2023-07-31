@@ -54,7 +54,7 @@ class FibaroEnvironment:
     
     def luaCall(self,method,*args): # called from another thread
         try: # unsafe call to lua function in other thread
-            QA = self.globals.QA[1]
+            QA = self.globals.QA[1] if type(self.globals.QA) == tuple else self.globals.QA
             fun = QA.fun              
             fun = tofun(fun)[method]
             res,code = tofun(fun)(*args)

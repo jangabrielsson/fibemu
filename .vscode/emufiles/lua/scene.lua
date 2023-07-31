@@ -123,14 +123,14 @@ ops['match<'] = function(a, b) return a < b end
 ops['match>='] = function(a, b) return a >= b end
 ops['match<='] = function(a, b) return a <= b end
 
-local minuteTimers,minuteRef = {},nil
+local minuteTimers, minuteRef = {}, nil
 local function addMinuteTimer(f)
-    minuteTimers[#minuteTimers+1] = f
+    minuteTimers[#minuteTimers + 1] = f
     if minuteRef then return end
     local nxt = (os.time() // 60 + 1) * 60
     local function loop()
         nxt = nxt + 60
-        for _,f in ipairs(minuteTimers) do f() end
+        for _, f in ipairs(minuteTimers) do f() end
         minuteRef = setTimeout(loop, 1000 * (nxt - os.time()))
     end
     minuteRef = setTimeout(loop, 1000 * (nxt - os.time()))
@@ -138,7 +138,7 @@ end
 
 local function clearMinuteTimers()
     if minuteRef then clearTimeout(minuteRef) end
-    minuteTimers,minuteRef = {},nil
+    minuteTimers, minuteRef = {}, nil
 end
 
 function cfs.device(c)
@@ -146,7 +146,15 @@ function cfs.device(c)
     local op = ops[c.operator]
     local value = c.value
     local id = c.id
-    return function(ev) return ev.event.id == id and op((__fibaro_get_device_property(id, prop) or {}).value, value) end
+    local duration = c.duration
+    local ref = nil
+    local lastTrue = nil
+    return function(ev)
+        local res = op((__fibaro_get_device_property(id, prop) or {}).value, value)
+        if res then lastTrue = lastTrue or os.time() else lastTrue = nil end
+        -- If duration, we need to set a timer and trigger the scene... or just trigger the action?. TBD
+        return res
+    end
 end
 
 function cfs.date(c)
@@ -178,8 +186,8 @@ function cfs.date(c)
             local test = dateTest(dateStr)
             return function(ev)
                 if isTrigger and ev.event.type ~= 'date' and ev.event.property ~= 'cron' and ev.event.operator ~= 'match' then return false end --???
-                local t = test(ev.timestamp) 
-                if DEBUG then printf("MATCH: %s => %s", os.date("%c", ev.timestamp),t) end
+                local t = test(ev.timestamp)
+                if DEBUG then printf("MATCH: %s => %s", os.date("%c", ev.timestamp), t) end
                 return t
             end
         elseif op == 'matchInterval' then
@@ -285,7 +293,7 @@ function compileCondition(c, scene)
             local t0 = t
             addMinuteTimer(function()
                 local ev = { timestamp = os.time(), event = t0, scene = scene }
-                 if cron(ev) then
+                if cron(ev) then
                     scene.run(ev)
                 end
             end)
