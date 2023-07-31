@@ -131,9 +131,9 @@ local function addMinuteTimer(f)
     local function loop()
         nxt = nxt + 60
         for _,f in ipairs(minuteTimers) do f() end
-        minuteRef = setTimeout(loop, 1000 * (nxt - os.time())
+        minuteRef = setTimeout(loop, 1000 * (nxt - os.time()))
     end
-    minuteRef = setTimeout(loop, 1000 * (nxt - os.time())
+    minuteRef = setTimeout(loop, 1000 * (nxt - os.time()))
 end
 
 local function clearMinuteTimers()
