@@ -391,7 +391,7 @@ function fibaro.getRemoteLog(delay)
     end
   end
   if not getRemoteLogRef then
-    timestamp = os.time()
+    timestamp = os.orgtime()
     getRemoteLogRef = setInterval(loop, delay)
   end
 end

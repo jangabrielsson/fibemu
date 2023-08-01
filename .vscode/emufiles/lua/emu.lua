@@ -1,4 +1,4 @@
-local pconfig,hooks,luapath = ...
+local pconfig, hooks, luapath = ...
 local function doload(fname) return dofile(luapath .. fname) end
 
 local RESTART_TIME = 5000 -- 5s wait before restarting QA
@@ -18,7 +18,7 @@ local files = doload("file.lua")
 local fakes = doload("fakes.lua")
 
 local timers = util.timerQueue()
-local format = string.format
+local format, copy = string.format, util.copy
 
 local lldebugger
 if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
@@ -46,8 +46,9 @@ local luaType = function(obj)
     return t == 'table' and obj.__USERDATA and 'userdata' or t
 end
 
-QA, DIR = { config = config, fun = {}, debug={}, debugDoc={}, FIBEMUVAR=EMU_GLOBAL }, {}
+QA, DIR = { config = config, fun = {}, debug = {}, debugDoc = {}, FIBEMUVAR = EMU_GLOBAL }, {}
 function QA.addDoc(flag, doc) QA.debugDoc[flag] = doc end
+
 QA.DIR = DIR
 local debugFlags = QA.debug
 debugFlags.color = true
@@ -55,6 +56,29 @@ debugFlags.refresh = true
 fibaro = { pyhooks = pyhooks, debugFlags = debugFlags, fibemu = QA, config = config }
 QA.loadstring = load
 QA.loadfile = loadfile
+os.orgtime = os.time
+os.orgdate = os.date
+local orgtime, orgdate = os.time, os.date
+local timeOffset = 0
+function os.time(a) return a == nil and orgtime() + timeOffset or orgtime(a) end
+
+function os.date(a, b) return b == nil and orgdate(a, os.time()) or orgdate(a, b) end
+
+function os.setTime(str) -- str = "mm/dd/yyyy-hh:mm:ss"
+    local function tn(s, v) return tonumber(s) or v end
+    local d, hour, min, sec = str:match("(.-)%-?(%d+):(%d+):?(%d*)")
+    local month, day, year = d:match("(%d*)/?(%d*)/?(%d*)")
+    local t = os.date("*t")
+    t.year, t.month, t.day = tn(year, t.year), tn(month, t.month), tn(day, t.day)
+    t.hour, t.min, t.sec = tn(hour, t.hour), tn(min, t.min), tn(sec, 0)
+    local t1 = os.time(t)
+    local t2 = os.date("*t", t1)
+    if t.isdst ~= t2.isdst then
+        t.isdst = t2.isdst
+        t1 = os.time(t)
+    end
+    timeOffset = t1 - os.orgtime()
+end
 
 QA.addDoc("color", "true, uses colors in debug console")
 QA.addDoc("refresh", "true, logs refreshStates (system triggers)")
@@ -68,21 +92,28 @@ QA.addDoc("refresh_resource", "true, logs refresh of resource in internal DB")
 QA.addDoc("autoui", "true, will add 2s autorefresh for QA UI web interface page")
 QA.addDoc("callstack", "true, will log callstack at error")
 
-local libs = { 
-    devices = devices, resources = resources, files = files, refreshStates = refreshStates, lldebugger = lldebugger,
-    emu = QA, util = util, binser = doload("binser.lua"), ui = doload("ui.lua"),
+local libs = {
+    devices = devices,
+    resources = resources,
+    files = files,
+    refreshStates = refreshStates,
+    lldebugger = lldebugger,
+    emu = QA,
+    util = util,
+    binser = doload("binser.lua"),
+    ui = doload("ui.lua"),
 }
 QA.libs = libs
 
-devices.init(config, luapath.."devices.json", libs)
+devices.init(config, luapath .. "devices.json", libs)
 resources.init(config, libs)
 refreshStates.init(config, libs)
 files.init(config, libs)
 fakes.init(config, libs)
 util.init(config, libs)
-local member,epcall = util.member,util.epcall
+local member, epcall = util.member, util.epcall
 
-for k,v in pairs(config.colors or {}) do util.fibColors[k] = v end
+for k, v in pairs(config.colors or {}) do util.fibColors[k] = v end
 
 if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['DARKTEXT'] end
 if not config.lcl then refreshStates.start() end
@@ -92,11 +123,11 @@ function QA.syslog(typ, fmt, ...)
 end
 
 ------- Greeting -----------------------------
-QA.syslog('boot',"Fibemu v%s",config.version)
+QA.syslog('boot', "Fibemu v%s", config.version)
 if not config.nogreet then
-    QA.syslog('boot',"Web UI : %s",config.webURL)
-    QA.syslog('boot',"API Doc: %s",config.apiDocURL)
-    QA.syslog('boot',"API EP : %s",config.apiURL)
+    QA.syslog('boot', "Web UI : %s", config.webURL)
+    QA.syslog('boot', "API Doc: %s", config.apiDocURL)
+    QA.syslog('boot', "API EP : %s", config.apiURL)
 end
 ----------------------------------------------
 
@@ -106,7 +137,7 @@ end
 
 local function systemTimer(fun, ms, msg)
     local t = clock() + ms / 1000
-    return timers.add(-1, t, fun, { type = 'timer', fun = fun, ms = t, log = "system"..(msg and msg or "") })
+    return timers.add(-1, t, fun, { type = 'timer', fun = fun, ms = t, log = "system" .. (msg and msg or "") })
 end
 QA.systemTimer = systemTimer
 
@@ -116,26 +147,27 @@ function string.split(str, sep)
     return fields
 end
 
-local stackSkips = {"breakForError","luaError","error","assert" }
+local stackSkips = { "breakForError", "luaError", "error", "assert" }
 
 local function createEnvironment(id)
     local qa = DIR[id]
-    local env,dev = {},qa.dev
+    local env, dev = {}, qa.dev
     local debugFlags, fmt = qa.debug, string.format
     if debugFlags.color == nil then debugFlags.color = true end
     qa.env = env
 
-    function qa.addTask(ms,task,nosleep) -- absolute time
+    function qa.addTask(ms, task, nosleep) -- absolute time
         return timers.add(id, clock() + ms / 1000, DIR[id].f, task, nosleep)
     end
-    function qa.addTimer(ms,f,log,nosleep) -- relative time
+
+    function qa.addTimer(ms, f, log, nosleep) -- relative time
         local t = clock() + ms / 1000
-        return timers.add(id,t, DIR[id].f, { type = 'timer', fun = f, ms = t, log = log or "" }, nosleep)
+        return timers.add(id, t, DIR[id].f, { type = 'timer', fun = f, ms = t, log = log or "" }, nosleep)
     end
 
     local function setTimer(f, ms, log)
         local ctx = debug.getinfo(2)
-        local function f2() epcall(env.fibaro,env.__TAG,"setTimeout",true,ctx,f) end
+        local function f2() epcall(env.fibaro, env.__TAG, "setTimeout", true, ctx, f) end
         return qa.addTimer(ms, f2, log)
     end
     local function clearTimer(ref)
@@ -145,8 +177,9 @@ local function createEnvironment(id)
 
     os.debug = debug
     os.dofile = dofile
+
     local funs = {
-        "os", "io","pairs", "ipairs", "select", "print", "math", "string", "pcall", "xpcall", "table", "error",
+        "os", "io", "pairs", "ipairs", "select", "print", "math", "string", "pcall", "xpcall", "table", "error",
         "next", "json", "tostring", "tonumber", "assert", "unpack", "utf8", "collectgarbage", "type",
         "setmetatable", "getmetatable", "rawset", "rawget", "coroutine" -- extra stuff
     }
@@ -159,20 +192,21 @@ local function createEnvironment(id)
     env.__setTimeout = setTimer
     env.__clearTimeout = clearTimer
 
-    function env.__fibaroSleep(ms) -- Need to make sure that onAction/onUIEvent are not run...
+    function env.__fibaroSleep(ms)                       -- Need to make sure that onAction/onUIEvent are not run...
         local co = coroutine.running()
         if not coroutine.isyieldable(co) then return end -- Think again. Cause issue from tool download due ti api.get's sleep(0)
         local function f() coroutine.resume(co) end
         timers.save(id)
-        DIR[id].addTimer(ms,f,"sleep",true)
-        coroutine.yield({type='next'})
+        DIR[id].addTimer(ms, f, "sleep", true)
+        coroutine.yield({ type = 'next' })
         timers.restore(id)
     end
 
     -- Optimizations. Instead of calling the API, we call the local function
     function env.__fibaro_get_global_variable(name) return resources.getResource("globalVariables", name) end
- 
-    function env.__fibaro_set_global_variable(name,value) return resources.modifyResource("globalVariables", name,{name=name,value=value}) end
+
+    function env.__fibaro_set_global_variable(name, value) return resources.modifyResource("globalVariables", name,
+            { name = name, value = value }) end
 
     function env.__fibaro_get_device(id) return resources.getResource("devices", id) end
 
@@ -203,11 +237,11 @@ local function createEnvironment(id)
     for _, l in ipairs({ "json.lua", "class.lua", "fibaro.lua", "net.lua", "quickApp.lua", "scene.lua" }) do
         local fn = luapath .. l
         if qa.debug.libraryfiles then
-            QA.syslog(qa.tag,"Loading library " .. fn)
+            QA.syslog(qa.tag, "Loading library " .. fn)
         end
         local stat, res = pcall(function() return loadfile(fn, "t", env)() end)
         if not stat then
-            QA.syslogerr(qa.tag,"%s - %s", fn, res)
+            QA.syslogerr(qa.tag, "%s - %s", fn, res)
             qa.env = nil
             return
         end
@@ -228,15 +262,18 @@ end
 
 local remotes = {} -- resources that we access on the HC3
 
-local function addFlags(perms,flags)
-    for typ,vals in pairs(perms) do
-        flags[typ] = flags[typ] or {patterns={},ids={}}
+local function addFlags(perms, flags)
+    for typ, vals in pairs(perms) do
+        flags[typ] = flags[typ] or { patterns = {}, ids = {} }
         local ep = flags[typ]
         if ep == true then break end
-        for _,v in ipairs(vals) do
-            if v == '*' then flags[typ] = true break end
-            if type(v)=='string' and v:sub(1,1)=="$" then
-                ep.patterns[#ep.patterns+1] = v:sub(2)
+        for _, v in ipairs(vals) do
+            if v == '*' then
+                flags[typ] = true
+                break
+            end
+            if type(v) == 'string' and v:sub(1, 1) == "$" then
+                ep.patterns[#ep.patterns + 1] = v:sub(2)
             else
                 ep.ids[v] = true
             end
@@ -244,30 +281,30 @@ local function addFlags(perms,flags)
     end
 end
 
-local function checkRsrcFlag(typ,id, flags)
+local function checkRsrcFlag(typ, id, flags)
     local p = flags[typ]
-    local r = resources.getResource(typ,id)
+    local r = resources.getResource(typ, id)
     if r and r._local then return true end
     if p == nil then return false end
     if p == true then return true end
     if #p.patterns > 0 then
         local id2 = tostring(id)
-        for _,v in ipairs(p.patterns) do
+        for _, v in ipairs(p.patterns) do
             if id2:match(v) then return true end
         end
     end
     if flags[typ].ids[id] then return true end
 end
 
-QA.isLocal = function(typ,id) return not checkRsrcFlag(typ,id,remotes) end
-QA.isRemote = function(typ,id) return checkRsrcFlag(typ,id,remotes) end
+QA.isLocal = function(typ, id) return not checkRsrcFlag(typ, id, remotes) end
+QA.isRemote = function(typ, id) return checkRsrcFlag(typ, id, remotes) end
 
 local function runner(fc, id)
     local qa = DIR[id]
     qa.f = fc
     local debugFlags = { color = true }
 
-    addFlags(qa.remotes,remotes)
+    addFlags(qa.remotes, remotes)
 
     if not createEnvironment(id) then return end
     local env = qa.env
@@ -286,31 +323,36 @@ local function runner(fc, id)
     collectgarbage("collect")
     for _, qf in pairs(qa.files) do
         log("Running '%s'", qf.name)
-        local stat, err = epcall(env.fibaro,env.__TAG,qf.name.." ",true,nil,qf.qa) -- run QA file
+        local stat, err = epcall(env.fibaro, env.__TAG, qf.name .. " ", true, nil, qf.qa) -- run QA file
         if not stat then
-            if type(err)=='userdata' then
+            if type(err) == 'userdata' then
                 if lldebugger then lldebugger.stop() end
-                QA.isDead=true
-                return 
+                QA.isDead = true
+                return
             end
-            env.fibaro.error(env.__TAG,format("will restart in %ds",RESTART_TIME/1000))
+            env.fibaro.error(env.__TAG, format("will restart in %ds", RESTART_TIME / 1000))
             QA.restart(id, RESTART_TIME)
         end
     end
 
-    local stat,_ = epcall(env.fibaro,env.__TAG,":onInit() ",true,nil,function()
-            local qo = env.QuickApp(qa.dev)
-            env.quickApp = qo
-        end)
-    if not stat then 
+    local stat, _ = epcall(env.fibaro, env.__TAG, ":onInit() ", true, nil, function()
+        local qo = env.QuickApp(qa.dev)
+        env.quickApp = qo
+    end)
+    if not stat then
         QA.restart(id, RESTART_TIME)
-        env.fibaro.error(env.__TAG,format("will restart in %ds",RESTART_TIME/1000))
+        env.fibaro.error(env.__TAG, format("will restart in %ds", RESTART_TIME / 1000))
     end
 
     local ok, err
     while true do -- QA coroutine loop
         local task = coroutine.yield({ type = 'next', log = "X" })
-        ::foo:: if task.type == 'timer' then ok, err = pcall(task.fun) if not ok then errfun(env.__TAG, format("%s Error: %s", "timer", err)) end task = coroutine.yield({ type = 'next' }) goto foo
+        ::foo::
+        if task.type == 'timer' then
+            ok, err = pcall(task.fun)
+            if not ok then errfun(env.__TAG, format("%s Error: %s", "timer", err)) end
+            task = coroutine.yield({ type = 'next' })
+            goto foo
             -- if task.type == 'timer' then
             --     checkErr("setTimeout", task.fun)
         elseif task.type == 'onAction' then
@@ -322,13 +364,13 @@ local function runner(fc, id)
     end
 end
 
-local function cresume(co,...)
-    local output = {coroutine.resume(co,...)}
+local function cresume(co, ...)
+    local output = { coroutine.resume(co, ...) }
     if output[1] == false then
-      return false, output[2], debug.traceback(co)
+        return false, output[2], debug.traceback(co)
     end
     return table.unpack(output)
-  end
+end
 
 local function createQArunner(runner, id)
     local c = coroutine.create(runner)
@@ -356,12 +398,15 @@ end
 -- Simple call arguments so no need to encode as json
 
 function QA.runFile(fname)
-    DIR[1] = { dev = { id = 1}, debug = { color = true }}
+    DIR[1] = { dev = { id = 1 }, debug = { color = true } }
     createEnvironment(1)
     local env = DIR[1].env
     local stat, res = pcall(function() loadfile(fname, "t", env)() end)
-    if (not stat) and type(res) ~= "userdata" then QA.syslogerr("initfile","Error: %s", res) 
-    else QA.isDead=true end
+    if (not stat) and type(res) ~= "userdata" then
+        QA.syslogerr("initfile", "Error: %s", res)
+    else
+        QA.isDead = true
+    end
 end
 
 function QA.install(fname, id)
@@ -384,7 +429,7 @@ function QA.restart(id, delay)
     if DIR[id] and not DIR[id].child then
         delay = delay or 0
         killQA(id)
-        systemTimer(function() createQArunner(runner,id) end, delay, " restart:"..delay)
+        systemTimer(function() createQArunner(runner, id) end, delay, " restart:" .. delay)
     end
 end
 
@@ -393,7 +438,7 @@ function QA.delete(id)
         killQA(id)
         DIR[id] = nil
         resources.removeDevice(id)
-        for cid,cqa in pairs(DIR) do
+        for cid, cqa in pairs(DIR) do
             if cqa.dev.parentId == id then
                 QA.delete(cid)
             end
@@ -409,27 +454,27 @@ end
 function QA.fun.debugMessages(arg)
     arg = json.decode(arg)
     util.debug({ color = true }, arg.tag, arg.message, arg.messageType)
-    return "OK",200
+    return "OK", 200
 end
 
 function QA.fun.restartDevice(id)
-    if not DIR[id] or DIR[id].child then return nil,404 end
+    if not DIR[id] or DIR[id].child then return nil, 404 end
     QA.restart(id)
-    return "OK",200
+    return "OK", 200
 end
 
 function QA.fun.createChildDevice(args)
     args = json.decode(args)
-    if not tonumber(args.parentId) then return {},400 end
+    if not tonumber(args.parentId) then return {}, 400 end
     local qa = files.createChildDevice(args.parentId, args)
-    return qa.dev,200
+    return qa.dev, 200
 end
 
 function QA.fun.deleteChildDevice(id)
     local qa = DIR[id]
-    if qa and not qa.child then return nil,501 end
+    if qa and not qa.child then return nil, 501 end
     QA.delete(id)
-    return qa.dev,200
+    return qa.dev, 200
 end
 
 function QA.fun.publishEvent(args)
@@ -445,26 +490,28 @@ function QA.fun.publishEvent(args)
         }
     }
     refreshStates.newEvent(ev)
-    return true,200
+    return true, 200
 end
 
 function QA.fun.exportFQA(args)
     args = json.decode(args)
-    return true,200
+    return true, 200
 end
 
 function QA.fun.importFQA(args)
     args = json.decode(args)
-    local stat,res = pcall(QA.installFQA,args,args.roomId)
-    if stat then 
-        return res.dev,200
-    else return nil,404 end
+    local stat, res = pcall(QA.installFQA, args, args.roomId)
+    if stat then
+        return res.dev, 200
+    else
+        return nil, 404
+    end
 end
 
 function QA.fun.exportFQA(id)
-    if not DIR[id] then return nil,404 end
+    if not DIR[id] then return nil, 404 end
     local fqa = files.createFQA(id)
-    return fqa,200
+    return fqa, 200
 end
 
 ------------ Events posted from fibenv.py ------------
@@ -473,7 +520,7 @@ local Events = {}
 
 function Events.onAction(event)
     local id = event.deviceId
-    local target_id,arg_id = id,id
+    local target_id, arg_id = id, id
     local args = json.decode(event.args)
     if DIR[target_id] and DIR[target_id].child then -- children sends events to parent
         arg_id = target_id
@@ -481,18 +528,19 @@ function Events.onAction(event)
     end
     if not DIR[id] then
         if QA.isRemote("devices", id) then -- If remote, forward, call HC3
-            api.post("/devices/" .. id .. "/action/"..event.actionName, {args=args}, "hc3")
+            api.post("/devices/" .. id .. "/action/" .. event.actionName, { args = args }, "hc3")
         else
             if QA.isLocal("devices", target_id) then
-                QA.syslogerr("onAction","No action, QA declared local, ID:%s", target_id)
+                QA.syslogerr("onAction", "No action, QA declared local, ID:%s", target_id)
             else
-                QA.syslogerr("onAction","Unknown QA, ID:%s", id)
+                QA.syslogerr("onAction", "Unknown QA, ID:%s", id)
             end
         end
         return
     end
-    if DIR[target_id].addTask then DIR[target_id].addTask(0,{ 
-        type = 'onAction', deviceId = arg_id, actionName = event.actionName, args = args 
+    if DIR[target_id].addTask then
+        DIR[target_id].addTask(0, {
+            type = 'onAction', deviceId = arg_id, actionName = event.actionName, args = args
         })
     end
 end
@@ -500,16 +548,16 @@ end
 function Events.uiEvent(event)
     local id = event.deviceId
     if not DIR[id] then -- ToDo, should forward to remote devices
-        QA.syslogerr("uiEvent","Unknown QA, ID:%s", id)
-        return 
+        QA.syslogerr("uiEvent", "Unknown QA, ID:%s", id)
+        return
     end
-    if event.eventType == "onChanged" then 
+    if event.eventType == "onChanged" then
         -- If slider change value, update our own ui struct for Web UI usage
         Events.updateView({
-            deviceId=id,
-            componentName=event.elementName,
-            propertyName="value",
-            newValue=tostring(event.values[1])
+            deviceId = id,
+            componentName = event.elementName,
+            propertyName = "value",
+            newValue = tostring(event.values[1])
         })
     end
     local target_id = id
@@ -533,17 +581,17 @@ function Events.updateView(ev) -- Used to update our own ui struct for Web UI us
         if map[ev.componentName] then
             map[ev.componentName][ev.propertyName] = ev.newValue
         else
-            QA.syslogerr("updateView","Unknown componentName, QA ID:%s - %s", 
+            QA.syslogerr("updateView", "Unknown componentName, QA ID:%s - %s",
                 ev.deviceId, tostring(ev.componentName))
         end
     else
-        QA.syslogerr("updateView","Unknown QA, ID:%s", ev.deviceId) -- ToDo, Should forward to remote devices
+        QA.syslogerr("updateView", "Unknown QA, ID:%s", ev.deviceId) -- ToDo, Should forward to remote devices
     end
 end
 
 function Events.installQA(event)
     local file = event.file
-    local stat,res = pcall(QA.install,file)
+    local stat, res = pcall(QA.install, file)
     if not stat then print(res) end
 end
 
@@ -560,19 +608,19 @@ function Events.refreshStates(event)
     refreshStates.newEvent(event.event)
 end
 
-function Events.luaCallback(event,options)
+function Events.luaCallback(event, options)
     local args = event.args
     local callback = options.callback
     local id = options.id
     if DIR[id] then
-        DIR[id].addTimer(0,function() callback(table.unpack(args)) end,0,"luaCallback")
+        DIR[id].addTimer(0, function() callback(table.unpack(args)) end, 0, "luaCallback")
     end
 end
 
-function QA.onEvent(event,luaData) -- dispatch to event handler
+function QA.onEvent(event, luaData) -- dispatch to event handler
     event = json.decode(event)
     local h = Events[event.type]
-    if h then h(event,luaData) else print("Unknown event", event.type) end
+    if h then h(event, luaData) else print("Unknown event", event.type) end
 end
 
 --[[
@@ -604,6 +652,6 @@ function QA.dispatcher()
 end
 
 if not config.nogreet then
-    QA.syslog("boot","QA emulator started")
+    QA.syslog("boot", "QA emulator started")
 end
 if (not config.lcl) and config.fibemuvar then refreshStates.hc3HookVar() end

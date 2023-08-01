@@ -336,7 +336,7 @@ function r.hc3HookVar()
     api.post("/globalVariables", {name=QA.FIBEMUVAR,value=tostring(os.time())}, "hc3")
     local data = {url=string.format("http://%s:%s",config.hostIP,config.wport)}
     local function loop()
-        data.time=os.time()
+        data.time=os.orgtime()
         api.put("/globalVariables/"..QA.FIBEMUVAR, {name=QA.FIBEMUVAR, value=(json.encode(data))}, "hc3")
         QA.systemTimer(loop, 3000,'hc3hook')
     end
