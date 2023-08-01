@@ -10,6 +10,140 @@ function r.init(conf, libs)
     defaultRsrcs['settings/network'].networkConfig.wlan0.ipConfig.ip = emu.config.whost
 end
 
+defaultRsrcs['devices'] = {
+    [1] = {
+        id = 1,
+        name = "zwave",
+        roomID = 219,
+        type = "com.fibaro.zwavePrimaryController",
+        baseType = "",
+        enabled = true,
+        visible = false,
+        isPlugin = false,
+        parentId = 0,
+        interfaces = {
+            "energy",
+            "zwave"
+        },
+        properties = {
+            UIMessageSendTime = 0,
+            autoConfig = 0,
+            configured = true,
+            date = "a",
+            dead = false,
+            deviceControlType = 1,
+            deviceIcon = 28,
+            deviceRole = "Other",
+            disabled = 1,
+            emailNotificationID = 0,
+            emailNotificationType = 0,
+            energy = 0,
+            log = "",
+            logTemp = "",
+            manufacturer = "",
+            markAsDead = true,
+            model = "",
+            nodeID = 1,
+            nodeId = 1,
+            productInfo = "",
+            pushNotificationID = 0,
+            pushNotificationType = 0,
+            saveLogs = true,
+            saveToEnergyPanel = true,
+            serialNumber = "",
+            showChildren = 1,
+            smsNotificationID = 0,
+            smsNotificationType = 0,
+            status = "STAT_IDLE",
+            storeEnergyData = true,
+            sunriseHour = "04:31",
+            sunsetHour = "21:14",
+            userDescription = "",
+            value = 0,
+            zwaveBuildVersion = "3.67",
+            zwaveCompany = "Unknown",
+            zwaveInfo = "",
+            zwaveRegion = "EU",
+            zwaveVersion = "4.33"
+        },
+        actions = {
+            pollingDeadDevice = 1,
+            pollingTimeSec = 1,
+            reconfigure = 0,
+            requestNodeNeighborUpdate = 1,
+            reset = 0,
+            turnOff = 0,
+            turnOn = 0
+        }
+    },
+    [2] = {
+        id = 2,
+        name = "admin",
+        roomID = 219,
+        type = "HC_user",
+        baseType = "com.fibaro.voipUser",
+        enabled = true,
+        visible = true,
+        isPlugin = false,
+        parentId = 0,
+        interfaces = {
+            "energy",
+            "voip"
+        },
+        properties = {
+            Email = "foo@bar.com",
+            HotelModeRoom = 0,
+            LastPwdChange = 1684757552,
+            Latitude = 52.4320294933,
+            Location = "52.4320294933;16.8449900900",
+            LocationTime = "2012-12-06 12:15",
+            LocationTimestamp = 1354792521,
+            Longitude = 16.84499009,
+            PreviousLatitude = 52.4320252015,
+            PreviousLocation = "52.4320252015;16.8449947542",
+            PreviousLocationTime = "2012-12-06 12:14",
+            PreviousLocationTimestamp = 1354792461,
+            PreviousLongitude = 16.844994754200002,
+            SendNotifications = true,
+            TrackUser = 1,
+            UserType = "superuser",
+            atHome = false,
+            deviceIcon = 91,
+            energy = 0,
+            fidLastSynchronizationTimestamp = 1689148003,
+            fidRole = "USER",
+            fidUuid = "b7a2295a-2615-40d0-84d9-f22de24875fe",
+            firmwareUpdateLevel = 0,
+            integrationPin = "",
+            saveLogs = true,
+            saveToEnergyPanel = true,
+            sipDisplayName = "_",
+            sipUserEnabled = true,
+            sipUserID = "1",
+            sipUserPassword = "",
+            skin = "light",
+            skinSetting = "manual",
+            storeEnergyData = true,
+            useIntegrationPin = false,
+            useOptionalArmPin = false,
+            usePin = false
+        },
+        actions = {
+            reset = 0,
+            sendDefinedEmailNotification = 1,
+            sendDefinedSMSNotification = 2,
+            sendEmail = 2,
+            sendGlobalEmailNotifications = 1,
+            sendGlobalPushNotifications = 1,
+            sendGlobalSMSNotifications = 1,
+            sendPush = 1,
+            setSipDisplayName = 1,
+            setSipUserID = 1,
+            setSipUserPassword = 1
+        },
+    }
+}
+
 defaultRsrcs['settings/location'] = {
     city = "Berlin",
     latitude = 52.520008,
@@ -281,13 +415,13 @@ function ME.rooms(id) return "RoomModifiedEvent", { id = id } end
 
 function ME.sections(id) return "SectionModifiedEvent", { id = id } end
 
-function ME.devices(id,p,nv,ov) return "DeviceModifiedEvent", { id = id, property=p, newValue=nv, oldValue=ov } end
+function ME.devices(id, p, nv, ov) return "DeviceModifiedEvent", { id = id, property = p, newValue = nv, oldValue = ov } end
 
 function ME.weather(id, nv, ov)
     return "WeatherChangedEvent", { change = id, newValue = nv, oldValue = ov }
 end
 
-function ME.customEvents(id,nv,ov) return "CustomEventModifiedEvent", {id=id} end
+function ME.customEvents(id, nv, ov) return "CustomEventModifiedEvent", { id = id } end
 
 local UA = { -- properties we can modify
     globalVariables = { name = true, value = true },
@@ -390,10 +524,10 @@ local function modifyResource_from_emu(typ, id, nd)
     if key then rs[id] = nil end
     if ed == nil then return nil, 404 end
     local flag = false
-    local props,newProps = {},{}
+    local props, newProps = {}, {}
     for k, v in pairs(nd) do
         if UA[typ][k] and ed[k] ~= v then
-            newProps[k] = {newValue=v,oldValue=ed[k]}
+            newProps[k] = { newValue = v, oldValue = ed[k] }
             props[k] = v
             ed[k] = v
             flag = true
@@ -406,8 +540,8 @@ local function modifyResource_from_emu(typ, id, nd)
         local r, c = api.put("/" .. typ .. "/" .. id, props, "hc3")
         return r, c
     end
-    if ME[typ] then 
-        for p,vs in pairs(newProps) do postEvent(ME[typ](id, p, vs.newValue, vs.oldValue)) end
+    if ME[typ] then
+        for p, vs in pairs(newProps) do postEvent(ME[typ](id, p, vs.newValue, vs.oldValue)) end
     end
     return ed, 200
 end
@@ -463,26 +597,29 @@ end
 
 --------- QA keys -------------
 rsrcs.keys = {}
-function r.getQAKey(id,name)
+function r.getQAKey(id, name)
     keys[id] = keys[id] or {}
-    return name and keys[id][name] or keys[id],200
+    return name and keys[id][name] or keys[id], 200
 end
-function r.deleteQAKey(id,name)
+
+function r.deleteQAKey(id, name)
     if keys[id] == nil then return end
     if name then keys[id][name] = nil else keys[id] = nil end
-    return nil,200
+    return nil, 200
 end
-function r.createQAKey(id,name,value)
+
+function r.createQAKey(id, name, value)
     keys[id] = keys[id] or {}
-    if keys[id] ~= nil then return nil,404 end
+    if keys[id] ~= nil then return nil, 404 end
     keys[id][name] = value
-    return value,200
+    return value, 200
 end
-function r.setQAKey(id,name,value)
+
+function r.setQAKey(id, name, value)
     keys[id] = keys[id] or {}
-    if keys[id] == nil then return nil,404 end
+    if keys[id] == nil then return nil, 404 end
     keys[id][name] = value
-    return value,200
+    return value, 200
 end
 
 return r

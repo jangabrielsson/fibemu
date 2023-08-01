@@ -1,6 +1,7 @@
 /__pycache__
 *.pyc
 /.vscode/emufiles/__pycache__
+/.vscode/emufiles/frontend
 config.json
 /test
 /dev

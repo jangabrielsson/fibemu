@@ -39,7 +39,8 @@
         "UDPServer"
     ],
     "Lua.diagnostics.disable": [
-        "duplicate-set-field"
+        "duplicate-set-field",
+        "param-type-mismatch"
     ],
     "Lua.workspace.library": [
         ".vscode/emufiles/lspaddon/library"
