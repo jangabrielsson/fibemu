@@ -14,7 +14,6 @@ local format = string.format
 
 local destDir = './dev/backup/'
 local QAs = api.get("/devices?interface=quickApp",remote)
-local QAs = api.get("/devices/1189",remote)
 QAs = {QAs}
 
 local listDir = fibaro.pyhooks.listDir
