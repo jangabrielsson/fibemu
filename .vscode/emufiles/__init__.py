@@ -79,6 +79,10 @@ if __name__ == "__main__":
     config['apiDocURL'] =  f"http://localhost:{config['wport']}/docs"
     config['webURL'] =  f"http://localhost:{config['wport']}/"
     
+    if not config['local'] and  (not config['user'] or not config['password'] or not config['host']):
+        print("Missing HC3 connection info for non-local run",file=sys.stderr)
+        sys.exit(1)
+
     f = FibaroEnvironment(config)
     fibapi.fibenv['fe'] = f
     f.run()
