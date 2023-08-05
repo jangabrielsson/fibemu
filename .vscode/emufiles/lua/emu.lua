@@ -16,7 +16,6 @@ local resources = doload("resources.lua")
 local refreshStates = doload("refreshState.lua")
 local files = doload("file.lua")
 local timesup = doload("time.lua")
-local fakes = doload("fakes.lua")
 
 local timers = util.timerQueue()
 local format, copy = string.format, util.copy
@@ -110,7 +109,6 @@ devices.init(config, luapath .. "devices.json", libs)
 resources.init(config, libs)
 refreshStates.init(config, libs)
 files.init(config, libs)
-fakes.init(config, libs)
 util.init(config, libs)
 local member, epcall = util.member, util.epcall
 
@@ -256,7 +254,6 @@ local function createEnvironment(id)
     env.fibaro._IPADDRESS = config.whost
     env.fibaro.config = config
     env.fibaro.pyhooks = pyhooks
-    env.fibaro.createDevice = fakes.createDevice
     if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['DARKTEXT'] end
     return env
 end

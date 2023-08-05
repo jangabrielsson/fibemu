@@ -7,13 +7,13 @@
             @click.prevent="buttonPresssed(item.button)">
             {{ uiMap[item.id].text }}
           </button>
-          <div v-if="item.type == 'slider'">
+          <div v-else-if="item.type == 'slider'">
             <output>{{ uiMap[item.id].value }}</output>
             <input v-if="item.type == 'slider'" type="range" class="form-range" :id="item.id" tooltips="true"
               :min="uiMap[item.id].min || 0" :max="uiMap[item.id].max || 100" :step="uiMap[item.id].step || 100"
               :value="uiMap[item.id].value || 0" @mouseup="sliderReleased($event.target.id, $event.target.value)">
           </div>
-          <div v-if="item.type == 'label'" class="text-center">
+          <div v-else-if="item.type == 'label'" class="text-center">
             {{ uiMap[item.id].text }}
           </div>
         </div>

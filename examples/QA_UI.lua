@@ -18,6 +18,9 @@ function QuickApp:onInit()
     self:debug("Started",self.id)
     self:setVariable("test","HELLO")
     setTimeout(function() self:updateView("lblA","text","FOO") end, 10*1000)
+    for i = 1,100 do
+    local dev = fibaro.fibemu.install("examples/devices/binarySwitch.lua")
+    end
 end
 
 function QuickApp:testFun()

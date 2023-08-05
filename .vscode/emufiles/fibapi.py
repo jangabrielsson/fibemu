@@ -196,7 +196,7 @@ async def invoke_ui_button(id:int, elm: str, val:int, response: Response):
 async def emu_list_qas(request: Request):
     emu = fibenv.get('fe')
     d = emu.DIR
-    qas = [{'id': id, 'name':d.name, 'type':d.type} for id in d]
+    qas = [{'id': id, 'name':d[id].dev.name, 'type':d[id].dev.type} for id in d]
     return qas
 
 @app.get("/emu/qa/{id}", tags=["Emulator methods"])
@@ -215,6 +215,8 @@ async def emu_get_qa(id: int, request: Request):
 @app.get("/emu/qa/ui/{id}", tags=["Emulator methods"])
 async def emu_get_qa_ui(id: int, request: Request):
     emu = fibenv.get('fe')
+    if not (hasattr(emu,'DIR') and emu.DIR[id]):
+        return {}
     qa = emu.DIR[id]
     uiMap = qa.uiMap
     uiMap = convertLuaTable(uiMap)
