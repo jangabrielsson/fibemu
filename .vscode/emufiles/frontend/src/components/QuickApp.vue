@@ -1,46 +1,85 @@
 <template>
-  <li>
-    <h2>{{ name }} {{  isEnabled ? '(enabled)' : "" }} </h2>
-    <button @click="toggleDetails">Show Details</button>
-    <button @click="toggleEnabled">{{isEnabled ? 'Disable' : 'Enable'}}</button>
-    <ul v-if="detailsAreVisible">
-      <li>
-        <strong>Id:</strong>
-        {{ qid }}
-      </li>
-      <li>
-        <strong>Type:</strong>
-        {{ type }}
-      </li>
-    </ul>
-  </li>
+    <div class="card" style="width: 28rem;"></div>
+    <h2>Name: {{ dev.name }} </h2>
+    <p>Type: {{ dev.type }}</p>
+    <quick-app-ui :id="id"></quick-app-ui>
 </template>
-
+  
 <script>
 export default {
-  props: {
-    qid: Number,
-    name: String,
-    type: String,
-    isEnabled: {
-      type: Boolean,
-      required: false,
-      default: false,
-    }
-  },
-  emits: ['toggle-enabled'],
-  data() {
-    return {
-      detailsAreVisible: false,
-    };
-  },
-  methods: {
-    toggleDetails() {
-      this.detailsAreVisible = !this.detailsAreVisible;
+    props: {
+        id: Number,
     },
-    toggleEnabled() {
-      this.$emit('toggle-enabled', this.qid);
-    }
-  }
+    data() {
+        return {
+            dev: {},
+            quickVars: {},
+        };
+    },
+    methods: {
+    },
+    mounted() {
+        console.log("Fetching device2 " + this.id);
+        fetch("http://localhost:5004/emu/qa/" + this.id, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
+            .then((response) => response.json())
+            .then((data) => {
+                console.log("Got device " + JSON.stringify(data.dev.id));
+                this.dev = data.dev;
+                this.quickVars = data.qvs;
+            });
+    },
 };
 </script>
+  
+<style scoped>
+@media (min-width: 1200px) {
+    .container {
+        max-width: 400px;
+    }
+}
+
+.btn-secondary {
+    color: #000000;
+    background-color: #f6f6f6;
+    border-color: #c7c7c7;
+}
+
+.form-range::-webkit-slider-thumb {
+    background: #cdcccc;
+}
+
+.form-range::-moz-range-thumb {
+    background: #cdcccc;
+}
+
+.form-range::-ms-thumb {
+    background: #cdcccc;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .form-range::-webkit-slider-thumb {
+        -webkit-transition: none;
+        transition: none;
+    }
+}
+
+.form-range::-webkit-slider-thumb:active {
+    background-color: #FF8000;
+}
+
+.form-range::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 0.5rem;
+    color: transparent;
+    cursor: pointer;
+    background-color: #a0a0a0;
+    border-color: transparent;
+    border-radius: 1rem;
+
+}
+</style>

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Body
+from fastapi.middleware.cors import CORSMiddleware  # NEW
 import logging
 from fastapi.responses import JSONResponse
 from fastapi.responses import HTMLResponse
@@ -62,6 +63,14 @@ tags_metadata = [
  ]
 
 app = FastAPI(openapi_tags=tags_metadata, swagger_ui_parameters = {"docExpansion":"none"})
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 def my_schema():
    DOCS_TITLE = "Fibemu API"
    DOCS_VERSION = "0.2"
@@ -182,6 +191,34 @@ async def invoke_ui_button(id:int, elm: str, val:int, response: Response):
     value = [val] if val > 0 else []
     fibenv.get('fe').postEvent({"type":"uiEvent","deviceId":id,"eventType":eventType,"elementName":elm,"values":value})
     return "OK"
+
+@app.get("/emu/qa", tags=["Emulator methods"])
+async def emu_list_qas(request: Request):
+    emu = fibenv.get('fe')
+    d = emu.DIR
+    qas = [{'id': id, 'name':d.name, 'type':d.type} for id in d]
+    return qas
+
+@app.get("/emu/qa/{id}", tags=["Emulator methods"])
+async def emu_get_qa(id: int, request: Request):
+    emu = fibenv.get('fe')
+    qa = emu.DIR[id]
+    ui = qa.UI
+    uiMap = qa.uiMap
+    ui = convertLuaTable(ui)
+    uiMap = convertLuaTable(uiMap)
+    d = convertLuaTable(qa.dev)
+    props = d.get('properties') if d.get('properties') else dict()
+    qvs = props.get('quickAppVariables') if props.get('quickAppVariables') else dict()
+    return {"ui": ui, "uiMap": uiMap, "qvs":qvs, "dev": d}
+
+@app.get("/emu/qa/ui/{id}", tags=["Emulator methods"])
+async def emu_get_qa_ui(id: int, request: Request):
+    emu = fibenv.get('fe')
+    qa = emu.DIR[id]
+    uiMap = qa.uiMap
+    uiMap = convertLuaTable(uiMap)
+    return uiMap
 
 ''' Device methods '''
 class ActionParams(BaseModel):
@@ -403,8 +440,9 @@ async def get_refreshStates_events(response: Response, query: RefreshStatesQuery
 
 ''' Plugins methods '''
 @app.get("/api/plugins/callUIEvent", tags=["Plugins methods"])
-async def call_UI_Event(deviceID: int, eventType: str, elementName: str, value: str):
+async def call_UI_Event(deviceID: int, eventType: str, elementName: str, value: str | None = None):
     t = time.time()
+    value = [value] if value else []
     fibenv.get('fe').postEvent({"type":"uiEvent","deviceId":deviceID,"eventType":eventType,"elementName":elementName,"values":value})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
