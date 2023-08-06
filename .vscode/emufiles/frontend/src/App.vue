@@ -3,7 +3,7 @@
     <header>
     </header>
     <menu-bar></menu-bar>
-    <quick-app-panel></quick-app-panel>
+    <router-view></router-view>
   </section>
   <div id="footer">
     &copy; Copyleft 2023 by <a href="http://domain.invalid/">Jan Gabrielsson</a>.
@@ -14,7 +14,7 @@
 export default {
   data() {
     return {
-      quickApps: [],
+      panel: "quick-app-panel",
     };
   },
   methods: {

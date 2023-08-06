@@ -2,14 +2,15 @@
     <div class="card" style="width: 28rem;"></div>
     <h5>Type: {{ dev.type }} </h5>
     <hr>
-    <quick-app-ui :id="id"></quick-app-ui>
+    <quick-app-ui :id="id" :ui="ui" :dev="dev" :uiMap="uiMap"></quick-app-ui>
     <hr>
-    <AccordionList v-model:state="state" open-multiple-items=true>
+    <!-- <AccordionList v-model:state="state" open-multiple-items> -->
+    <AccordionList open-multiple-items>
         <AccordionItem id="mId1">
             <template #summary>QuickAppVariables</template>
             <template #icon>+</template>
             <ul class="list-group">
-                <li v-for="v in quickVars" :key="key" class="list-group-item">
+                <li v-for="v in quickVars" :key="v" class="list-group-item">
                     <form>
                         {{ v.name }}:
                         <input :value="v.value" @input="v.value = $event.target.value">
@@ -35,26 +36,33 @@ export default {
         return {
             dev: {},
             quickVars: {},
+            uiMap: {},
+            ui: {},
         };
     },
     methods: {
-        updateVar(name, value) {
-            console.log(`Update var ${name} to ${value}`);
-            // fetch(`http://localhost:5004/emu/qa/${this.id}/var/${name}/${value}`, {
-            //     method: "GET",
-            //     headers: {
-            //         "Content-Type": "application/json",
-            //     },
-            // })
-            //     .then((response) => response.json())
-            //     .then((data) => {
-            //         console.log("Got quickApps " + JSON.stringify(data));
-            //         this.quickVars = data;
-            //     });
+        sliderReleased(id, value) {
+            console.log(`Slider '${id}' changed to ${value}`);
+            this.uiMap[id].value = value;
         },
+        updateQA() {
+            console.log(`Refresh QA ${this.id}`);
+            fetch("http://localhost:5004/emu/qa/" + this.id, {
+                method: "GET",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    this.uiMap = data.uiMap;
+                    this.quickVars = data.quickVars;
+                    this.dev = data.dev;
+                });
+        }
     },
     mounted() {
-        console.log("Fetching device2 " + this.id);
+        console.log("Fetching device " + this.id);
         fetch("http://localhost:5004/emu/qa/" + this.id, {
             method: "GET",
             headers: {
@@ -63,11 +71,27 @@ export default {
         })
             .then((response) => response.json())
             .then((data) => {
-                console.log("Got device " + JSON.stringify(data.dev.id));
                 this.dev = data.dev;
-                this.quickVars = data.qvs;
+                this.ui = data.ui;
+                this.uiMap = data.uiMap;
+                this.quickVars = data.quickVars;
+                data.ui.forEach(row => {
+                    row.forEach(item => {
+                        if (item.type == "slider") {
+                            item.id = item.slider;
+                        } else if (item.type == "button") {
+                            item.id = item.button;
+                        } else if (item.type == "label") {
+                            item.id = item.label;
+                        }
+                    });
+                });
             });
+        this.ref = setInterval(this.updateQA, 1000);
     },
+    beforeDestroy() {
+        clearInterval(this.ref);
+    }
 };
 </script>
   
@@ -123,7 +147,8 @@ export default {
     justify-content: center;
     border-bottom: 2px solid gray;
     margin-bottom: 50px;
-    &__image {
+
+    :is(__image[data-v-85a91b67]) {
         font-size: 150px;
     }
 }

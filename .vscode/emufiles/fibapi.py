@@ -195,6 +195,8 @@ async def invoke_ui_button(id:int, elm: str, val:int, response: Response):
 @app.get("/emu/qa", tags=["Emulator methods"])
 async def emu_list_qas(request: Request):
     emu = fibenv.get('fe')
+    if not hasattr(emu,'DIR'): # at startup, if ui is polling
+        return {}
     d = emu.DIR
     qas = [{'id': id, 'name':d[id].dev.name, 'type':d[id].dev.type} for id in d]
     return qas
@@ -202,6 +204,8 @@ async def emu_list_qas(request: Request):
 @app.get("/emu/qa/{id}", tags=["Emulator methods"])
 async def emu_get_qa(id: int, request: Request):
     emu = fibenv.get('fe')
+    if not (hasattr(emu,'DIR') and emu.DIR[id]): # at startup, if ui is polling
+        return {}
     qa = emu.DIR[id]
     ui = qa.UI
     uiMap = qa.uiMap
@@ -210,17 +214,14 @@ async def emu_get_qa(id: int, request: Request):
     d = convertLuaTable(qa.dev)
     props = d.get('properties') if d.get('properties') else dict()
     qvs = props.get('quickAppVariables') if props.get('quickAppVariables') else dict()
-    return {"ui": ui, "uiMap": uiMap, "qvs":qvs, "dev": d}
+    return {"ui": ui, "uiMap": uiMap, "quickVars":qvs, "dev": d}
 
-@app.get("/emu/qa/ui/{id}", tags=["Emulator methods"])
-async def emu_get_qa_ui(id: int, request: Request):
+@app.get("/emu/events", tags=["Emulator methods"])
+async def emu_get_events(request: Request):
     emu = fibenv.get('fe')
-    if not (hasattr(emu,'DIR') and emu.DIR[id]):
+    if not hasattr(emu,'events'): # at startup, if ui is polling
         return {}
-    qa = emu.DIR[id]
-    uiMap = qa.uiMap
-    uiMap = convertLuaTable(uiMap)
-    return uiMap
+    return emu.events
 
 ''' Device methods '''
 class ActionParams(BaseModel):

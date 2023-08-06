@@ -27,12 +27,12 @@
 export default {
   props: {
     id: Number,
+    dev: Object,
+    uiMap: Object,
+    ui: Object,
   },
   data() {
     return {
-      dev: {},
-      ui: {},
-      uiMap: {},
     };
   },
   methods: {
@@ -41,54 +41,12 @@ export default {
       fetch(`http://localhost:5004/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onReleased&elementName=${id}`);
     },
     sliderReleased(id, value) {
-      console.log(`Slider '${id}' changed to ${value}`);
-      this.uiMap[id].value = value;
+      // console.log(`Slider '${id}' changed to ${value}`);
+      // this.uiMap[id].value = value;
+      this.$emit("slider-changed", id, value)
       fetch(`http://localhost:5004/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onChanged&elementName=${id}&value=${value}`);
     },
-    updateUI() {
-      console.log(`Refresh UI ${this.id}`);
-      fetch("http://localhost:5004/emu/qa/ui/" + this.id, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          this.uiMap = data;
-        });
-    }
   },
-  mounted() {
-    console.log("Fetching device " + this.id);
-    fetch("http://localhost:5004/emu/qa/" + this.id, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        this.dev = data.dev;
-        this.ui = data.ui;
-        this.uiMap = data.uiMap;
-        data.ui.forEach(row => {
-          row.forEach(item => {
-            if (item.type == "slider") {
-              item.id = item.slider;
-            } else if (item.type == "button") {
-              item.id = item.button;
-            } else if (item.type == "label") {
-              item.id = item.label;
-            }
-          });
-        });
-      });
-    this.ref = setInterval(this.updateUI, 1000);
-  },
-  beforeDestroy() {
-    clearInterval(this.ref);
-  }
 };
 </script>
 
