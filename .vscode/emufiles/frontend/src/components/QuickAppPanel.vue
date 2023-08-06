@@ -1,11 +1,11 @@
 <template>
     <section>
         <!-- <AccordionList v-model:state="state" open-multiple-items> -->
-        <AccordionList open-multiple-items>
+        <AccordionList v-model:state="state" open-multiple-items>
             <AccordionItem v-for="(qa,i) in quickApps" :key="qa" :id="qa.id" id="mId1" :default-opened="i === 0">
                 <template #summary>QA: '{{ qa.name }}' ({{ qa.id }})</template>
                 <template #icon>+</template>
-                <quick-app :key="qa.id" :id="qa.id"></quick-app>
+                <quick-app :key="qa.id" :id="qa.id" :state="state" :start="i === 0"></quick-app>
             </AccordionItem>
         </AccordionList>
     </section>
@@ -22,6 +22,7 @@ export default {
     data() {
         return {
             quickApps: [],
+            state: {},
         };
     },
     methods: {

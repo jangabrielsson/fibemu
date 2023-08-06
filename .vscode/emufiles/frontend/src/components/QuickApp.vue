@@ -38,6 +38,8 @@ export default {
 
     props: {
         id: Number,
+        state: Object,
+        start: Boolean,
     },
     data() {
         return {
@@ -45,7 +47,19 @@ export default {
             quickVars: {},
             uiMap: {},
             ui: {},
+            ref: null,
         };
+    },
+    watch: {
+        state(st,oldSt) {
+            // console.log(`State changed ${this.id} ${st} ${oldSt}`);
+            if (st[this.id] && this.ref == null) {
+                this.ref = setInterval(this.updateQA, 1000);
+            } else if (!st[this.id] && this.ref != null) {
+                clearInterval(this.ref);
+                this.ref = null;
+            }
+        },
     },
     methods: {
         sliderReleased(id, value) {
@@ -69,7 +83,7 @@ export default {
         }
     },
     mounted() {
-        console.log("Fetching device " + this.id);
+        console.log("Mounting device " + this.id);
         fetch("http://localhost:5004/emu/qa/" + this.id, {
             method: "GET",
             headers: {
@@ -98,7 +112,9 @@ export default {
                     this.ui = [];
                 }
             });
-        this.ref = setInterval(this.updateQA, 1000);
+        if (this.start) {
+            this.ref = setInterval(this.updateQA, 1000);
+        }
     },
     unmounted() {
         console.log("Unmounting device " + this.id);
