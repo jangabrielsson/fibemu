@@ -28,7 +28,14 @@
 </template>
   
 <script>
+
+import QuickAppUI from './QuickAppUI.vue';
+
 export default {
+    components: {
+        'quick-app-ui': QuickAppUI,
+    },
+
     props: {
         id: Number,
     },
@@ -70,26 +77,31 @@ export default {
             },
         })
             .then((response) => response.json())
-            .then((data) => {
+            .then(data => {
                 this.dev = data.dev;
                 this.ui = data.ui;
                 this.uiMap = data.uiMap;
                 this.quickVars = data.quickVars;
-                data.ui.forEach(row => {
-                    row.forEach(item => {
-                        if (item.type == "slider") {
-                            item.id = item.slider;
-                        } else if (item.type == "button") {
-                            item.id = item.button;
-                        } else if (item.type == "label") {
-                            item.id = item.label;
-                        }
+                if (this.ui.forEach) {
+                    this.ui.forEach(row => {
+                        row.forEach(item => {
+                            if (item.type == "slider") {
+                                item.id = item.slider;
+                            } else if (item.type == "button") {
+                                item.id = item.button;
+                            } else if (item.type == "label") {
+                                item.id = item.label;
+                            }
+                        });
                     });
-                });
+                } else {
+                    this.ui = [];
+                }
             });
         this.ref = setInterval(this.updateQA, 1000);
     },
     unmounted() {
+        console.log("Unmounting device " + this.id);
         clearInterval(this.ref);
     }
 };

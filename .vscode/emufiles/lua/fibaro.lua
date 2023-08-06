@@ -10,13 +10,13 @@ function __assert_type(value, typeOfValue)
 end
 
 function setTimeout(fun, ms)
-    if type(fun) ~= 'function' then error("setTimeout first arg must be function",2) end
-    assert(type(ms) == 'number', "setTimeout second arg must be a number",2)
+    if type(fun) ~= 'function' then error("setTimeout first arg must be function", 2) end
+    assert(type(ms) == 'number', "setTimeout second arg must be a number", 2)
     return __setTimeout(fun, ms)
 end
 
 function clearTimeout(ref)
-    if type(ref) ~= 'number' then error("clearTimeout arg must be number (ref)",2) end
+    if type(ref) ~= 'number' then error("clearTimeout arg must be number (ref)", 2) end
     __clearTimeout(ref)
 end
 
@@ -24,14 +24,16 @@ function setInterval(fun, ms)
     local ref = {}
     local function loop()
         fun()
-        ref[1] = setTimeout(loop, ms)
+        if ref[1] then
+            ref[1] = setTimeout(loop, ms)
+        end
     end
     ref[1] = setTimeout(loop, ms)
     return ref
 end
 
 function clearInterval(ref)
-    clearTimeout(ref[1])
+    if type(ref)=='table' and ref[1] then clearTimeout(ref[1]); ref[1] = nil end
 end
 
 fibaro = {}
@@ -375,23 +377,23 @@ end
 
 local getRemoteLogRef
 function fibaro.getRemoteLog(delay)
-  delay = delay or 1000
-  assert(type(delay)=='number',"Delay needs to be a number > 500")
-  if delay < 500 then delay = 500 end
-  local timestamp
-  local function loop()
-    local msg = api.get("/debugMessages?from=" .. timestamp, "hc3") -- fetch new logs from the HC3
-    if msg and msg.messages then
-      for i = #msg.messages, 1, -1 do
-        local m = msg.messages[i]
-        timestamp = m.timestamp
-        __fibaro_add_debug_message(m.tag, m.message, m.type) -- and add them the vscode log
-      end
-      timestamp = msg.timestamp and msg.timestamp or timestamp
+    delay = delay or 1000
+    assert(type(delay) == 'number', "Delay needs to be a number > 500")
+    if delay < 500 then delay = 500 end
+    local timestamp
+    local function loop()
+        local msg = api.get("/debugMessages?from=" .. timestamp, "hc3") -- fetch new logs from the HC3
+        if msg and msg.messages then
+            for i = #msg.messages, 1, -1 do
+                local m = msg.messages[i]
+                timestamp = m.timestamp
+                __fibaro_add_debug_message(m.tag, m.message, m.type) -- and add them the vscode log
+            end
+            timestamp = msg.timestamp and msg.timestamp or timestamp
+        end
     end
-  end
-  if not getRemoteLogRef then
-    timestamp = os.orgtime()
-    getRemoteLogRef = setInterval(loop, delay)
-  end
+    if not getRemoteLogRef then
+        timestamp = os.orgtime()
+        getRemoteLogRef = setInterval(loop, delay)
+    end
 end

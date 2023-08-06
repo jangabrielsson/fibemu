@@ -6,9 +6,6 @@ import { useAccordion } from "vue3-rich-accordion";
 import "vue3-rich-accordion/accordion-library-styles.css";
 
 import App from './App.vue';
-import QuickAppUI from './components/QuickAppUI.vue';
-import QuickApp from './components/QuickApp.vue';
-import MenuBar from './components/MenuBar.vue';
 import QuickAppPanel from './components/QuickAppPanel.vue';
 import AboutPanel from './components/AboutPanel.vue';
 import ConfigPanel from './components/ConfigPanel.vue';
@@ -30,16 +27,13 @@ const router = createRouter({
 });
 
 const app = createApp(App);
-app.use(useAccordion);
-app.use(router)
-
-app.component('quick-app-ui', QuickAppUI);
-app.component('quick-app', QuickApp);
 app.component('quick-app-panel', QuickAppPanel);
-app.component('menu-bar', MenuBar);
 app.component('about-panel', AboutPanel);
 app.component('config-panel', ConfigPanel);
 app.component('event-panel', EventPanel);
-app.component('globalvar-panel', GlobalVarPanel);
+app.component('global-var-panel', GlobalVarPanel);
+
+app.use(useAccordion);
+app.use(router)
 
 app.mount('#app');

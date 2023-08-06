@@ -273,19 +273,23 @@ end
 
 customUI = {
     ['com.fibaro.binarySwitch'] = {
-        { { button = "__turnon", text = "Turn On", onReleased = "turnOn" },
-            { button = "__turnoff", text = "Turn Off", onReleased = "turnOff" } }
+        {
+            { button = "__turnon",  text = "Turn On",  onReleased = "turnOn" },
+            { button = "__turnoff", text = "Turn Off", onReleased = "turnOff" }
+        }
     },
     ['com.fibaro.multilevelSwitch'] = {
-        { { button = "__turnon", text = "Turn On", onReleased = "turnOn" },
-            { button = "__turnoff", text = "Turn Off", onReleased = "turnOff" } },
+        {
+            { button = "__turnon",  text = "Turn On",  onReleased = "turnOn" },
+            { button = "__turnoff", text = "Turn Off", onReleased = "turnOff" }
+        },
         { label = '_Brightness', text = 'Brightness' },
-        { slider = '__value',  min = 0,          max = 99, onChanged = 'setValue' },
+        { slider = '__value', min = 0, max = 99, onChanged = 'setValue' },
         {
             { button = '__sli', text = "&#8679;", onReleased = "startLevelIncrease" },
             { button = '__sld', text = "&#8681;", onReleased = "startLevelDecrease" },
-            { button = '__sls', text = "&Vert;", onReleased = "stopLevelChange" },
-        }
+            { button = '__sls', text = "&Vert;",  onReleased = "stopLevelChange" },
+        },
     },
     ['com.fibaro.energyMeter'] = {
         { label = '__energy', text = '...' }
@@ -301,16 +305,22 @@ customUI = {
     },
     ['com.fibaro.colorController'] =
     { { { button = '__turnon', text = "Turn On", onReleased = "turnOn" },
-                                                                   { button = '__turnoff', text = "Turn Off",
-            onReleased = "turnOff" } },
-        { label = '_Brightness',                                   text = 'Brightness' },
-        { slider = '__value',                                      min = 0,                                                   max = 99,
-                                                                                                                                          onChanged =
-            'setValue' },
+        {
+            button = '__turnoff',
+            text = "Turn Off",
+            onReleased = "turnOff"
+        } },
+        { label = '_Brightness', text = 'Brightness' },
+        {
+            slider = '__value',
+            min = 0,
+            max = 99,
+            onChanged = 'setValue'
+        },
         {
             { button = '__sli', text = "&#8679;", onReleased = "startLevelIncrease" },
             { button = '__sld', text = "&#8681;", onReleased = "startLevelDecrease" },
-            { button = '__sls', text = "&Vert;", onReleased = "stopLevelChange" }
+            { button = '__sls', text = "&Vert;",  onReleased = "stopLevelChange" }
         }
     },
 }
@@ -393,16 +403,23 @@ local function loadFiles(id)
         local file = io.open(im.fname, "r")
         assert(file, "Image not found:" .. im.name, im.fname)
         local img = file:read("*all")
-        local w,h = getSize(img)
-        imcont[#imcont+1] = string.format([[
+        local w, h = getSize(img)
+        imcont[#imcont + 1] = string.format([[
             _IMAGES['%s']={data='%s',w=%s,h=%s}
-            ]],im.name,"data:image/png;base64,"..base64encode(img),w,h)
+            ]], im.name, "data:image/png;base64," .. base64encode(img), w, h)
         file:close()
     end
     if #imcont > 1 then
-        local content = table.concat(imcont,"\n")
+        local content = table.concat(imcont, "\n")
         local qa2, res = load(content, "images", "t", env) -- Load QA
-        table.insert(qa.files,1,{qa = qa2, name="IMAGES",content=content,type='lua',isMain=false,isOpen=false})
+        table.insert(qa.files, 1, {
+            qa = qa2,
+            name = "IMAGES",
+            content = content,
+            type = 'lua',
+            isMain = false,
+            isOpen = false
+        })
     end
     return true
 end

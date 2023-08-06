@@ -144,10 +144,6 @@ async def read_item6(file,request: Request):
 async def read_item8(request: Request):
     return RedirectResponse(url="/frontend/index.html")
 
-# @app.get("/vue/{file}", response_class=HTMLResponse,include_in_schema=False)
-# async def read_item(request: Request):
-#     return templates.TemplateResponse("test.html", {"request": request, "emu": fibenv.get('fe')})
-
 @app.get("/info/qa/{id}", response_class=HTMLResponse,include_in_schema=False)
 async def read_item(id: int, request: Request):
     emu = fibenv.get('fe')

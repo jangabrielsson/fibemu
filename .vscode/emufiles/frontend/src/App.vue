@@ -11,7 +11,13 @@
 </template>
 
 <script>
+
+import MenuBar from './components/MenuBar.vue';
+
 export default {
+  components: {
+    'menu-bar': MenuBar,
+  },
   data() {
     return {
       panel: "quick-app-panel",

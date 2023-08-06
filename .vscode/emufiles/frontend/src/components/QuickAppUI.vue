@@ -1,30 +1,57 @@
 <template>
-  <div class="card" style="width: 28rem;">
-    <div class="p-1 container-xs border-primary p-3">
-      <div v-for="(row, x) in    ui   " :key="x" class="row p-1">
-        <div v-for="item in    row   " :key="item.id" class="col mb-1 d-grid">
-          <button v-if="item.type == 'button'" type="button" class="btn btn-secondary"
-            @click.prevent="buttonPresssed(item.button)">
-            {{ uiMap[item.id].text }}
-          </button>
-          <div v-else-if="item.type == 'slider'">
-            <output>{{ uiMap[item.id].value }}</output>
-            <input v-if="item.type == 'slider'" type="range" class="form-range" :id="item.id" tooltips="true"
-              :min="uiMap[item.id].min || 0" :max="uiMap[item.id].max || 100" :step="uiMap[item.id].step || 100"
-              :value="uiMap[item.id].value || 0" @mouseup="sliderReleased($event.target.id, $event.target.value)">
-          </div>
-          <div v-else-if="item.type == 'label'" class="text-center">
-            {{ uiMap[item.id].text }}
+  <div class="row">
+    <div class="col">
+      <div class="card" style="width: 28rem;">
+        <div class="p-1 container-xs border-primary p-3">
+          <div v-for="(row, x) in    ui   " :key="x" class="row p-1">
+            <div v-for="item in    row   " :key="item.id" class="col mb-1 d-grid">
+              <button v-if="item.type == 'button'" type="button" class="btn btn-secondary"
+                @click.prevent="buttonPresssed(item.button)">
+                <span v-html="uiMap[item.id].text"></span>
+              </button>
+              <div v-else-if="item.type == 'slider'">
+                <output>{{ uiMap[item.id].value }}</output>
+                <input v-if="item.type == 'slider'" type="range" class="form-range" :id="item.id" tooltips="true"
+                  :min="uiMap[item.id].min || 0" :max="uiMap[item.id].max || 100" :step="uiMap[item.id].step || 100"
+                  :value="uiMap[item.id].value || 0" @mouseup="sliderReleased($event.target.id, $event.target.value)">
+              </div>
+              <div v-else-if="item.type == 'label'" class="text-center">
+                <span v-html="uiMap[item.id].text"></span>
+              </div>
+            </div>
           </div>
         </div>
+        <button @click.prevent="updateUI">Update UI</button>
       </div>
     </div>
-    <button @click.prevent="updateUI">Update UI</button>
+    <div v-if="type==='com.fibaro.binarySwitch'" class="col">
+      <com-fibaro-binarySwitch :props="props"></com-fibaro-binarySwitch>
+    </div>
+    <div v-else-if="type==='com.fibaro.binarySensor'" class="col">
+      <com-fibaro-binarySensor :props="props"></com-fibaro-binarySensor>
+    </div>
+    <div v-else-if="type==='com.fibaro.multilevelSwitch'" class="col">
+      <com-fibaro-multilevelSwitch :props="props"></com-fibaro-multilevelSwitch>
+    </div>
+    <div v-else-if="type==='com.fibaro.multilevelSensor'" class="col">
+      <com-fibaro-multilevelSensor :props="props"></com-fibaro-multilevelSensor>
+    </div>
   </div>
 </template>
 
-<script> 
+<script>
+import com_fibaro_binarySwitch from "./devs/com_fibaro_binarySwitch.vue";
+import com_fibaro_multilevelSwitch from "./devs/com_fibaro_multilevelSwitch.vue";
+import com_fibaro_multilevelSensor from "./devs/com_fibaro_multilevelSensor.vue";
+import com_fibaro_binarySensor from "./devs/com_fibaro_binarySensor.vue";
+
 export default {
+  components: {
+    "com-fibaro-binarySwitch": com_fibaro_binarySwitch,
+    "com-fibaro-multilevelSwitch": com_fibaro_multilevelSwitch,
+    "com-fibaro-multilevelSensor": com_fibaro_multilevelSensor,
+    "com-fibaro-binarySensor": com_fibaro_binarySensor,
+  },
   props: {
     id: Number,
     dev: Object,
@@ -33,6 +60,8 @@ export default {
   },
   data() {
     return {
+      type: "",
+      props: {},
     };
   },
   methods: {
@@ -46,6 +75,14 @@ export default {
       this.$emit("slider-changed", id, value)
       fetch(`http://localhost:5004/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onChanged&elementName=${id}&value=${value}`);
     },
+  },
+  watch: {
+    dev: function (dev) {
+      this.type = dev.type;
+      this.props = dev.properties;
+    },
+  },
+  mounted() {
   },
 };
 </script>

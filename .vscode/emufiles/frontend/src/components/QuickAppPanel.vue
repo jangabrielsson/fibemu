@@ -12,7 +12,13 @@
 </template>
   
 <script>
+
+import QuickApp from './QuickApp.vue';
+
 export default {
+    components: {
+        'quick-app': QuickApp,
+    },
     data() {
         return {
             quickApps: [],
