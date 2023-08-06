@@ -76,20 +76,19 @@ export default {
                     "Content-Type": "application/json",
                 },
             })
-                .then((response) => {
-                    if (response.ok) {
-                        return response.json();
-                    } else {
+                .then(response => {
+                    if (!response.ok) {
                         throw new Error("HTTP error " + response.status);
                     }
+                    return response.json();
                 })
-                .then((data) => {
+                .then(data => {
                     this.uiMap = data.uiMap;
                     this.quickVars = data.quickVars;
                     this.dev = data.dev;
                     this.disconnected = false;
                 })
-                .catch((error) => {
+                .catch(error => {
                     console.log("Error: " + error.message);
                     this.disconnected = true;
                 });
