@@ -19,11 +19,13 @@ const router = createRouter({
     history: createWebHistory(),
     routes: [
         { path: '/', component: QuickAppPanel },
-        { path: '/home', component: QuickAppPanel },
-        { path: '/events', component: EventPanel },
-        { path: '/globals', component: GlobalVarPanel },
-        { path: '/config', component: ConfigPanel },
-        { path: '/about', component: AboutPanel },
+        { path: '/frontend/', component: QuickAppPanel },
+        { path: '/frontend/index.html', component: QuickAppPanel },
+        { path: '/frontend/home', component: QuickAppPanel },
+        { path: '/frontend/events', component: EventPanel },
+        { path: '/frontend/globals', component: GlobalVarPanel },
+        { path: '/frontend/config', component: ConfigPanel },
+        { path: '/frontend/about', component: AboutPanel },
     ],
 });
 

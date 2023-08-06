@@ -10,19 +10,19 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a href="/" class="nav-link active">Home</a>
+                        <router-link class="nav-link" to="/frontend/home">Home</router-link>
                     </li>
                     <li class="nav-item">
-                        <a href="/events" class="nav-link">Events</a>
+                        <router-link class="nav-link" to="/frontend/events">Events</router-link>
                     </li>
                     <li class="nav-item">
-                        <a href="/globals" class="nav-link">Globals</a>
+                        <router-link class="nav-link" to="/frontend/globals">GlobalVariables</router-link>
                     </li>
                     <li class="nav-item">
-                        <a href="/config" class="nav-link">Config</a>
+                        <router-link class="nav-link" to="/frontend/config">Config</router-link>
                     </li>
                     <li class="nav-item">
-                        <a href="/about" class="nav-link">About</a>
+                        <router-link class="nav-link" to="/frontend/about">About</router-link>
                     </li>
                 </ul>
             </div>

@@ -117,28 +117,32 @@ fibenv['fe']=42
 fibenv['app']=app
 
 @app.get("/", response_class=HTMLResponse,include_in_schema=False)
-async def read_item(request: Request):
+async def read_item1(request: Request):
     return templates.TemplateResponse("main.html", {"request": request, "emu": fibenv.get('fe')})
 
 @app.get("/events", response_class=HTMLResponse,include_in_schema=False)
-async def read_item(request: Request):
+async def read_item2(request: Request):
     return templates.TemplateResponse("events.html", {"request": request, "emu": fibenv.get('fe')})
 
 @app.get("/globals", response_class=HTMLResponse,include_in_schema=False)
-async def read_item(request: Request):
+async def read_item3(request: Request):
     return templates.TemplateResponse("globals.html", {"request": request, "emu": fibenv.get('fe')})
 
 @app.get("/config", response_class=HTMLResponse,include_in_schema=False)
-async def read_item(request: Request):
+async def read_item4(request: Request):
     return templates.TemplateResponse("config.html", {"request": request, "emu": fibenv.get('fe')})
 
 @app.get("/about", response_class=HTMLResponse,include_in_schema=False)
-async def read_item(request: Request):
+async def read_item5(request: Request):
     return templates.TemplateResponse("about.html", {"request": request, "emu": fibenv.get('fe')})
 
 @app.get("/js/{file}", response_class=HTMLResponse,include_in_schema=False)
-async def read_item(file,request: Request):
+async def read_item6(file,request: Request):
     return templates.TemplateResponse(file, {"request": request, "emu": fibenv.get('fe')})
+
+@app.get("/frontend", response_class=HTMLResponse,include_in_schema=False)
+async def read_item8(request: Request):
+    return RedirectResponse(url="/frontend/index.html")
 
 # @app.get("/vue/{file}", response_class=HTMLResponse,include_in_schema=False)
 # async def read_item(request: Request):

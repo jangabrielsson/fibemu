@@ -19,9 +19,6 @@ function QuickApp:onInit()
     self:setVariable("test","HELLO")
     setTimeout(function() self:updateView("lblA","text","FOO") end, 10*1000)
     fibaro.setGlobalVariable("A","HELLO")
-    for _,v in ipairs(api.get("/globalVariables")) do
-        self:debug("Global",v.name,v.modified)
-    end
     -- for i = 1,10 do
     -- local dev = fibaro.fibemu.install("examples/devices/binarySwitch.lua")
     -- end
