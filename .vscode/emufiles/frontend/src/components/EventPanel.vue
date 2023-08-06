@@ -49,7 +49,7 @@ export default {
         this.fetchEvents();
         this.ref = setInterval(this.fetchEvents, 1000);
     },
-    beforeDestroy() {
+    unmounted() {
         clearInterval(this.ref);
     }
 };

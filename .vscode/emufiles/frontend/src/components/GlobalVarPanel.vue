@@ -51,11 +51,13 @@ export default {
         }
     },
     mounted() {
+        console.log("Mounted");
         this.fetchGlobals();
         this.ref = setInterval(this.fetchGlobals, 1000);
     },
-    beforeDestroy() {
-        clearInterval(this.ref);
-    }
+    unmounted() {
+        console.log("Unmounted");
+        if (this.ref) clearInterval(this.ref);
+    },
 };
 </script>

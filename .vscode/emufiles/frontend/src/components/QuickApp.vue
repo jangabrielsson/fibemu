@@ -89,7 +89,7 @@ export default {
             });
         this.ref = setInterval(this.updateQA, 1000);
     },
-    beforeDestroy() {
+    unmounted() {
         clearInterval(this.ref);
     }
 };

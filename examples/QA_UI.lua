@@ -17,11 +17,10 @@
 function QuickApp:onInit()
     self:debug("Started",self.id)
     self:setVariable("test","HELLO")
-    setTimeout(function() self:updateView("lblA","text","FOO") end, 10*1000)
     fibaro.setGlobalVariable("A","HELLO")
-    -- for i = 1,10 do
-    -- local dev = fibaro.fibemu.install("examples/devices/binarySwitch.lua")
-    -- end
+    setInterval(function()
+        self:updateView("lblA","text",os.date())
+    end, 1000)
 end
 
 function QuickApp:testFun()
