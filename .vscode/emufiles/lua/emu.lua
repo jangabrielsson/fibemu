@@ -125,7 +125,7 @@ end
 QA.syslog('boot', "Fibemu v%s", config.version)
 if not config.nogreet then
     QA.syslog('boot', "Web UI : %s", config.webURL)
-    QA.syslog('boot', "alt. Web UI : %s", config.webURL.."frontend")
+    QA.syslog('boot', "alt. Web UI : %s", config.webURL.."frontend?port=5004")
     QA.syslog('boot', "API Doc: %s", config.apiDocURL)
     QA.syslog('boot', "API EP : %s", config.apiURL)
 end

@@ -4,7 +4,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+const stdExport = {
   plugins: [
     vue(),
   ],
@@ -22,5 +22,21 @@ export default defineConfig({
   // transpileDependencies: true,    //Transpile your dependencies
   // publicPath: "/static",          //Path of static directory
   //outputDir: path.resolve(__dirname, '../static'),   // Output path for the static files
+}
 
-})
+export default defineConfig(({ command, mode, ssrBuild }) => {
+  if (command === 'serve' && command === 'build') {
+    return stdExport
+  } else if (command === 'development') {
+    console.log('mode: ', mode)
+    const env = loadEnv(mode, process.cwd(), '');
+    stdExport.define = {
+      VUE_APP_X: "AYZ"
+    }
+    return stdExport
+  } else {
+    console.log('mode: ', mode)
+    return stdExport
+  }
+});
+

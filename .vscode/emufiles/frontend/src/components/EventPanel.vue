@@ -32,7 +32,7 @@ export default {
         },
         fetchEvents() {
             console.log("Fetching events");
-            fetch("http://localhost:5004/emu/events", {
+            fetch(this.$store.state.backend+"/emu/events", {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",

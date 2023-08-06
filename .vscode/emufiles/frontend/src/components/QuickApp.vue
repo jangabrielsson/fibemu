@@ -3,6 +3,7 @@
     <h5>Type: {{ dev.type }} </h5>
     <hr>
     <quick-app-ui :id="id" :ui="ui" :dev="dev" :uiMap="uiMap"></quick-app-ui>
+    <div v-if="disconnected" class="bg-danger text-center text-white">Disconnected</div>
     <hr>
     <!-- <AccordionList v-model:state="state" open-multiple-items> -->
     <AccordionList open-multiple-items>
@@ -47,11 +48,12 @@ export default {
             quickVars: {},
             uiMap: {},
             ui: {},
+            disconnected: false,
             ref: null,
         };
     },
     watch: {
-        state(st,oldSt) {
+        state(st, oldSt) {
             // console.log(`State changed ${this.id} ${st} ${oldSt}`);
             if (st[this.id] && this.ref == null) {
                 this.ref = setInterval(this.updateQA, 1000);
@@ -68,23 +70,34 @@ export default {
         },
         updateQA() {
             console.log(`Refresh QA ${this.id}`);
-            fetch("http://localhost:5004/emu/qa/" + this.id, {
+            fetch(this.$store.state.backend+"/emu/qa/" + this.id, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",
                 },
             })
-                .then((response) => response.json())
+                .then((response) => {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error("HTTP error " + response.status);
+                    }
+                })
                 .then((data) => {
                     this.uiMap = data.uiMap;
                     this.quickVars = data.quickVars;
                     this.dev = data.dev;
+                    this.disconnected = false;
+                })
+                .catch((error) => {
+                    console.log("Error: " + error.message);
+                    this.disconnected = true;
                 });
         }
     },
     mounted() {
         console.log("Mounting device " + this.id);
-        fetch("http://localhost:5004/emu/qa/" + this.id, {
+        fetch(this.$store.state.backend+"/emu/qa/" + this.id, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
@@ -92,6 +105,7 @@ export default {
         })
             .then((response) => response.json())
             .then(data => {
+                this.disconnected = false;
                 this.dev = data.dev;
                 this.ui = data.ui;
                 this.uiMap = data.uiMap;
@@ -111,7 +125,11 @@ export default {
                 } else {
                     this.ui = [];
                 }
-            });
+            })
+            .catch((error) => {
+                console.log("Error: " + error.message);
+                this.disconnected = true;
+            })
         if (this.start) {
             this.ref = setInterval(this.updateQA, 1000);
         }

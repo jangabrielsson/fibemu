@@ -28,7 +28,7 @@ export default {
     methods: {
     },
     mounted() {
-        fetch("http://localhost:5004/emu/qa", {
+        fetch(this.$store.state.backend+"/emu/qa", {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",

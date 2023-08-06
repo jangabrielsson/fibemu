@@ -15,13 +15,9 @@
                   :min="uiMap[item.id].min || 0" :max="uiMap[item.id].max || 100" :step="uiMap[item.id].step || 100"
                   :value="uiMap[item.id].value || 0" @mouseup="sliderReleased($event.target.id, $event.target.value)">
               </div>
-              <div v-else-if="item.type == 'label'" class="text-center">
-                <span v-html="uiMap[item.id].text"></span>
-              </div>
             </div>
           </div>
         </div>
-        <button @click.prevent="updateUI">Update UI</button>
       </div>
     </div>
     <div v-if="type==='com.fibaro.binarySwitch'" class="col">
@@ -67,13 +63,13 @@ export default {
   methods: {
     buttonPresssed(id) {
       console.log(`Button '${id}' pressed`);
-      fetch(`http://localhost:5004/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onReleased&elementName=${id}`);
+      fetch(this.$store.state.backend+`/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onReleased&elementName=${id}`);
     },
     sliderReleased(id, value) {
       // console.log(`Slider '${id}' changed to ${value}`);
       // this.uiMap[id].value = value;
       this.$emit("slider-changed", id, value)
-      fetch(`http://localhost:5004/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onChanged&elementName=${id}&value=${value}`);
+      fetch(this.$store.state.backend+`/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onChanged&elementName=${id}&value=${value}`);
     },
   },
   watch: {

@@ -37,7 +37,7 @@ export default {
         },
         fetchGlobals() {
             console.log("Fetching globals");
-            fetch("http://localhost:5004/api/globalVariables", {
+            fetch(this.$store.state.backend+"/api/globalVariables", {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json",

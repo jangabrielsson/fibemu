@@ -18,6 +18,9 @@ export default {
   components: {
     'menu-bar': MenuBar,
   },
+  props: {
+    backend: String,
+  },
   data() {
     return {
       panel: "quick-app-panel",
