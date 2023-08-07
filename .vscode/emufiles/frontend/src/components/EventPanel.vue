@@ -47,7 +47,7 @@ export default {
     },
     mounted() {
         this.fetchEvents();
-        this.ref = setInterval(this.fetchEvents, 1000);
+        this.ref = setInterval(this.fetchEvents, this.$store.state.mediumPoll);
     },
     unmounted() {
         clearInterval(this.ref);

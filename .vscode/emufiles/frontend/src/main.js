@@ -34,6 +34,9 @@ const store = createStore({
     state() {
         return {
             backend: backend,
+            fastPoll: 1000,
+            mediumPoll: 2500,
+            longPoll: 10000,
         }
     }
 });

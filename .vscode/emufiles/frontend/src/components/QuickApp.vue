@@ -64,73 +64,67 @@ export default {
         },
     },
     methods: {
+        httpGet(url, callback, timeout) {
+            (async () => {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+                try {
+                    const response = await fetch(url, {
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        signal: controller.signal
+                    }).then((res) => res.json());
+                    this.disconnected = false;
+                    callback(response);
+                } catch (error) {
+                    this.disconnected = true;
+                    console.log("error:" + error.message);
+                } finally {
+                    clearTimeout(timeoutId);
+                }
+            })();
+        },
         sliderReleased(id, value) {
             console.log(`Slider '${id}' changed to ${value}`);
             this.uiMap[id].value = value;
         },
         updateQA() {
             console.log(`Refresh QA ${this.id}`);
-            fetch(this.$store.state.backend+"/emu/qa/" + this.id, {
-                method: "GET",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error("HTTP error " + response.status);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    this.uiMap = data.uiMap;
-                    this.quickVars = data.quickVars;
-                    this.dev = data.dev;
-                    this.disconnected = false;
-                })
-                .catch(error => {
-                    console.log("Error: " + error.message);
-                    this.disconnected = true;
-                });
-        }
+            this.httpGet(this.$store.state.backend + "/emu/qa/" + this.id, (data) => {
+                this.uiMap = data.uiMap;
+                this.quickVars = data.quickVars;
+                this.dev = data.dev;
+            }, this.$store.state.fastPoll);
+        },
     },
     mounted() {
         console.log("Mounting device " + this.id);
-        fetch(this.$store.state.backend+"/emu/qa/" + this.id, {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
-        })
-            .then((response) => response.json())
-            .then(data => {
-                this.disconnected = false;
-                this.dev = data.dev;
-                this.ui = data.ui;
-                this.uiMap = data.uiMap;
-                this.quickVars = data.quickVars;
-                if (this.ui.forEach) {
-                    this.ui.forEach(row => {
-                        row.forEach(item => {
-                            if (item.type == "slider") {
-                                item.id = item.slider;
-                            } else if (item.type == "button") {
-                                item.id = item.button;
-                            } else if (item.type == "label") {
-                                item.id = item.label;
-                            }
-                        });
+        this.httpGet(this.$store.state.backend + "/emu/qa/" + this.id, (data) => {
+            this.disconnected = false;
+            this.dev = data.dev;
+            this.ui = data.ui;
+            this.uiMap = data.uiMap;
+            this.quickVars = data.quickVars;
+            if (this.ui.forEach) {
+                this.ui.forEach(row => {
+                    row.forEach(item => {
+                        if (item.type == "slider") {
+                            item.id = item.slider;
+                        } else if (item.type == "button") {
+                            item.id = item.button;
+                        } else if (item.type == "label") {
+                            item.id = item.label;
+                        }
                     });
-                } else {
-                    this.ui = [];
-                }
-            })
-            .catch((error) => {
-                console.log("Error: " + error.message);
-                this.disconnected = true;
-            })
+                });
+            } else {
+                this.ui = [];
+            }
+        }, 3000);
         if (this.start) {
-            this.ref = setInterval(this.updateQA, 1000);
+            this.ref = setInterval(this.updateQA, this.$store.state.mediumPoll);
         }
     },
     unmounted() {

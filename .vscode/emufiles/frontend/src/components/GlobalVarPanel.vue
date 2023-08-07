@@ -53,7 +53,7 @@ export default {
     mounted() {
         console.log("Mounted");
         this.fetchGlobals();
-        this.ref = setInterval(this.fetchGlobals, 1000);
+        this.ref = setInterval(this.fetchGlobals, this.$store.state.mediumPoll);
     },
     unmounted() {
         console.log("Unmounted");
