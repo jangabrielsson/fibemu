@@ -1,5 +1,5 @@
 local fmt = string.format
-
+local HC3_TIMEOUT = 5
 net = {}
 
 local apiPatches = {}
@@ -27,6 +27,7 @@ local function callHC3(method, path, data, hc3)
         fibaro.fibemu.syslog(__TAG or "HC3", "%s: %s", method, url)
     end
     local options = {
+        timeout = HC3_TIMEOUT,
         headers = {
             ['Authorization'] = creds,
             ["Accept"] = '*/*',
@@ -395,9 +396,9 @@ function mqtt.Client.connect(uri, options)
     return client
 end
 
-local function callHC3S(...) -- sleep to let threads catch up (ex. importFQA)
-    local a,b,c = callHC3(...)
-    if fibaro.sleep then fibaro.sleep(0) end
+local function callHC3S(x,y,z,w) -- sleep to let threads catch up (ex. importFQA)
+    local a,b,c = callHC3(x,y,z,w)
+    if (w ~= 'hc3') and (fibaro.sleep ~= nil) then fibaro.sleep(0) end
     return a,b,c
 end
 

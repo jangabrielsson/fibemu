@@ -1,10 +1,7 @@
 <template>
-    <div v-if="props.value">
-        <h1><span class="badge bg-success">Breached</span></h1>
-    </div>
-    <div v-else>
-        <h1><span class="badge bg-danger">Safe</span></h1>
-    </div>
+    
+        <h1><span class="badge bg-primary">Level {{ props.value}}%</span></h1>
+
 </template>
 
 <script>

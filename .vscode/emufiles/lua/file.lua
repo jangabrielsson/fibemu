@@ -303,20 +303,13 @@ customUI = {
     ['com.fibaro.humiditySensor'] = {
         { label = '__humidity', text = '...' }
     },
-    ['com.fibaro.colorController'] =
-    { { { button = '__turnon', text = "Turn On", onReleased = "turnOn" },
+    ['com.fibaro.colorController'] = {
         {
-            button = '__turnoff',
-            text = "Turn Off",
-            onReleased = "turnOff"
-        } },
-        { label = '_Brightness', text = 'Brightness' },
-        {
-            slider = '__value',
-            min = 0,
-            max = 99,
-            onChanged = 'setValue'
+            { button = '__turnon',  text = "Turn On",  onReleased = "turnOn" },
+            { button = '__turnoff', text = "Turn Off", onReleased = "turnOff" }
         },
+        { label = '_Brightness', text = 'Brightness' },
+        { slider = '__value', min = 0, max = 99, onChanged = 'setValue' },
         {
             { button = '__sli', text = "&#8679;", onReleased = "startLevelIncrease" },
             { button = '__sld', text = "&#8681;", onReleased = "startLevelDecrease" },

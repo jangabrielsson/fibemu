@@ -2,7 +2,7 @@
     <div class="card" style="width: 28rem;"></div>
     <h5>Type: {{ dev.type }} </h5>
     <hr>
-    <quick-app-ui :id="id" :ui="ui" :dev="dev" :uiMap="uiMap"></quick-app-ui>
+    <quick-app-ui :id="id" :ui="ui" :dev="dev" :uiMap="uiMap" @slider-changed="sliderReleased"></quick-app-ui>
     <div v-if="disconnected" class="bg-danger text-center text-white">Disconnected</div>
     <hr>
     <!-- <AccordionList v-model:state="state" open-multiple-items> -->
