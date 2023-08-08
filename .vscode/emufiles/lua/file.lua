@@ -39,6 +39,18 @@ local function init(conf, libs2)
     for name, fun in pairs(exports) do QA.fun[name] = fun end -- export file functions
 end
 
+local function addStockUI(dev, ui)
+    local cui = customUI[dev.type or dev.baseType or ""]
+    if cui then -- Insert stock UI at top.
+        ui = ui or {}
+        if #ui > 0 then
+            table.insert(ui, 1, { label = '__divider', text = '-------------------------------' }) -- 31
+        end
+        for i = #cui, 1, -1 do table.insert(ui, 1, cui[i]) end
+    end
+    return ui
+end
+
 local function annotateUI(UI)
     local res, map = {}, {}
     for _, e in ipairs(UI) do
@@ -70,6 +82,7 @@ local function installFQA(fqa, id)
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id
     local uiStruct, uiMap = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks), nil
+    --- ToDo - add stock UI...
     uiStruct, uiMap = annotateUI(uiStruct)
 
     DIR[dev.id] = {
@@ -136,6 +149,8 @@ local function installQA(fname, id, silent)
     function chandler.id(var, val, vars) vars.id = tonumber(val) end
 
     function chandler.proxy(var, val, vars) vars.proxy = tonumber(val) end
+
+    function chandler.noStock(var, val, vars) vars.noStock = eval(val) end
 
     function chandler.debug(var, val, vars) --%%debug=flag1:val1,flag2:val2
         local dbs = {}
@@ -234,18 +249,30 @@ local function installQA(fname, id, silent)
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id
 
+    -- local uiStruct, uiMap = nil, nil
+    -- if vars.ui then
+    --     ui.transformUI(vars.ui)
+    --     dev.properties.viewLayout = ui.mkViewLayout(vars.ui, nil, dev.id)
+    --     dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(vars.ui)
+    --     uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
+    --     uiStruct, uiMap = annotateUI(uiStruct)
+    -- else
+    --     local UI = customUI[dev.type] or {}
+    --     ui.transformUI(UI)
+    --     dev.properties.viewLayout = ui.mkViewLayout(UI, nil, dev.id)
+    --     dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(UI)
+    --     uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
+    --     uiStruct, uiMap = annotateUI(uiStruct)
+    -- end
+
     local uiStruct, uiMap = nil, nil
+
+    if not vars.noStock then vars.ui = addStockUI(dev, vars.ui) end
+
     if vars.ui then
         ui.transformUI(vars.ui)
         dev.properties.viewLayout = ui.mkViewLayout(vars.ui, nil, dev.id)
         dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(vars.ui)
-        uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
-        uiStruct, uiMap = annotateUI(uiStruct)
-    else
-        local UI = customUI[dev.type] or {}
-        ui.transformUI(UI)
-        dev.properties.viewLayout = ui.mkViewLayout(UI, nil, dev.id)
-        dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(UI)
         uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
         uiStruct, uiMap = annotateUI(uiStruct)
     end
@@ -284,7 +311,7 @@ customUI = {
             { button = "__turnoff", text = "Turn Off", onReleased = "turnOff" }
         },
         { label = '_Brightness', text = 'Brightness' },
-        { slider = '__value', min = 0, max = 99, onChanged = 'setValue' },
+        { slider = '__value',    min = 0,            max = 99, onChanged = 'setValue' },
         {
             { button = '__sli', text = "&#8679;", onReleased = "startLevelIncrease" },
             { button = '__sld', text = "&#8681;", onReleased = "startLevelDecrease" },
@@ -309,7 +336,7 @@ customUI = {
             { button = '__turnoff', text = "Turn Off", onReleased = "turnOff" }
         },
         { label = '_Brightness', text = 'Brightness' },
-        { slider = '__value', min = 0, max = 99, onChanged = 'setValue' },
+        { slider = '__value',    min = 0,            max = 99, onChanged = 'setValue' },
         {
             { button = '__sli', text = "&#8679;", onReleased = "startLevelIncrease" },
             { button = '__sld', text = "&#8681;", onReleased = "startLevelDecrease" },
@@ -342,6 +369,7 @@ local function createChildDevice(pID, cdev)
     if dev.properties.viewLayout then
         uiStruct, uiMap = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks), nil
     end
+
     if next(uiStruct) == nil then
         local UI = customUI[dev.type] or {}
         ui.transformUI(UI)
@@ -461,11 +489,15 @@ local function createFQA(id)
         f.isOpen = false
         f.type = "lua"
     end
+
+    local p = copy(dev.properties)
+    p.viewLayout, p.uiCallbacks = ui.pruneStock(p)
+
     local props = {
         apiVersion = "1.2",
-        quickAppVariables = dev.properties.quickAppVariables or {},
-        uiCallbacks = #dev.properties.uiCallbacks > 0 and dev.properties.uiCallbacks or nil,
-        viewLayout = dev.properties.viewLayout,
+        quickAppVariables = p.quickAppVariables or {},
+        uiCallbacks = #p.uiCallbacks > 0 and p.uiCallbacks or nil,
+        viewLayout = p.viewLayout,
         typeTemplateInitialized = true,
     }
     local fqa = {
@@ -504,11 +536,15 @@ local function file2fqa(fname)
         f.isOpen = false
         f.type = "lua"
     end
+
+    local p = copy(dev.properties)
+    p.viewLayout, p.uiCallbacks = ui.pruneStock(p)
+
     local props = {
         apiVersion = "1.2",
-        quickAppVariables = dev.properties.quickAppVariables or {},
-        uiCallbacks = #dev.properties.uiCallbacks > 0 and dev.properties.uiCallbacks or nil,
-        viewLayout = dev.properties.viewLayout,
+        quickAppVariables = p.quickAppVariables or {},
+        uiCallbacks = #p.uiCallbacks > 0 and p.uiCallbacks or nil,
+        viewLayout = p.viewLayout,
         typeTemplateInitialized = true,
     }
     local fqa = {

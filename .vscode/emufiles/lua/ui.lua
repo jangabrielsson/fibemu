@@ -224,10 +224,55 @@ local function updateUI(self,UI)
   else return "Already updated",200 end
 end
 
+local function stockRow(x)
+  if type(x)=='table' then 
+      for k,v in pairs(x) do
+          if type(v)=='string' and v:sub(1,1)=="_" then return true end
+          if stockRow(v) then return true end
+      end
+  end
+end
+
+local function copy(t)
+  if type(t)~='table' then return t end
+  local res = {}
+  for k,v in pairs(t) do res[k] = copy(v) end
+  return res
+end
+
+local function pruneViewLayout(vl)
+  local x = vl['$jason'].body.sections.items
+  local items,flag = {},false
+  for i = 1,#x do
+      print(json.encode(x[i]))
+      if not stockRow(x[i]) then items[#items+1] = x[i] else flag=true end
+  end
+  if flag then
+      vl = copy(vl)
+      vl['$jason'].body.sections.items = items
+  end
+  return vl
+end
+
+local function pruneStock(prop)
+  local viewLayout = pruneViewLayout(prop.viewLayout)
+  local uiCallbacks = prop.uiCallbacks
+  if uiCallbacks then
+      local x = {}
+      for i=1,#uiCallbacks do
+          local e = uiCallbacks[i]
+          if e.name:sub(1,1)~='_' then x[#x+1] = e end
+      end
+      uiCallbacks = x
+  end
+  return viewLayout,uiCallbacks
+end
+
 return {
   uiStruct2uiCallbacks = uiStruct2uiCallbacks,
   transformUI = transformUI,
   mkViewLayout = mkViewLayout,
   view2UI = view2UI,
-  updateUI =  updateUI
+  updateUI =  updateUI,
+  pruneStock = pruneStock,
 }

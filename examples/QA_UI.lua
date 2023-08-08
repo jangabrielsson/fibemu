@@ -7,18 +7,17 @@
 --%%debug=permissions:false,refresh_resource:true
 --%% debug=autoui:true
 
---%%u={{button='turnOn', text='On', onReleased='turnOn'},{button='turnOff', text='Off', onReleased='turnOff'}}
 --%%u={{button='t1', text='A', onReleased='t1'},{button='t2', text='B', onReleased='t1'},{button='t3', text='C', onReleased='t1'},{button='t4', text='D', onReleased='t1'},{button='t5', text='E', onReleased='t1'}}
 --%%u={button='test', text='Test', onReleased='testFun'}
 --%%u={{button='test', text='A', onReleased='testA'},{button='test', text='B', onReleased='testB'}}
 --%%u={slider="slider", max="80", onChanged='sliderA'}
 --%%u={label="lblA", text='This is a text'}
- 
+
 function QuickApp:onInit()
     self:debug("Started",self.id)
     self:setVariable("test","HELLO")
     fibaro.setGlobalVariable("A","HELLO")
-    setInterval(function()
+    setInterval(function() 
         self:updateView("lblA","text",os.date())
     end, 1000)
     fibaro.fibemu.install("examples/devices/binarySwitch.lua",6000)

@@ -152,31 +152,12 @@ end
 function tool.upload(file, rsrc, name, path)
     if name == '.' then name = file end
     local flib = fibaro.fibemu.libs.files
-    local qa = flib.installQA(name, nil, true)
-    local dev = qa.dev
-    local files = qa.files
-    flib.loadFiles(qa.dev.id)
-    for _, f in ipairs(files) do
-        f.qa = nil
-        f.fname = nil
-        f.isOpen = false
-        f.type = "lua"
+
+    local fqa,err = pcall(flib.file2FQA,name)
+    if not fqa then
+        printerrf("Error parsing %s: %s", name, err)
+        return true
     end
-    local props = {
-        apiVersion = "1.2",
-        quickAppVariables = dev.properties.quickAppVariables or {},
-        uiCallbacks = #dev.properties.uiCallbacks > 0 and dev.properties.uiCallbacks or nil,
-        viewLayout = dev.properties.viewLayout,
-        typeTemplateInitialized = true,
-    }
-    local fqa = {
-        apiVersion = "1.2",
-        name = dev.name,
-        type = dev.type,
-        files = files,
-        initialProperties = props,
-        initialInterfaces = dev.interfaces,
-    }
 
     local stat, res, info = api.post("/quickApp/", fqa, "hc3")
     if not stat then
@@ -187,7 +168,7 @@ function tool.upload(file, rsrc, name, path)
     end
 end
 
-function tool.update(file, rsrc, name, path)
+function tool.update(file, rsrc, name, path) -- move logic to files?
     local updateQvs,id = true,nil
     if name == '.' then name = file end
     if name == '-' then name = file; updateQvs = false end
@@ -251,10 +232,13 @@ function tool.update(file, rsrc, name, path)
     else
         printf("Updating viewLayout and uiCallbacks...")
     end
+
+    local viewLayout,uiCallbacks = fibaro.fibemu.libs.ui.pruneStock(dev.properties)
+
     local stat, res = api.put("/devices/" .. id, {
         properties = {
-            uiCallbacks = dev.properties.uiCallbacks,
-            viewLayout = dev.properties.viewLayout,
+            uiCallbacks = uiCallbacks,
+            viewLayout = viewLayout,
             quickAppVariables = updateQvs and dev.properties.quickAppVariables or nil,
         }
     }, "hc3")

@@ -86,7 +86,7 @@ class FibaroEnvironment:
                 except exceptions.ConnectionError as e:
                     retries += 1
                     if retries > 5:
-                        print(f"Connection error Error: {nurl}",file=sys.stderr)
+                        print(f"Connection error: {nurl}",file=sys.stderr)
                         print(f"Exiting refreshStates loop",file=sys.stderr)
                         return
                 except Exception as e:
