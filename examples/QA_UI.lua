@@ -20,10 +20,15 @@ function QuickApp:onInit()
     setInterval(function() 
         self:updateView("lblA","text",os.date())
     end, 1000)
-    fibaro.fibemu.install("examples/devices/binarySwitch.lua",6000)
-    fibaro.fibemu.install("examples/devices/binarySensor.lua",6001)
-    fibaro.fibemu.install("examples/devices/multilevelSwitch.lua",6002)
-    fibaro.fibemu.install("examples/devices/multilevelSensor.lua",6003)
+    fibaro.fibemu.install("examples/devices/binarySwitch.lua")
+    fibaro.fibemu.install("examples/devices/binarySensor.lua")
+    fibaro.fibemu.install("examples/devices/multilevelSwitch.lua")
+    fibaro.fibemu.install("examples/devices/multilevelSensor.lua")
+
+    setTimeout(function()
+        fibaro.call(5004,"updateProperty","dead",true)
+    end
+    ,5000)
 end
 
 function QuickApp:testFun()

@@ -525,8 +525,7 @@ function Events.onAction(event)
         arg_id = target_id
         target_id = DIR[arg_id].dev.parentId
     end
-    if not DIR[id] then
-        if QA.isRemote("devices", id) then -- If remote, forward, call HC3
+    if not DIR[id] then        if QA.isRemote("devices", id) then -- If remote, forward, call HC3
             api.post("/devices/" .. id .. "/action/" .. event.actionName, { args = args }, "hc3")
         else
             if QA.isLocal("devices", target_id) then

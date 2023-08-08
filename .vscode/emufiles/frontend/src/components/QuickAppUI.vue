@@ -25,16 +25,16 @@
       </div>
     </div>
     <div v-if="type === 'com.fibaro.binarySwitch'" class="col">
-      <com-fibaro-binarySwitch :props="props"></com-fibaro-binarySwitch>
+      <com-fibaro-binarySwitch :id="id" :props="props"></com-fibaro-binarySwitch>
     </div>
     <div v-else-if="type === 'com.fibaro.binarySensor'" class="col">
-      <com-fibaro-binarySensor :props="props"></com-fibaro-binarySensor>
+      <com-fibaro-binarySensor :id="id" :props="props"></com-fibaro-binarySensor>
     </div>
     <div v-else-if="type === 'com.fibaro.multilevelSwitch'" class="col">
-      <com-fibaro-multilevelSwitch :props="props"></com-fibaro-multilevelSwitch>
+      <com-fibaro-multilevelSwitch :id="id" :props="props"></com-fibaro-multilevelSwitch>
     </div>
     <div v-else-if="type === 'com.fibaro.multilevelSensor'" class="col">
-      <com-fibaro-multilevelSensor :props="props"></com-fibaro-multilevelSensor>
+      <com-fibaro-multilevelSensor :id="id" :props="props"></com-fibaro-multilevelSensor>
     </div>
   </div>
 </template>

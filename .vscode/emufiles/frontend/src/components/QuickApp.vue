@@ -86,6 +86,10 @@ export default {
                 }
             })();
         },
+        elementUpdate(id, prop, value, ev) {
+            console.log(`Element '${id}' prop '${prop}' changed to ${value} -> ${ev}`);
+            this.uiMap[id][prop] = value;
+        },
         sliderReleased(id, value) {
             console.log(`Slider '${id}' changed to ${value}`);
             this.uiMap[id].value = value;

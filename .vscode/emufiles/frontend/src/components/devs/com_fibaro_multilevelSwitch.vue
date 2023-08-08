@@ -1,15 +1,18 @@
 <template>
     <div v-if="props.state">
-        <h1><span class="badge bg-success">{{isOff}} {{props.value}}%</span></h1>
+        <h2><span class="badge bg-success">On {{ props.value }}%</span></h2>
     </div>
     <div v-else>
-        <h1><span class="badge bg-danger">{{isOff}}</span></h1>
+        <h2><span class="badge bg-danger">Off</span></h2>
     </div>
+    <h2 v-if="props.dead"><span class="badge bg-danger">Dead</span></h2>
+    <h2 v-if="props.batteryLevel"><span class="badge bg-secondary">Battery {{ props.batteryLevel }}%</span></h2>
 </template>
 
 <script>
 export default {
     props: {
+        id: Number,
         props: Object,
     },
     data() {
@@ -17,13 +20,15 @@ export default {
         };
     },
     computed: {
-        isOff() {
-            const s = this.props.state;
-            if (!s) {
-                console.log("Emitting slider-changed");
-                this.$emit("slider-changed", "__value", 0);
-            }
-            return this.props.state ? "On" : "Off";
+        value() {
+            return this.props.value;
+        },
+    },
+    watch: {
+        value(value) {
+            console.log(`Value changed to ${value}`);
+            this.$emit("slider-changed", '__value', value)
+            fetch(this.$store.state.backend + `/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onChanged&elementName=__value&value=${value}`);
         },
     },
     methods: {
