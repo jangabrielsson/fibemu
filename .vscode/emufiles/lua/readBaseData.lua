@@ -1,0 +1,5 @@
+local hierarchy = api.get('/devices/hierarchy', 'hc3')
+local dev1 = api.get("/devices/1","hc3")
+local dev2 = api.get("/devices/2","hc3")
+local info = api.get("/settings/info","hc3")
+local info = api.get("/settings/location","hc3")

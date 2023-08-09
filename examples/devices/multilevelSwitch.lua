@@ -1,6 +1,5 @@
 --%%name=MultilevelSwitch
 --%%type=com.fibaro.multilevelSwitch
---%%remote=devices:1236
 
 local value = 0
 function QuickApp:turnOn()
@@ -21,7 +20,6 @@ function QuickApp:setValue(newValue)
     self:debug("Set value", value)
     self:updateProperty("value", value)
     self:updateProperty("state", value > 0)
-    --self:updateView("__value", "value", tostring(value))
 end
 
 local ref

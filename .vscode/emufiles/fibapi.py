@@ -485,11 +485,11 @@ async def restart_qa(args: RestartParams, response: Response):
     return {} if code < 300 else None
 
 class ChildParams(BaseModel):
-    parentId: int
+    parentId: int | None = None
     name: str
     type: str
-    initialProperties: Dict[str, Any]
-    initialInterfaces: List[str]
+    initialProperties: Dict[str, Any] | None = None
+    initialInterfaces: List[str] | None = None
 
 @app.post("/api/plugins/createChildDevice", tags=["Plugins methods"])
 async def create_Child_Device(args: ChildParams, response: Response):

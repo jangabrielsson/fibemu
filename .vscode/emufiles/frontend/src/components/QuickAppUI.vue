@@ -36,6 +36,12 @@
     <div v-else-if="type === 'com.fibaro.multilevelSensor'" class="col">
       <com-fibaro-multilevelSensor :id="id" :props="props"></com-fibaro-multilevelSensor>
     </div>
+    <div v-else-if="type === 'com.fibaro.humiditySensor'" class="col">
+      <com-fibaro-humiditySensor :id="id" :props="props"></com-fibaro-humiditySensor>
+    </div>
+    <div v-else-if="type === 'com.fibaro.temperatureSensor'" class="col">
+      <com-fibaro-temperatureSensor :id="id" :props="props"></com-fibaro-temperatureSensor>
+    </div>
   </div>
 </template>
 
@@ -44,6 +50,8 @@ import com_fibaro_binarySwitch from "./devs/com_fibaro_binarySwitch.vue";
 import com_fibaro_multilevelSwitch from "./devs/com_fibaro_multilevelSwitch.vue";
 import com_fibaro_multilevelSensor from "./devs/com_fibaro_multilevelSensor.vue";
 import com_fibaro_binarySensor from "./devs/com_fibaro_binarySensor.vue";
+import com_fibaro_temperatureSensor from "./devs/com_fibaro_temperatureSensor.vue";
+import com_fibaro_humiditySensor from "./devs/com_fibaro_humiditySensor.vue";
 
 export default {
   components: {
@@ -51,6 +59,8 @@ export default {
     "com-fibaro-multilevelSwitch": com_fibaro_multilevelSwitch,
     "com-fibaro-multilevelSensor": com_fibaro_multilevelSensor,
     "com-fibaro-binarySensor": com_fibaro_binarySensor,
+    "com-fibaro-temperatureSensor": com_fibaro_temperatureSensor,
+    "com-fibaro-humiditySensor": com_fibaro_humiditySensor
   },
   props: {
     id: Number,
