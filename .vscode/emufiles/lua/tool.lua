@@ -130,7 +130,7 @@ function tool.download_unpack(file, rsrc, id, path)
 
     local flib = fibaro.fibemu.libs.files
     local uilib = fibaro.fibemu.libs.ui
-    local qa = flib.installQA(mainFname, nil, true)
+    local qa = flib.installQA(mainFname, {silent=true})
     local headers = {}
     local function outf(...) headers[#headers + 1] = string.format(...) end
     outf("--%%%%name=%s", name)
@@ -181,7 +181,7 @@ function tool.update(file, rsrc, name, path) -- move logic to files?
         name = file
     end
     local flib = fibaro.fibemu.libs.files
-    local qa = flib.installQA(name, nil, true)
+    local qa = flib.installQA(name, {silent=true})
     if not id and not qa.definedId then
         printerrf("QA need to define --%%id=<HC3ID>\nso we know what QA to update on HC3")
         return true

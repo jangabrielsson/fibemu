@@ -4,7 +4,7 @@ More doc [here](https://forum.fibaro.com/topic/66394-visual-studio-code-vscode-f
 
 Steps to run
 
-* Have pyton3 installed on your machine.
+* Have python3 installed on your machine.
 * pip install the needed python libraries from requirements.txt
  >pip install -r requirements.txt
 * Create a config.json file with the credentials to access the HC3.

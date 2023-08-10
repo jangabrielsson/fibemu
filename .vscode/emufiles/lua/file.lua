@@ -64,7 +64,8 @@ local function annotateUI(UI)
     return res, map
 end
 
-local function installFQA(fqa, id)
+local function installFQA(fqa, conf)
+    conf = conf or {}
     QA.syslog("install", "FQA '%s'", fqa.name)
     local dev = devices.getDeviceStruct(fqa.type)
     if dev == nil then
@@ -101,8 +102,10 @@ local function installFQA(fqa, id)
     return DIR[dev.id]
 end
 
-local function installQA(fname, id, silent)
-    if not silent then QA.syslog("install", "QA '%s'", fname) end
+local function installQA(fname, conf)
+    local id
+    conf = conf or {}
+    if not conf.silent then QA.syslog("install", "QA '%s'", fname) end
     local f = io.open(fname, "r")
     if not f then
         QA.syslogerr("install", "File not found - %s", fname)
@@ -209,7 +212,7 @@ local function installQA(fname, id, silent)
         vars.remote[typ] = append(vars.remote[typ], items)
     end
 
-    local vars = { files = {}, writes = {}, remote = {}, debug = {}, qvars = {}, interfaces = {} }
+    local vars = { files = {}, writes = {}, remote = {}, debug = {}, qvars = conf.qvars or {}, interfaces = {} }
     code:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
         if chandler[var] then
             chandler[var](var, val, vars)
@@ -223,6 +226,7 @@ local function installQA(fname, id, silent)
     table.insert(vars.files, { name = 'main', isMain = true, content = code, fname = fname })
 
     local definedId = vars.id
+    vars.id = conf.id or vars.id
     if vars.id == nil then vars.id = resources.nextRsrcId() end
     id = vars.id
 
@@ -231,18 +235,20 @@ local function installQA(fname, id, silent)
         return
     end
 
+    vars.type = conf.type or vars.type
     local dev = devices.getDeviceStruct(vars.type or "com.fibaro.binarySwitch")
     if dev == nil then
         QA.syslogerr("install", "%s - Unknown device type '%s'", fname, vars.type)
         dev = devices.getDeviceStruct("com.fibaro.binarySwitch")
     end
     dev = copy(dev)
-    dev.name = vars.name or name
+    dev.name = conf.name or vars.name or name
     dev.id = vars.id
     local qvars = {}
     for k, v in pairs(vars.qvars or {}) do qvars[#qvars + 1] = { name = k, value = v } end
     dev.properties.quickAppVariables = qvars
     vars.interfaces['quickApp'] = true
+    for _,i in ipairs(conf.interfaces or {}) do vars.interfaces[i] = true end
     local ifs = {}
     for i, _ in pairs(vars.interfaces) do ifs[#ifs + 1] = i end
     dev.interfaces = ifs
@@ -294,7 +300,7 @@ local function installQA(fname, id, silent)
 
     for k, v in pairs(vars.debug) do emu.debug[k] = v end
 
-    if not silent then resources.createDevice(dev) end
+    if not conf.silent then resources.createDevice(dev) end
     return DIR[id]
 end
 
@@ -525,7 +531,7 @@ local function importFQA(file)
 end
 
 local function file2fqa(fname)
-    local qa = installQA(fname, nil, true)
+    local qa = installQA(fname, {silent=true})
     assert(qa, "File not found:" .. fname)
     local dev = qa.dev
     local files = qa.files

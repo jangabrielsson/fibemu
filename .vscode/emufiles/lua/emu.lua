@@ -408,8 +408,8 @@ function QA.runFile(fname)
     end
 end
 
-function QA.install(fname, id)
-    local qa = files.installQA(fname, id)
+function QA.install(fname, conf)
+    local qa = files.installQA(fname, conf)
     if qa then
         QA.restart(qa.dev.id)
     end

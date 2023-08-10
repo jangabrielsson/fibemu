@@ -33,7 +33,7 @@ function QuickApp:onInit()
         fibaro.call(5004, "updateProperty", "dead", true)
     end, 5000)
 
-    local h = api.get('/devices/hierarchy', 'hc3')
+    local h = {} --api.get('/devices/hierarchy', 'hc3')
     local function printHierarchy(h)
         local res = {}
         local function pr(h, level)
