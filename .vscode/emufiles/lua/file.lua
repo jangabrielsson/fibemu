@@ -212,7 +212,7 @@ local function installQA(fname, conf)
         vars.remote[typ] = append(vars.remote[typ], items)
     end
 
-    local vars = { files = {}, writes = {}, remote = {}, debug = {}, qvars = conf.qvars or {}, interfaces = {} }
+    local vars = { files = {}, writes = {}, remote = {}, debug = {}, qvars = {}, interfaces = {} }
     code:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
         if chandler[var] then
             chandler[var](var, val, vars)
@@ -244,6 +244,7 @@ local function installQA(fname, conf)
     dev = copy(dev)
     dev.name = conf.name or vars.name or name
     dev.id = vars.id
+    for n,v in pairs(conf.qvars or {}) do vars.qvars[n]=v end
     local qvars = {}
     for k, v in pairs(vars.qvars or {}) do qvars[#qvars + 1] = { name = k, value = v } end
     dev.properties.quickAppVariables = qvars

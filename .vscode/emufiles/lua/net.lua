@@ -16,15 +16,25 @@ function net._setupPatches(config)
     apiPatches[':11111/api/refreshStates'] = ":" .. config.wport .. "/api/refreshStates"
 end
 
-local hooks
-function net.addHook(pattern,fun)
-    hooks = hooks or {}
-    hooks[pattern] = fun
+local http_hooks
+function net.HTTPIntercept(ip,fun)
+    http_hooks = http_hooks or {}
+    http_hooks[ip] = fun
 end
-local function hookMatch(url,opts)
-    for p, fun in pairs(hooks) do
-        local m = { url:match(p) }
-        if #m > 0 then m[#m+1]=opts return fun(table.unpack(m)) end
+local function httpMatch(url,opts)
+    local ip,path = url:match("https?://([^/]+)(.*)")
+    ip = ip or ""
+    local method = opts.options and opts.options.method or "GET"
+    if http_hooks and http_hooks[ip] then
+        local res,code = http_hooks[ip](method,path,opts)
+        if code < 300 then
+            if opts.success then 
+                setTimeout(function() opts.success({status=code,data=json.encode(res)}) end,0)
+            end
+        elseif opts.error then
+            setTimeout(function() opts.error(code) end,0)
+        end
+        return true
     end
 end
 
@@ -69,15 +79,7 @@ function net.HTTPClient(opts)
                 fibaro.fibemu.syslog(__TAG, "HTTPClient: %s", url)
             end
             url = patch(url)
-            if  hooks then
-                local res,code = hookMatch(url,opts)
-                if code < 300 then
-                    if opts.success then opts.success({status=code,data=json.encode(res)}) end
-                elseif opts.error then
-                    opts.error(code)
-                end
-                return
-            end
+            if  http_hooks and httpMatch(url,opts) then return end
             local options = (opts or {}).options or {}
             local data = options.data or nil
             local errH = opts.error
