@@ -70,8 +70,13 @@ function net.HTTPClient(opts)
             end
             url = patch(url)
             if  hooks then
-                local res = hookMatch(url,opts)
-                if res then return res.unpack() end
+                local res,code = hookMatch(url,opts)
+                if code < 300 then
+                    if opts.success then opts.success({status=code,data=json.encode(res)}) end
+                elseif opts.error then
+                    opts.error(code)
+                end
+                return
             end
             local options = (opts or {}).options or {}
             local data = options.data or nil

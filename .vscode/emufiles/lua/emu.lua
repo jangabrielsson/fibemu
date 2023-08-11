@@ -152,7 +152,11 @@ local stackSkips = { "breakForError", "luaError", "error", "assert" }
 local function createEnvironment(id)
     local qa = DIR[id]
     local env, dev = {}, qa.dev
-    local debugFlags, fmt = qa.debug, string.format
+    for k, v in pairs(qa.debug or {}) do 
+        QA.debug[k] = v
+    end
+    qa.debug = QA.debug
+    local debugFlags, fmt = QA.debug, string.format
     if debugFlags.color == nil then debugFlags.color = true end
     qa.env = env
 
@@ -256,7 +260,6 @@ local function createEnvironment(id)
     end
     env.net._setupPatches(config)
     env.net._debugFlags = debugFlags
-    print("NET",env.net)
     return env
 end
 

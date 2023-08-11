@@ -198,7 +198,7 @@ async def emu_list_qas(request: Request):
     if not hasattr(emu,'DIR'): # at startup, if ui is polling
         return {}
     d = emu.DIR
-    qas = [{'id': id, 'name':d[id].dev.name, 'type':d[id].dev.type} for id in d]
+    qas = [{'id': id, 'name':d[id].dev.name, 'type':d[id].dev.type, 'parent':d[id].dev.parentId} for id in d]
     return qas
 
 @app.get("/emu/qa/{id}", tags=["Emulator methods"])
