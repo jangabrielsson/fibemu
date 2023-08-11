@@ -21,19 +21,19 @@ function QuickApp:onInit()
     setInterval(function()
         self:updateView("lblA", "text", os.date())
     end, 1000)
-    fibaro.fibemu.install("examples/devices/binarySwitch.lua")
-    fibaro.fibemu.install("examples/devices/binarySensor.lua")
-    fibaro.fibemu.install("examples/devices/multilevelSwitch.lua")
-    fibaro.fibemu.install("examples/devices/multilevelSensor.lua")
-    fibaro.fibemu.install("examples/devices/temperatureSensor.lua")
-    fibaro.fibemu.install("examples/devices/humiditySensor.lua")
+    fibaro.create.binarySwitch()
+    fibaro.create.binarySensor()
+    fibaro.create.multilevelSwitch()
+    fibaro.create.multilevelSensor()
+    fibaro.create.temperatureSensor()
+    fibaro.create.humiditySensor()
 
     setTimeout(function()
         fibaro.call(5004, "updateProperty", "batteryLevel", 50)
         fibaro.call(5004, "updateProperty", "dead", true)
     end, 5000)
 
-    local h = {} --api.get('/devices/hierarchy', 'hc3')
+    --local h = api.get('/devices/hierarchy')
     local function printHierarchy(h)
         local res = {}
         local function pr(h, level)
@@ -51,7 +51,7 @@ function QuickApp:onInit()
         print("Hierarchy:".."\n"..table.concat(res, "\n"))
     end
 
-    printHierarchy(h)
+    --printHierarchy(h)
 end
 
 function QuickApp:testFun()

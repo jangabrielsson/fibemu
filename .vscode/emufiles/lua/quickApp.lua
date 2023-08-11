@@ -81,8 +81,34 @@ function QuickAppBase:setVisible(bool)
   api.put("/devices/" .. self.id, { visible = bool })
 end
 
+local function mapH(p,n,dict)
+  if n==nil or #n==0 then return end
+  for _,c in ipairs(n) do
+    dict[c.type] = p
+    mapH(c.type,c.children,dict)
+  end
+end
+
+local hierarchy,revHierarchy,_H = nil,nil,nil
+function getHierarchy()
+  if not hierarchy then
+    local file = io.open(".vscode/emufiles/lua/hierarchy.json")
+    hierarchy = json.decode(file:read("*all"))
+    file:close()
+    revHierarchy = {}
+    mapH(hierarchy.type,hierarchy.children,revHierarchy)
+    _H = {}
+    local function lookupType(t1,t2)
+      if t1 == nil then return false 
+      else return t1 == t2 or lookupType(revHierarchy[t1],t2) end
+    end
+    function _H:isTypeOf(t1,t2) return lookupType(t1,t2) end
+  end
+  return _H
+end
+
 function QuickAppBase:isTypeOf(typ)
-  return getHierarchy():isTypeOf(typ, self.type)
+  return getHierarchy():isTypeOf(self.type,typ)
 end
 
 function QuickAppBase:addInterfaces(ifs)

@@ -233,8 +233,16 @@ local function createEnvironment(id)
 
     env.plugin = { mainDeviceId = dev.id }
     env.__TAG = "QUICKAPP" .. dev.id
+    env.fibaro = {}
+    env.fibaro.fibemu = QA
+    env.fibaro.debugFlags = debugFlags
+    env.fibaro._emulator = "fibemu"
+    env.fibaro._IPADDRESS = config.whost
+    env.fibaro.config = config
+    env.fibaro.pyhooks = pyhooks
+    if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['DARKTEXT'] end
 
-    for _, l in ipairs({ "json.lua", "class.lua", "fibaro.lua", "net.lua", "quickApp.lua", "scene.lua" }) do
+    for _, l in ipairs({ "json.lua", "class.lua", "fibaro.lua", "net.lua", "quickApp.lua", "fibemu.lua", "scene.lua" }) do
         local fn = luapath .. l
         if qa.debug.libraryfiles then
             QA.syslog(qa.tag, "Loading library " .. fn)
@@ -248,14 +256,6 @@ local function createEnvironment(id)
     end
     env.net._setupPatches(config)
     env.net._debugFlags = debugFlags
-
-    env.fibaro.debugFlags = debugFlags
-    env.fibaro._emulator = "fibemu"
-    env.fibaro.fibemu = QA
-    env.fibaro._IPADDRESS = config.whost
-    env.fibaro.config = config
-    env.fibaro.pyhooks = pyhooks
-    if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['DARKTEXT'] end
     return env
 end
 

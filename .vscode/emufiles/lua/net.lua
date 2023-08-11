@@ -16,6 +16,18 @@ function net._setupPatches(config)
     apiPatches[':11111/api/refreshStates'] = ":" .. config.wport .. "/api/refreshStates"
 end
 
+local hooks
+function net.addHook(pattern,fun)
+    hooks = hooks or {}
+    hooks[pattern] = fun
+end
+local function hookMatch(url,opts)
+    for p, fun in pairs(hooks) do
+        local m = { url:match(p) }
+        if #m > 0 then m[#m+1]=opts return fun(table.unpack(m)) end
+    end
+end
+
 local function callHC3(method, path, data, hc3)
     local lcl = hc3 ~= "hc3"
     local conf = fibaro and fibaro.config or QA.config
@@ -57,6 +69,10 @@ function net.HTTPClient(opts)
                 fibaro.fibemu.syslog(__TAG, "HTTPClient: %s", url)
             end
             url = patch(url)
+            if  hooks then
+                local res = hookMatch(url,opts)
+                if res then return res.unpack() end
+            end
             local options = (opts or {}).options or {}
             local data = options.data or nil
             local errH = opts.error

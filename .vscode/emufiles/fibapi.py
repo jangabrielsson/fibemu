@@ -262,6 +262,12 @@ async def get_devices(response: Response, query: DeviceQueryParams = Depends()):
     response.status_code = code
     return list(vars.values()) if code < 300 else None
 
+@app.get("/api/devices/hierarchy", tags=["Device methods"])
+async def get_Device_Hierarchy():
+    with open('.vscode/emufiles/lua/hierarchy.json') as f:
+        data = json.load(f)
+    return data
+
 @app.get("/api/devices/{id}", tags=["Device methods"])
 async def get_Device(id: int, response: Response):
     var,code = fibenv.get('fe').luaCall("getResource","devices",id)
