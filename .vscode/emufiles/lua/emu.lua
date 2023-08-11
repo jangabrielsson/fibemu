@@ -176,7 +176,7 @@ local function createEnvironment(id)
     end
 
     os.debug = debug
-    os.dofile = dofile
+    os.dofile,os.loadfile = dofile,loadfile
 
     local funs = {
         "os", "io", "pairs", "ipairs", "select", "print", "math", "string", "pcall", "xpcall", "table", "error",
@@ -256,6 +256,7 @@ local function createEnvironment(id)
     end
     env.net._setupPatches(config)
     env.net._debugFlags = debugFlags
+    print("NET",env.net)
     return env
 end
 
