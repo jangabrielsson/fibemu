@@ -3,37 +3,70 @@ from threading import Timer
 import requests_async
 import requests
 from requests import exceptions
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 import asyncio
-import socket, errno, os, sys
+import socket
+import errno
+import os
+import sys
 import websocket
 import paho.mqtt.client as mqtt
 import fibapi
 
-def callCB(fibemu,cb,*args):
-    fibemu.postEvent({"type":"luaCallback","args":list(args)}, extra=cb)
+
+def requests_retry_session(
+    retries=3,
+    backoff_factor=0.3,
+    status_forcelist=(500, 502, 504),
+    session=None,
+):
+    session = session or requests.Session()
+    retry = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
+    return session
+
+def callCB(fibemu, cb, *args):
+    fibemu.postEvent({"type": "luaCallback", "args": list(args)}, extra=cb)
+
 
 def httpCall(method, url, options, data, local):
     ''' http called from lua, async-wait if we call our own api (local, Fast API) '''
     headers = options['headers']
-    timeout = options['timeout'] if options['timeout'] else 60 
-    req = requests if not local else requests_async.ASGISession(fibapi.app)
+    timeout = options['timeout'] if options['timeout'] else 60
+    req = None
+    if not local:
+        req = requests_retry_session()
+    else:
+        req = requests_async.ASGISession(fibapi.app)
+    #req = requests if not local else requests_async.ASGISession(fibapi.app)
     if data:
         if headers and 'Content-Type' in headers and 'utf-8' in headers['Content-Type']:
             data = data.encode('utf-8')
-    match method:
-        case 'GET':
-            res = req.get(url, headers = headers, timeout = timeout)
-        case 'PUT':
-            res = req.put(url, headers = headers, data = data, timeout = timeout)
-        case 'POST':
-            res = req.post(url, data=data, headers = headers, timeout = timeout)
-        case 'DELETE':
-            res = req.delete(url, headers = headers, data = data, timeout = timeout)
     try:
+        match method:
+            case 'GET':
+                res = req.get(url, headers=headers, timeout=timeout)
+            case 'PUT':
+                res = req.put(url, headers=headers, data=data, timeout=timeout)
+            case 'POST':
+                res = req.post(url, data=data, headers=headers, timeout=timeout)
+            case 'DELETE':
+                res = req.delete(url, headers=headers, data=data, timeout=timeout)
+
         res = asyncio.run(res) if local else res
-        return res.status_code, res.text , res.headers
+        return res.status_code, res.text, res.headers
     except Exception as e:
-        return 500, str(e), {}
+        return 500, e.__doc__, {}
+
 
 def httpCallAsync(fibemu, method, url, options, data, local):
     ''' http call in separate thread and post back to lua '''
@@ -41,203 +74,223 @@ def httpCallAsync(fibemu, method, url, options, data, local):
         try:
             status, text, headers = httpCall(method, url, options, data, local)
             headers = dict(headers)
-            fibemu.postEvent({"type":"luaCallback","args":[status,text,headers]}, extra=options)
+            fibemu.postEvent({"type": "luaCallback", "args": [
+                             status, text, headers]}, extra=options)
         except Exception as e:
-            fibemu.postEvent({"type":"luaCallback","args":[404,str(e)]}, extra=options)
+            fibemu.postEvent({"type": "luaCallback", "args": [
+                             404, str(e)]}, extra=options)
     rthread = Thread(target=runner, args=())
     rthread.start()
+
 
 class LuaTCPSocket:
     def __init__(self, fibemu):
         self.fibemu = fibemu
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.setblocking(False) 
+        self.sock.setblocking(False)
 
-    def settimeout(self,value):
+    def settimeout(self, value):
         self.socket.settimeout(value/1000)
-        self.sock.setblocking(False) 
+        self.sock.setblocking(False)
 
     def connect(self, ip, port, cb):
         async def runner():
             loop = asyncio.get_running_loop()
             try:
-                await loop.sock_connect(self.sock,(ip, port))
-                callCB(self.fibemu,cb,0,'connected')
+                await loop.sock_connect(self.sock, (ip, port))
+                callCB(self.fibemu, cb, 0, 'connected')
             except Exception as e:
-                callCB(self.fibemu,cb,1,str(e))
+                callCB(self.fibemu, cb, 1, str(e))
         Thread(target=asyncio.run, args=(runner(),)).start()
 
-    def send(self,msg):
+    def send(self, msg):
         try:
             msg = bytes(msg.values())
             self.sock.sendall(msg)
-            return 0,len(msg)
+            return 0, len(msg)
         except Exception as e:
-            return 1,"Bad file descriptor"
+            return 1, "Bad file descriptor"
 
     def close(self):
         self.sock.close()
 
-    def recieve(self,cb):
+    def recieve(self, cb):
         async def runner():
             loop = asyncio.get_running_loop()
             try:
-                msg = await loop.sock_recv(self.sock,4096)
+                msg = await loop.sock_recv(self.sock, 4096)
                 msg = list(msg)
-                if len(msg)==0:
-                    callCB(self.fibemu,cb,1,"End of file")
+                if len(msg) == 0:
+                    callCB(self.fibemu, cb, 1, "End of file")
                 else:
-                    callCB(self.fibemu,cb,0,msg)
+                    callCB(self.fibemu, cb, 0, msg)
             except socket.timeout:
-                callCB(self.fibemu,cb,1,"operation cancelled")
+                callCB(self.fibemu, cb, 1, "operation cancelled")
             except Exception as e:
-                callCB(self.fibemu,cb,1,str(e))
+                callCB(self.fibemu, cb, 1, str(e))
         Thread(target=asyncio.run, args=(runner(),)).start()
 
-    def receieveUntil(self,until,cb):
+    def receieveUntil(self, until, cb):
         async def runner():
             loop = asyncio.get_running_loop()
-            callCB(self.fibemu,cb,1,"not implemented")
+            callCB(self.fibemu, cb, 1, "not implemented")
         Thread(target=asyncio.run, args=(runner(),)).start()
 
-class LuaTCPSocketServer: ## should implement tcp server...
+
+class LuaTCPSocketServer:  # should implement tcp server...
     def __init__(self, fibemu):
         self.fibemu = fibemu
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.setblocking(False) 
+        self.sock.setblocking(False)
 
-    def settimeout(self,value):
+    def settimeout(self, value):
         self.socket.settimeout(value/1000)
-        self.sock.setblocking(False) 
+        self.sock.setblocking(False)
 
     def connect(self, ip, port, cb):
         async def runner():
             loop = asyncio.get_running_loop()
             try:
-                await loop.sock_connect(self.sock,(ip, port))
-                callCB(self.fibemu,cb,0,'connected')
+                await loop.sock_connect(self.sock, (ip, port))
+                callCB(self.fibemu, cb, 0, 'connected')
             except Exception as e:
-                callCB(self.fibemu,cb,1,str(e))
+                callCB(self.fibemu, cb, 1, str(e))
         Thread(target=asyncio.run, args=(runner(),)).start()
 
-    def send(self,msg):
+    def send(self, msg):
         try:
             msg = bytes(msg.values())
             self.sock.sendall(msg)
-            return 0,len(msg)
+            return 0, len(msg)
         except Exception as e:
-            return 1,"Bad file descriptor"
+            return 1, "Bad file descriptor"
 
     def close(self):
         self.sock.close()
 
-    def recieve(self,cb):
+    def recieve(self, cb):
         async def runner():
             loop = asyncio.get_running_loop()
             try:
-                msg = await loop.sock_recv(self.sock,4096)
+                msg = await loop.sock_recv(self.sock, 4096)
                 msg = list(msg)
-                if len(msg)==0:
-                    callCB(self.fibemu,cb,1,"End of file")
+                if len(msg) == 0:
+                    callCB(self.fibemu, cb, 1, "End of file")
                 else:
-                    callCB(self.fibemu,cb,0,msg)
+                    callCB(self.fibemu, cb, 0, msg)
             except socket.timeout:
-                callCB(self.fibemu,cb,1,"operation cancelled")
+                callCB(self.fibemu, cb, 1, "operation cancelled")
             except Exception as e:
-                callCB(self.fibemu,cb,1,str(e))
+                callCB(self.fibemu, cb, 1, str(e))
         Thread(target=asyncio.run, args=(runner(),)).start()
 
-    def receieveUntil(self,until,cb):
+    def receieveUntil(self, until, cb):
         async def runner():
             loop = asyncio.get_running_loop()
-            callCB(self.fibemu,cb,1,"not implemented")
+            callCB(self.fibemu, cb, 1, "not implemented")
         Thread(target=asyncio.run, args=(runner(),)).start()
+
 
 class LuaUDPSocket:
     def __init__(self, fibemu):
         self.fibemu = fibemu
-        self.sock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        self.sock.setblocking(False) 
+        self.sock = socket.socket(
+            family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        self.sock.setblocking(False)
+
     def bind(self, localIP, localPort):
         try:
             self.sock.bind((localIP, localPort))
-            return 0,""
+            return 0, ""
         except Exception as e:
-            return 1,str(e)
-    def settimeout(self,value):
+            return 1, str(e)
+
+    def settimeout(self, value):
         self.sock.settimeout(value/1000)
-        self.sock.setblocking(False) 
+        self.sock.setblocking(False)
+
     def setoption(self, option, flag):
         if option == "broadcast":
-            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, flag and 1 or 0)
+            self.sock.setsockopt(
+                socket.SOL_SOCKET, socket.SO_BROADCAST, flag and 1 or 0)
         elif option == "reuseport":
-            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, flag and 1 or 0)
+            self.sock.setsockopt(
+                socket.SOL_SOCKET, socket.SO_REUSEPORT, flag and 1 or 0)
         elif option == "reuseaddr":
-            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, flag and 1 or 0)
+            self.sock.setsockopt(
+                socket.SOL_SOCKET, socket.SO_REUSEADDR, flag and 1 or 0)
         self.sock.setblocking(False)
+
     async def _sendto(self, msg, ip, port, cb):
-            try:
-                loop = asyncio.get_running_loop()
-                # for b in msg.values():
-                #     print(f"{b:02x} ",end="", file=sys.stderr)
-                # print(file=sys.stderr)
-                msg = bytes(msg.values())
-                await loop.sock_sendto(self.sock, msg, (ip, port))
-                callCB(self.fibemu,cb,0,len(msg))
-            except Exception as e:
-                #print(str(e), file=sys.stderr)
-                callCB(self.fibemu,cb,1,"Bad file descriptor",str(e))
+        try:
+            loop = asyncio.get_running_loop()
+            # for b in msg.values():
+            #     print(f"{b:02x} ",end="", file=sys.stderr)
+            # print(file=sys.stderr)
+            msg = bytes(msg.values())
+            await loop.sock_sendto(self.sock, msg, (ip, port))
+            callCB(self.fibemu, cb, 0, len(msg))
+        except Exception as e:
+            # print(str(e), file=sys.stderr)
+            callCB(self.fibemu, cb, 1, "Bad file descriptor", str(e))
+
     def sendto(self, msg, ip, port, cb):
-        Thread(target=asyncio.run, args=(self._sendto(msg,ip,port,cb),)).start()
+        Thread(target=asyncio.run, args=(
+            self._sendto(msg, ip, port, cb),)).start()
+
     def close(self):
         self.sock.close()
-    def recieve(self,cb):
+
+    def recieve(self, cb):
         async def runner():
             try:
                 loop = asyncio.get_running_loop()
-                msgFromServer, addr = await loop.sock_recvfrom(self.sock,4096)
+                msgFromServer, addr = await loop.sock_recvfrom(self.sock, 4096)
                 msg = list(msgFromServer)
-                if len(msg)==0:
-                    callCB(self.fibemu,cb,1,"End of file")
+                if len(msg) == 0:
+                    callCB(self.fibemu, cb, 1, "End of file")
                 else:
-                    callCB(self.fibemu,cb,0,msg,addr[0],addr[1])
+                    callCB(self.fibemu, cb, 0, msg, addr[0], addr[1])
             except socket.timeout:
-                callCB(self.fibemu,cb,1,"operation cancelled")
+                callCB(self.fibemu, cb, 1, "operation cancelled")
             except Exception as e:
-                callCB(self.fibemu,cb,1,str(e))
+                callCB(self.fibemu, cb, 1, str(e))
         Thread(target=asyncio.run, args=(runner(),)).start()
+
 
 class LuaWebSocket:
     #    websocket.enableTrace(True)
     def __init__(self, fibemu, url, headers, cb):
-        #websocket.enableTrace(True)
+        # websocket.enableTrace(True)
         self.closed = True
         self.fibemu = fibemu
         self.cb = cb
-        self.ws = websocket.WebSocketApp(url=url,#"wss://api.gemini.com/v1/marketdata/BTCUSD",
-                              header=headers,
-                              on_open=lambda ws: self.on_open(ws),
-                              on_message=lambda ws,msg: self.on_message(ws,msg),
-                              on_error=lambda ws,err: self.on_error(ws,err),
-                              on_close=lambda ws,stat,msg: self.on_close(ws,stat,msg))
+        self.ws = websocket.WebSocketApp(url=url,  # "wss://api.gemini.com/v1/marketdata/BTCUSD",
+                                         header=headers,
+                                         on_open=lambda ws: self.on_open(ws),
+                                         on_message=lambda ws, msg: self.on_message(
+                                             ws, msg),
+                                         on_error=lambda ws, err: self.on_error(
+                                             ws, err),
+                                         on_close=lambda ws, stat, msg: self.on_close(ws, stat, msg))
         self.closed = False
         Thread(target=self.ws.run_forever).start()
 
     def on_message(self, ws, message):
-        callCB(self.fibemu,self.cb,"dataReceived",message)
+        callCB(self.fibemu, self.cb, "dataReceived", message)
 
     def on_error(self, ws, error):
-        callCB(self.fibemu,self.cb,"error",str(error))
+        callCB(self.fibemu, self.cb, "error", str(error))
 
     def on_close(self, ws, close_status_code, close_msg):
         self.closed = True
         self.close()
-        callCB(self.fibemu,self.cb,"disconnected")
+        callCB(self.fibemu, self.cb, "disconnected")
 
     def on_open(self, ws):
-        callCB(self.fibemu,self.cb,"connected")
+        callCB(self.fibemu, self.cb, "connected")
 
-    def send(self,msg):
+    def send(self, msg):
         return self.ws.send(msg)
 
     def close(self):
@@ -246,13 +299,16 @@ class LuaWebSocket:
     def isOpen(self):
         return self.closed
 
+
 class LuaMQTT:
     def __init__(self, fibemu, cb):
         self.fibemu = fibemu
         self.cb = cb
         client = mqtt.Client()
-        client.on_connect = lambda client,userdata,flags,rc: self.on_connect(client, userdata, flags, rc)
-        client.on_message = lambda client,userdata,msg: self.on_message(client, userdata, msg)
+        client.on_connect = lambda client, userdata, flags, rc: self.on_connect(
+            client, userdata, flags, rc)
+        client.on_message = lambda client, userdata, msg: self.on_message(
+            client, userdata, msg)
         self.client = client
 
     def connect(self, url, port, keepalive):
@@ -261,13 +317,11 @@ class LuaMQTT:
 
 # The callback for when the client receives a CONNACK response from the server.
     def on_connect(self, client, userdata, flags, rc):
-        callCB(self.fibemu,self.cb,"on_connect",userdata, flags, rc)
+        callCB(self.fibemu, self.cb, "on_connect", userdata, flags, rc)
 
     def on_message(self, client, userdata, msg):
-        callCB(self.fibemu,self.cb,"on_message",userdata, msg)
+        callCB(self.fibemu, self.cb, "on_message", userdata, msg)
 
     # client.subscribe("$SYS/#")
     def subscribe(self, topic):
         return self.client.subscribe(topic)
-
-       
