@@ -1,9 +1,8 @@
 local scenes, loadScene, sceneRunner, compileCondition, dateTest = {}, nil, nil, nil, nil
 local Events = {}
-local fibemu
 local DEBUG = true
 local function printf(...) print(string.format(...)) end
-
+local fibemu = fibaro.fibemu
 
 local triggerFilter = {
     device = true,
@@ -17,8 +16,7 @@ local triggerFilter = {
     location = true,
 }
 
-function fibaro.loadScenes(s, ...)
-    fibemu = fibaro.fibemu
+function fibemu.loadScenes(s, ...)
     function fibemu.triggerHook(ev)
         local st = Events[ev.type] and Events[ev.type](ev, ev.data) or ev
         if ev == st then return end

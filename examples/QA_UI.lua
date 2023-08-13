@@ -14,6 +14,8 @@
 --%%u={slider="slider", max="80", onChanged='sliderA'}
 --%%u={label="lblA", text='This is a text'}
 
+local fibemu = fibaro.fibemu 
+
 function QuickApp:onInit()
     self:debug("Started", self.id)
     self:setVariable("test", "HELLO")
@@ -21,12 +23,12 @@ function QuickApp:onInit()
     setInterval(function()
         self:updateView("lblA", "text", os.date())
     end, 1000)
-    fibaro.create.binarySwitch()
-    fibaro.create.binarySensor()
-    fibaro.create.multilevelSwitch()
-    fibaro.create.multilevelSensor()
-    fibaro.create.temperatureSensor()
-    fibaro.create.humiditySensor()
+    fibemu.create.binarySwitch()
+    fibemu.create.binarySensor()
+    fibemu.create.multilevelSwitch()
+    fibemu.create.multilevelSensor()
+    fibemu.create.temperatureSensor()
+    fibemu.create.humiditySensor()
 
     setTimeout(function()
         fibaro.call(5004, "updateProperty", "batteryLevel", 50)

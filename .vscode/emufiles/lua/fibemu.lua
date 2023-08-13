@@ -1,3 +1,5 @@
+local path = fibaro.fibemu.config.path
+
 local emuDevices = {
     "com.fibaro.binarySwitch",
     "com.fibaro.binarySensor",
@@ -40,6 +42,7 @@ end
 fibaro.fibemu.create = create
 fibaro.fibemu.getRemoteLog = getRemoteLog
 
-fibaro.create = fibaro.fibemu.create
-fibaro.getRemoteLog = fibaro.fibemu.getRemoteLog
-
+fibaro.fibemu.profiler = os.dofile(path.."lua/profiler.lua")
+function fibaro.fibemu.profiler.log(n)
+    print(fibaro.fibemu.profiler.report(n or 30))
+end

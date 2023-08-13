@@ -5,11 +5,12 @@
 -- <file> qa upload test/foo.lua
 -- <file> qa upload test/foo.fqa
 -- <file> qa upload <file> test/foo.fqa
-local file = fibaro.config.extra[1]
-local rsrc = fibaro.config.extra[2]
-local cmd = fibaro.config.extra[3]
-local name = fibaro.config.extra[4]
-local path = fibaro.config.extra[5]
+local fibemu = fibaro.fibemu
+local file = fibemu.config.extra[1]
+local rsrc = fibemu.config.extra[2]
+local cmd = fibemu.config.extra[3]
+local name = fibemu.config.extra[4]
+local path = fibemu.config.extra[5]
 local function printf(fmt, ...) print(string.format(fmt, ...)) end
 local function printerrf(fmt, ...) fibaro.error(__TAG, string.format(fmt, ...)) end
 __TAG = "fibtool"
@@ -128,8 +129,8 @@ function tool.download_unpack(file, rsrc, id, path)
     local mainFname = path .. "/" .. fname .. ".lua"
     if not writeFile(mainFname, mainFD.code, true) then return true end
 
-    local flib = fibaro.fibemu.libs.files
-    local uilib = fibaro.fibemu.libs.ui
+    local flib = fibemu.libs.files
+    local uilib = fibemu.libs.ui
     local qa = flib.installQA(mainFname, {silent=true})
     local headers = {}
     local function outf(...) headers[#headers + 1] = string.format(...) end
@@ -151,7 +152,7 @@ end
 
 function tool.upload(file, rsrc, name, path)
     if name == '.' then name = file end
-    local flib = fibaro.fibemu.libs.files
+    local flib = fibemu.libs.files
 
     local fqa,err = pcall(flib.file2FQA,name)
     if not fqa then
@@ -180,7 +181,7 @@ function tool.update(file, rsrc, name, path) -- move logic to files?
         end
         name = file
     end
-    local flib = fibaro.fibemu.libs.files
+    local flib = fibemu.libs.files
     local qa = flib.installQA(name, {silent=true})
     if not id and not qa.definedId then
         printerrf("QA need to define --%%id=<HC3ID>\nso we know what QA to update on HC3")
@@ -233,7 +234,7 @@ function tool.update(file, rsrc, name, path) -- move logic to files?
         printf("Updating viewLayout and uiCallbacks...")
     end
 
-    local viewLayout,uiCallbacks = fibaro.fibemu.libs.ui.pruneStock(dev.properties)
+    local viewLayout,uiCallbacks = fibemu.libs.ui.pruneStock(dev.properties)
 
     local stat, res = api.put("/devices/" .. id, {
         properties = {
@@ -259,4 +260,4 @@ else
         fibaro.debug("fibtool", "Success")
     end
 end
-fibaro.pyhooks.exit(0)
+fibemu.pyhooks.exit(0)

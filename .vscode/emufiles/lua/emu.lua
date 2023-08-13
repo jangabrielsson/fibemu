@@ -53,7 +53,9 @@ QA.DIR = DIR
 local debugFlags = QA.debug
 debugFlags.color = true
 debugFlags.refresh = true
-fibaro = { pyhooks = pyhooks, debugFlags = debugFlags, fibemu = QA, config = config }
+QA.pyhooks = pyhooks
+QA.debugFlags = debugFlags
+QA.config = config
 QA.loadstring = load
 QA.loadfile = loadfile
 os.orgtime = os.time
@@ -89,8 +91,8 @@ QA.addDoc("hc3_http", "true, logs http calls to HC3 or emulator")
 QA.addDoc("libraryfiles", "true, logs Lua library files loaded (ex. quickApp.lua)")
 QA.addDoc("userfiles", "true, logs user's QA files loaded (--%%file directive)")
 QA.addDoc("refresh_resource", "true, logs refresh of resource in internal DB")
-QA.addDoc("autoui", "true, will add 2s autorefresh for QA UI web interface page")
-QA.addDoc("callstack", "true, will log callstack at error")
+QA.addDoc("autoui", "true, will add 2s autorefresh for (old) QA UI web interface page")
+--QA.addDoc("callstack", "true, will log callstack at error")
 
 local libs = {
     devices = devices,

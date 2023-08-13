@@ -40,7 +40,7 @@ end
 
 local function callHC3(method, path, data, hc3)
     local lcl = hc3 ~= "hc3"
-    local conf = fibaro and fibaro.config or QA.config
+    local conf = fibaro and fibaro.fibemu.config or QA.config
     local host = hc3 and conf.host or conf.whost
     local port = hc3 and conf.port or conf.wport
     local creds = hc3 and conf.creds or nil
@@ -58,7 +58,7 @@ local function callHC3(method, path, data, hc3)
             ["Content-Type"] = "application/json; charset=utf-8",
         }
     }
-    local status, res, headers = fibaro.pyhooks.http(method, url, options, data and json.encode(data) or nil, lcl)
+    local status, res, headers = fibaro.fibemu.pyhooks.http(method, url, options, data and json.encode(data) or nil, lcl)
     if status >= 303 then
         return nil, status, res, headers
         --error(fmt("HTTP error %d: %s", status, res))
@@ -100,7 +100,7 @@ function net.HTTPClient(opts)
                 callback = callback,
                 id = plugin.mainDeviceId or -1
             }
-            return fibaro.pyhooks.httpAsync(options.method or "GET", url, opts, data, false)
+            return fibaro.fibemu.pyhooks.httpAsync(options.method or "GET", url, opts, data, false)
         end
     }
     local pstr = "HTTPClient object: " .. tostring({}):match("%s(.*)")
@@ -118,7 +118,7 @@ end
 
 function net.TCPSocket(opts2)
     local self2 = { opts = opts2 or {} }
-    self2.sock = fibaro.pyhooks.createTCPSocket()
+    self2.sock = fibaro.fibemu.pyhooks.createTCPSocket()
     if tonumber(self2.opts.timeout) then
         self2.sock:settimeout(opts2.timeout) -- timeout in ms
     end
@@ -178,7 +178,7 @@ end
 
 function net.UDPSocket(opts2)
     local self2 = { opts = opts2 or {} }
-    self2.sock = fibaro.pyhooks.createUDPSocket()
+    self2.sock = fibaro.fibemu.pyhooks.createUDPSocket()
     if tonumber(self2.opts.timeout) then
         self2.sock:settimeout(self2.opts.timeout)
     end
@@ -240,7 +240,7 @@ function net.WebSocketClient()
             local f = self._callback[event]
             if f then f(...) end
         end
-        self._sock = fibaro.pyhooks.createWebSocket(url, headers, createCB(cb))
+        self._sock = fibaro.fibemu.pyhooks.createWebSocket(url, headers, createCB(cb))
     end
 
     function self:addEventListener(event, callback)

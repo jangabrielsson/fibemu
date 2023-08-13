@@ -16,7 +16,7 @@ local destDir = './dev/backup/'
 local QAs = api.get("/devices?interface=quickApp",remote)
 QAs = {QAs}
 
-local listDir = fibaro.pyhooks.listDir
+local listDir = fibaro.fibemu.pyhooks.listDir
 
 table.sort(QAs,function(a,b) return a.modified < b.modified end)
 for _,qa in ipairs(QAs) do

@@ -11,8 +11,8 @@ function QuickApp:onInit()
     self:trace("Trace message")
     self:warning("Warning message")
     self:error("Error message") 
-    self:debug("fibaro.config")
-    for k,v in pairs(fibaro.config) do
+    self:debug("fibaro.fibemu.config")
+    for k,v in pairs(fibaro.fibemu.config) do
         printf("   %s=%s",k,json.encode(v))
     end
 
@@ -67,9 +67,9 @@ function QuickApp:testGlobalVariables()
     api.post("/globalVariables",{ name = "A42", value = "B" })
     local val,t = fibaro.getGlobalVariable("A42")
     printf("Global 'A42' = %s (%s)",val,os.date('%c',t))
-    t = fibaro.pyhooks.clock()
+    t = fibaro.fibemu.pyhooks.clock()
     fibaro.setGlobalVariable("A42","C")
-    printf("setGlobalVariable took %f",fibaro.pyhooks.clock()-t)
+    printf("setGlobalVariable took %f",fibaro.fibemu.pyhooks.clock()-t)
     val,t = fibaro.getGlobalVariable("A42")
     printf("Global 'A42' = %s (%s)",val,os.date('%c',t))
     api.delete("/globalVariables/A42")

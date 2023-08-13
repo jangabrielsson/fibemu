@@ -4,6 +4,7 @@ import os, socket
 import argparse
 import fibapi
 import json
+import subprocess
 from fibenv import FibaroEnvironment
 
 app = fibapi.app
@@ -82,6 +83,21 @@ if __name__ == "__main__":
     if not config['local'] and  (not config['user'] or not config['password'] or not config['host']):
         print("Missing HC3 connection info for non-local run",file=sys.stderr)
         sys.exit(1)
+
+    def run(self, cmd):
+        completed = subprocess.run(["powershell", "-Command", cmd], capture_output=False)
+        return completed
+
+    print(f"Platform is {sys.platform}",file=sys.stderr)
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        stat = s.connect_ex(('localhost', config['wport']))
+        print(f"Web server port {config['wport']} status {stat}",file=sys.stderr)
+        if s == 0:
+            print("Port already in use",file=sys.stderr)
+            if sys.platform == "darwin":
+                os.system(f"kill -9 $(lsof -ti :{config['wport']})")
+            elif sys.platform == "win32":
+                run(f"Stop-Process -Id (Get-NetTCPConnection -LocalPort {config['wport']}).OwningProcess -Force")
 
     f = FibaroEnvironment(config)
     fibapi.fibenv['fe'] = f
