@@ -2,6 +2,7 @@
 
 local filesToKeep = 3
 local remote = 'hc3'
+local fibemu = fibaro.fibemu
 
 local function writeFile(fname, content)
     local f = io.open(fname, "w")
@@ -16,7 +17,7 @@ local destDir = './dev/backup/'
 local QAs = api.get("/devices?interface=quickApp",remote)
 QAs = {QAs}
 
-local listDir = fibaro.fibemu.pyhooks.listDir
+local listDir = fibemu.pyhooks.listDir
 
 table.sort(QAs,function(a,b) return a.modified < b.modified end)
 for _,qa in ipairs(QAs) do

@@ -424,7 +424,7 @@ end
 
 local function callHC3S(x,y,z,w) -- sleep to let threads catch up (ex. importFQA)
     local a,b,c = callHC3(x,y,z,w)
-    if (w ~= 'hc3') and (fibaro.sleep ~= nil) then fibaro.sleep(0) end
+    if (w ~= 'hc3' and fibaro) and (fibaro.sleep ~= nil) then fibaro.sleep(0) end
     return a,b,c
 end
 

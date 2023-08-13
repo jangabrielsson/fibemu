@@ -10,6 +10,23 @@ function r.init(conf, libs)
     defaultRsrcs['settings/network'].networkConfig.wlan0.ipConfig.ip = emu.config.whost
 end
 
+local function updateDates()
+    local sunrise, sunset = QA.libs.time.suntime(os.time())
+    --print(sunrise,sunset)
+    defaultRsrcs['devices'][1].properties.sunriseHour = sunrise
+    defaultRsrcs['devices'][1].properties.sunsetHour = sunset
+end
+
+local _intercepts = { devices={} }
+_intercepts.devices[1] = function() updateDates() end
+_intercepts.devices[2] = function() updateDates() end
+
+local function intercept(typ,id)
+    if _intercepts[typ] and _intercepts[typ][id] then
+        _intercepts[typ][id](typ,id)
+    end
+end
+
 defaultRsrcs['devices'] = {
     [1] = {
         id = 1,
@@ -381,6 +398,7 @@ end
 function r.getResource(typ, id)
     initr(typ)
     local rs = rsrcs[typ] or {}
+    if config.lcl then intercept(typ,id) end
     local res = id == nil and rs or rs[id]
     return res, res and 200 or 404
 end

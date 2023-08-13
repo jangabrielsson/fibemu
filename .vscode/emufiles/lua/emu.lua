@@ -100,6 +100,7 @@ local libs = {
     files = files,
     refreshStates = refreshStates,
     lldebugger = lldebugger,
+    time = timesup,
     emu = QA,
     util = util,
     binser = doload("binser.lua"),
