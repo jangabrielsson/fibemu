@@ -92,7 +92,7 @@ if __name__ == "__main__":
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         stat = s.connect_ex(('localhost', config['wport']))
         print(f"Web server port {config['wport']} status {stat}",file=sys.stderr)
-        if s == 0:
+        if stat == 0:
             print("Port already in use",file=sys.stderr)
             if sys.platform == "darwin":
                 os.system(f"kill -9 $(lsof -ti :{config['wport']})")

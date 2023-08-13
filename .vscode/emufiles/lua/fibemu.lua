@@ -1,4 +1,4 @@
-local path = fibaro.fibemu.config.path
+local fibemu = fibaro.fibemu
 
 local emuDevices = {
     "com.fibaro.binarySwitch",
@@ -11,10 +11,12 @@ local emuDevices = {
     "com.fibaro.windowSensor",
 }
 local create = {}
-for _,d in ipairs(emuDevices) do
-    local name = d:match("com%.fibaro%.(.*)")
-    create[name] = function(args)
-        return fibaro.fibemu.install(path.."lua/devices/"..name..".lua",args)
+local files = json.decode(fibemu.pyhooks.listDir(fibemu.config.path.."lua/devices"))
+for _,name in ipairs(files) do
+    local path = fibemu.config.path
+    local nf = name:gsub("%.lua","")
+    create[nf] = function(args)
+        return fibaro.fibemu.install(path.."lua/devices/"..name,args)
     end
 end
 
@@ -44,7 +46,7 @@ end
 fibaro.fibemu.create = create
 fibaro.fibemu.getRemoteLog = getRemoteLog
 
-fibaro.fibemu.profiler = os.dofile(path.."lua/profiler.lua")
+fibaro.fibemu.profiler = os.dofile(fibemu.config.path.."lua/profiler.lua")
 function fibaro.fibemu.profiler.log(n)
     print(fibaro.fibemu.profiler.report(n or 30))
 end
