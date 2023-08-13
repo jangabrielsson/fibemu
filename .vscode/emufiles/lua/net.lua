@@ -40,13 +40,14 @@ end
 
 local function callHC3(method, path, data, hc3)
     local lcl = hc3 ~= "hc3"
-    local conf = fibaro and fibaro.fibemu.config or QA.config
+    local fibemu = fibaro and fibaro.fibemu or QA
+    local conf = fibemu.config
     local host = hc3 and conf.host or conf.whost
     local port = hc3 and conf.port or conf.wport
     local creds = hc3 and conf.creds or nil
     local url = fmt("http://%s:%s/api%s", host, port, path)
-    if fibaro.debugFlags.hc3_http and not path=="/globalVariables/FIBEMU" then
-        fibaro.fibemu.syslog(__TAG or "HC3", "%s: %s", method, url)
+    if fibemu.debugFlags.hc3_http and not path=="/globalVariables/FIBEMU" then
+        fibemu.syslog(__TAG or "HC3", "%s: %s", method, url)
     end
     local options = {
         timeout = HC3_TIMEOUT,
@@ -58,7 +59,7 @@ local function callHC3(method, path, data, hc3)
             ["Content-Type"] = "application/json; charset=utf-8",
         }
     }
-    local status, res, headers = fibaro.fibemu.pyhooks.http(method, url, options, data and json.encode(data) or nil, lcl)
+    local status, res, headers = fibemu.pyhooks.http(method, url, options, data and json.encode(data) or nil, lcl)
     if status >= 303 then
         return nil, status, res, headers
         --error(fmt("HTTP error %d: %s", status, res))
@@ -68,15 +69,16 @@ end
 
 function net.HTTPClient(opts)
     opts = opts or {}
+    local fibemu = fibaro and fibaro.fibemu or QA
     local debugFlags = net._debugFlags or {}
-    local util = fibaro.fibemu.libs.util
+    local util = fibemu.libs.util
     local timeout = opts.timeout
     local epcall = util.epcall
     local self2 = {
         request = function(_, url, opts)
             local ctx = util.getErrCtx(3)
             if debugFlags.http and not url:match("/refreshStates") then
-                fibaro.fibemu.syslog(__TAG, "HTTPClient: %s", url)
+                fibemu.syslog(__TAG, "HTTPClient: %s", url)
             end
             url = patch(url)
             if  http_hooks and httpMatch(url,opts) then return end
@@ -100,7 +102,7 @@ function net.HTTPClient(opts)
                 callback = callback,
                 id = plugin.mainDeviceId or -1
             }
-            return fibaro.fibemu.pyhooks.httpAsync(options.method or "GET", url, opts, data, false)
+            return fibemu.pyhooks.httpAsync(options.method or "GET", url, opts, data, false)
         end
     }
     local pstr = "HTTPClient object: " .. tostring({}):match("%s(.*)")
@@ -118,7 +120,8 @@ end
 
 function net.TCPSocket(opts2)
     local self2 = { opts = opts2 or {} }
-    self2.sock = fibaro.fibemu.pyhooks.createTCPSocket()
+    local fibemu = fibaro and fibaro.fibemu or QA
+    self2.sock = fibemu.pyhooks.createTCPSocket()
     if tonumber(self2.opts.timeout) then
         self2.sock:settimeout(opts2.timeout) -- timeout in ms
     end
