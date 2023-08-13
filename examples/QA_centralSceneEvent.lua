@@ -18,6 +18,6 @@ function QuickApp:onInit()
         local ev = env.event
         self:debugf("CentralSceneEvent: %s %s",ev.value.keyId,ev.value.keyAttribute)
     end)
-    setTimeout(function() fibaro.postCentralSceneEvent(2,"Pressed") end,0)
+    setTimeout(function() fibaro.postCentralSceneEvent(2,"Pressed") end,2000)
 end
 

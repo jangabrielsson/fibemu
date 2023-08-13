@@ -241,11 +241,11 @@ local function createEnvironment(id)
     env.__TAG = "QUICKAPP" .. dev.id
     env.fibaro = {}
     env.fibaro.fibemu = QA
-    env.fibaro.debugFlags = debugFlags
+    -- env.fibaro.debugFlags = debugFlags
     env.fibaro._emulator = "fibemu"
     env.fibaro._IPADDRESS = config.whost
-    env.fibaro.config = config
-    env.fibaro.pyhooks = pyhooks
+    -- env.fibaro.config = config
+    -- env.fibaro.pyhooks = pyhooks
     if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['DARKTEXT'] end
 
     for _, l in ipairs({ "json.lua", "class.lua", "fibaro.lua", "net.lua", "quickApp.lua", "fibemu.lua", "scene.lua" }) do
@@ -315,7 +315,7 @@ local function runner(fc, id)
     if not files.loadFiles(id) then return end
 
     local errfun = env.fibaro.error
-    debugFlags = env.fibaro.debugFlags
+    debugFlags = env.fibaro.fibemu.debugFlags
 
     local function log(fmt, ...) util.debug(debugFlags, env.__TAG, format(fmt, ...), "SYS") end
 

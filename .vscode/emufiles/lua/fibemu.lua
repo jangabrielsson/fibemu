@@ -7,12 +7,14 @@ local emuDevices = {
     "com.fibaro.multilevelSensor",
     "com.fibaro.temperatureSensor",
     "com.fibaro.humiditySensor",
+    "com.fibaro.doorSensor",
+    "com.fibaro.windowSensor",
 }
 local create = {}
 for _,d in ipairs(emuDevices) do
     local name = d:match("com%.fibaro%.(.*)")
     create[name] = function(args)
-        fibaro.fibemu.install("examples/devices/"..name..".lua",args)
+        return fibaro.fibemu.install(path.."lua/devices/"..name..".lua",args)
     end
 end
 

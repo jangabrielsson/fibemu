@@ -51,9 +51,9 @@ function loadScene(fname, id)
     }
     for _, f in ipairs(funs) do env[f] = _G[f] end
     for k, v in pairs(_G) do if k:sub(1, 2) == '__' then env[k] = v end end
-    fibemu.loadfile(".vscode/emufiles/lua/json.lua", "t", env)
-    fibemu.loadfile(".vscode/emufiles/lua/net.lua", "t", env)
-    fibemu.loadfile(".vscode/emufiles/lua/fibaro.lua", "t", env)
+    fibemu.loadfile(fibemu.path.."lua/json.lua", "t", env)
+    fibemu.loadfile(fibemu.path.."lua/net.lua", "t", env)
+    fibemu.loadfile(fibemu.path.."fibaro.lua", "t", env)
     function env.print(...) env.fibaro.debug(env._sceneId, ...) end
 
     scene.fun = fibemu.loadstring(scene.code, fname, "t", env)

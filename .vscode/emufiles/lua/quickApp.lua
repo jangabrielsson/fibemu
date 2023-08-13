@@ -92,7 +92,7 @@ end
 local hierarchy,revHierarchy,_H = nil,nil,nil
 function getHierarchy()
   if not hierarchy then
-    local file = io.open(".vscode/emufiles/lua/hierarchy.json")
+    local file = io.open(fibaro.fibemu.path.."lua/hierarchy.json")
     hierarchy = json.decode(file:read("*all"))
     file:close()
     revHierarchy = {}
