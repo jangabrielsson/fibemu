@@ -70,7 +70,7 @@ end
 function net.HTTPClient(opts)
     opts = opts or {}
     local fibemu = fibaro and fibaro.fibemu or QA
-    local debugFlags = net._debugFlags or {}
+    local debugFlags = fibemu.debugFlags or {}
     local util = fibemu.libs.util
     local timeout = opts.timeout
     local epcall = util.epcall

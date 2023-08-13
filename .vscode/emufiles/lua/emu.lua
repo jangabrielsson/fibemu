@@ -261,7 +261,6 @@ local function createEnvironment(id)
         end
     end
     env.net._setupPatches(config)
-    env.net._debugFlags = debugFlags
     return env
 end
 
