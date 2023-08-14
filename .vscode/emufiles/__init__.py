@@ -92,12 +92,12 @@ if __name__ == "__main__":
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         stat = s.connect_ex(('localhost', config['wport']))
         print(f"Web server port {config['wport']} status {stat}",file=sys.stderr)
-        if stat == 0:
-            print("Port already in use",file=sys.stderr)
-            if sys.platform == "darwin":
-                os.system(f"kill -9 $(lsof -ti :{config['wport']})")
-            elif sys.platform == "win32":
-                run(f"Stop-Process -Id (Get-NetTCPConnection -LocalPort {config['wport']}).OwningProcess -Force")
+        # if stat == 0:
+        #     print("Port already in use",file=sys.stderr)
+        #     if sys.platform == "darwin":
+        #         os.system(f"kill -9 $(lsof -ti :{config['wport']})")
+        #     elif sys.platform == "win32":
+        #         run(f"Stop-Process -Id (Get-NetTCPConnection -LocalPort {config['wport']}).OwningProcess -Force")
 
     f = FibaroEnvironment(config)
     fibapi.fibenv['fe'] = f
