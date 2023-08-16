@@ -329,7 +329,7 @@ function r.start()
             ["Content-Type"] = "application/json",
         }
     }
-    fibaro.fibemu.pyhooks.refreshStates(true, url, options) -- Python function 
+    QA.pyhooks.refreshStates(true, url, options) -- Python function 
 end
 
 function r.hc3HookVar()
