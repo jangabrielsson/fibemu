@@ -12,6 +12,7 @@ import AboutPanel from './components/AboutPanel.vue';
 import ConfigPanel from './components/ConfigPanel.vue';
 import EventPanel from './components/EventPanel.vue';
 import GlobalVarPanel from './components/GlobalVarPanel.vue';
+import TypesPanel from './components/TypesPanel.vue';
 
 const isDev = import.meta.env.DEV;
 const backend = isDev ? 'http://localhost:5004' : '';
@@ -27,6 +28,7 @@ const router = createRouter({
         { path: '/frontend/globals', component: GlobalVarPanel },
         { path: '/frontend/config', component: ConfigPanel },
         { path: '/frontend/about', component: AboutPanel },
+        { path: '/frontend/types', component: TypesPanel },
     ],
 });
 
@@ -47,6 +49,7 @@ app.component('about-panel', AboutPanel);
 app.component('config-panel', ConfigPanel);
 app.component('event-panel', EventPanel);
 app.component('global-var-panel', GlobalVarPanel);
+app.component('types-panel', TypesPanel);
 
 app.use(useAccordion);
 app.use(store);

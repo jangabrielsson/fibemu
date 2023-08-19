@@ -19,6 +19,9 @@
                         <router-link class="nav-link" to="/frontend/globals">GlobalVariables</router-link>
                     </li>
                     <li class="nav-item">
+                        <router-link class="nav-link" to="/frontend/types">Types</router-link>
+                    </li>
+                    <li class="nav-item">
                         <router-link class="nav-link" to="/frontend/config">Config</router-link>
                     </li>
                     <li class="nav-item">

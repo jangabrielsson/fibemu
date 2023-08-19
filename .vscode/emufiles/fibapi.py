@@ -223,6 +223,13 @@ async def emu_get_events(request: Request):
         return {}
     return emu.events
 
+@app.get("/emu/types", tags=["Emulator methods"])
+async def emu_get_types(request: Request):
+    with open('.vscode/emufiles/lua/types.json') as f:
+        types = json.load(f)
+        return types
+    return {}
+
 ''' Device methods '''
 class ActionParams(BaseModel):
     args: list
