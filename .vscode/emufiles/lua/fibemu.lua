@@ -43,10 +43,20 @@ local function getRemoteLog(delay)
     end
 end
 
-fibaro.fibemu.create = create
-fibaro.fibemu.getRemoteLog = getRemoteLog
+fibemu.create = create
+fibemu.getRemoteLog = getRemoteLog
 
-fibaro.fibemu.profiler = os.dofile(fibemu.config.path.."lua/profiler.lua")
-function fibaro.fibemu.profiler.log(n)
-    print(fibaro.fibemu.profiler.report(n or 30))
+fibemu.profiler = fibemu.dofile(fibemu.config.path.."lua/profiler.lua")
+function fibemu.profiler.log(n)
+    print(fibemu.profiler.report(n or 30))
 end
+
+function fibemu.listDir(path) 
+    return json.decode(fibemu.pyhooks.listDir(path))
+end
+
+fibemu.dofile = fibemu.dofile
+fibemu.loadfile = fibemu.loadfile
+fibemu.load = fibemu.load
+
+

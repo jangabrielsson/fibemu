@@ -58,6 +58,8 @@ QA.debugFlags = debugFlags
 QA.config = config
 QA.loadstring = load
 QA.loadfile = loadfile
+QA.dofile = dofile
+QA.load = load
 os.orgtime = os.time
 os.orgdate = os.date
 local orgtime, orgdate = os.time, os.date
@@ -183,7 +185,6 @@ local function createEnvironment(id)
     end
 
     os.debug = debug
-    os.dofile,os.loadfile = dofile,loadfile
 
     local funs = {
         "os", "io", "pairs", "ipairs", "select", "print", "math", "string", "pcall", "xpcall", "table", "error",

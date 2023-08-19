@@ -1,20 +1,23 @@
 --[[
     Simple QA with UI elements
-    Open browser at http://127.0.0.1:5004/ to interact with this app
+    creating and using a proxy QA on the HC3.
+    First time run it creates a proxy QA on the HC3 with the
+    UI defined in the %%u section - if any.
+    If proxy already exists it will use the UI from the proxy QA on the HC3.
+    This way the UI is defined and edited in the QA on the HC3.
+    The proxy QA will send all events back to the emulated QA.
+    The emulated QA will take on the ID of the proxy QA.
 --]]
 
---%%name=QA0
---%%type=com.fibaro.doorSensor
+--%%name=My QA2
+--%%type=com.fibaro.binarySwitch
 --%%debug=permissions:false,refresh_resource:true
---%% debug=autoui:true
 
 --%%u={{button='t1', text='A', onReleased='t1'},{button='t2', text='B', onReleased='t1'},{button='t3', text='C', onReleased='t1'},{button='t4', text='D', onReleased='t1'},{button='t5', text='E', onReleased='t1'}}
 --%%u={button='test', text='Test', onReleased='testFun'}
 --%%u={{button='test', text='A', onReleased='testA'},{button='test', text='B', onReleased='testB'}}
 --%%u={slider="slider", max="80", onChanged='sliderA'}
 --%%u={label="lblA", text='This is a text'}
-
-local fibemu = fibaro.fibemu 
 
 function QuickApp:onInit()
     self:debug("Started", self.id)
@@ -23,37 +26,49 @@ function QuickApp:onInit()
     setInterval(function()
         self:updateView("lblA", "text", os.date())
     end, 1000)
-    fibemu.create.binarySwitch()
-    fibemu.create.binarySensor()
-    fibemu.create.multilevelSwitch()
-    local dev = fibemu.create.multilevelSensor{name="myMultilevelSensor"}
-    fibemu.create.temperatureSensor()
-    fibemu.create.humiditySensor()
 
-    setTimeout(function()
-        fibaro.call(dev.id, "updateProperty", "batteryLevel", 50)
-        fibaro.call(dev.id, "updateProperty", "dead", true)
-    end, 5000)
-
-    --local h = api.get('/devices/hierarchy')
+    local h = api.get('/devices/hierarchy',"hc3")
     local function printHierarchy(h)
         local res = {}
-        local function pr(h, level)
-            if not h then return end
-            level = level or 0
-            res[#res+1]=string.format("%s>%s",string.rep('-', level), h.type)
-            if h.children then
+        local function pr(h, level, arrow)
+            local hasChildren = h.children and #h.children > 0
+            arrow = hasChildren and arrow:sub(1,-3).."+>" or arrow
+            if level > 0 then
+                res[#res+1]=string.format("%s%s",string.rep(' ', level), "|")
+            end
+            res[#res+1]=string.format("%s%s%s",string.rep(' ', level), arrow, h.type)
+            if hasChildren then
                 for _, c in ipairs(h.children) do
-                    pr(c, level + 2)
+                    pr(c, level + 1, "+->")
                 end
             end
         end
-        pr(h,0)
+        pr(h,0,"-+->")
         --table.sort(res)
         print("Hierarchy:".."\n"..table.concat(res, "\n"))
     end
 
     --printHierarchy(h)
+    local hd,map2 = {},{}
+    local function traverse(h)
+        if not h.children or #h.children==0 then return end
+        local name = h.type
+        map2[name] = true
+        for _,c in ipairs(h.children) do
+            map2[c.type] = true
+            hd[#hd+1] = string.format('   "%s" -> "%s"', name, c.type)
+            traverse(c)
+        end
+    end
+    traverse(h)
+    n=0
+    for _,_ in pairs(map2) do n=n+1 end
+    print("Nodes:", n)
+    table.sort(hd)
+    table.insert(hd, 1, "strict digraph tree {")
+    table.insert(hd, 2, '   rankdir="LR";')
+    table.insert(hd, "}")
+    print("\n"..table.concat(hd, "\n"))
 end
 
 function QuickApp:testFun()
