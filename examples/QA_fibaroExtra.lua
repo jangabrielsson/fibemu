@@ -8,6 +8,7 @@
 --%%name=QA_fibaroExtra
 --%%debug=refresh_resource:true
 --%%debug=http:true,hc3_http:true
+--%%debug=noStock:false
 
 --%%file=../TQAE/lib/fibaroExtra.lua,fibaroExtra;
 
@@ -28,9 +29,13 @@ function QuickApp:onInit()
     end
     function MyChild:turnOn()
         self:debug("Child turned on")
+        self:updateProperty("state", true)
+        self:updateProperty("value", true)
     end
     function MyChild:turnOff()
         self:debug("Child turned off")
+        self:updateProperty("state", false)
+        self:updateProperty("value", false)
     end
 
     local child = MyChild{

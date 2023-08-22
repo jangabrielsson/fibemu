@@ -256,22 +256,6 @@ local function installQA(fname, conf)
     dev.parentId = 0
     local tag = "QUICKAPP" .. dev.id
 
-    -- local uiStruct, uiMap = nil, nil
-    -- if vars.ui then
-    --     ui.transformUI(vars.ui)
-    --     dev.properties.viewLayout = ui.mkViewLayout(vars.ui, nil, dev.id)
-    --     dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(vars.ui)
-    --     uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
-    --     uiStruct, uiMap = annotateUI(uiStruct)
-    -- else
-    --     local UI = customUI[dev.type] or {}
-    --     ui.transformUI(UI)
-    --     dev.properties.viewLayout = ui.mkViewLayout(UI, nil, dev.id)
-    --     dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(UI)
-    --     uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
-    --     uiStruct, uiMap = annotateUI(uiStruct)
-    -- end
-
     local uiStruct, uiMap = nil, nil
 
     if not vars.noStock then vars.ui = addStockUI(dev, vars.ui) end
@@ -372,19 +356,33 @@ local function createChildDevice(pID, cdev)
     dev.interfaces = merge(dev.interfaces, cdev.initialInterfaces or {})
     dev.parentId = pID
     local tag = "QUICKAPP" .. dev.id
-    local uiStruct, uiMap = {}, {}
-    if dev.properties.viewLayout then
-        uiStruct, uiMap = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks), nil
-    end
 
-    if next(uiStruct) == nil then
-        local UI = customUI[dev.type] or {}
+    -- local uiStruct, uiMap = {}, {}
+    -- if dev.properties.viewLayout then
+    --     uiStruct, uiMap = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks), nil
+    -- end
+
+    -- if next(uiStruct) == nil then
+    --     local UI = customUI[dev.type] or {}
+    --     ui.transformUI(UI)
+    --     dev.properties.viewLayout = ui.mkViewLayout(UI, nil, dev.id)
+    --     dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(UI)
+    --     uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
+    -- end
+    -- uiStruct, uiMap = annotateUI(uiStruct)
+
+    local UI =  ui.view2UI(dev.properties.viewLayout or {}, dev.properties.uiCallbacks or {})
+    local uiStruct, uiMap = nil, nil
+
+    if not QA.debugFlags.noStock then UI = addStockUI(dev, UI) end
+
+    if next(UI) then
         ui.transformUI(UI)
         dev.properties.viewLayout = ui.mkViewLayout(UI, nil, dev.id)
         dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(UI)
         uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
+        uiStruct, uiMap = annotateUI(uiStruct)
     end
-    uiStruct, uiMap = annotateUI(uiStruct)
 
     DIR[dev.id] = {
         fname = "",
