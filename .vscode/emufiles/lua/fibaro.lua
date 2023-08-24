@@ -279,7 +279,7 @@ function fibaro.setTimeout(timeout, action)
 end
 
 function fibaro.clearTimeout(timeoutId)
-    __assert_type(timeoutId, "table")
+    __assert_type(timeoutId, "number")
     clearTimeout(timeoutId)
 end
 
