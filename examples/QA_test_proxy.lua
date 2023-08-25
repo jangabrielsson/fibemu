@@ -26,49 +26,6 @@ function QuickApp:onInit()
     setInterval(function()
         self:updateView("lblA", "text", os.date())
     end, 1000)
-
-    local h = api.get('/devices/hierarchy',"hc3")
-    local function printHierarchy(h)
-        local res = {}
-        local function pr(h, level, arrow)
-            local hasChildren = h.children and #h.children > 0
-            arrow = hasChildren and arrow:sub(1,-3).."+>" or arrow
-            if level > 0 then
-                res[#res+1]=string.format("%s%s",string.rep(' ', level), "|")
-            end
-            res[#res+1]=string.format("%s%s%s",string.rep(' ', level), arrow, h.type)
-            if hasChildren then
-                for _, c in ipairs(h.children) do
-                    pr(c, level + 1, "+->")
-                end
-            end
-        end
-        pr(h,0,"-+->")
-        --table.sort(res)
-        print("Hierarchy:".."\n"..table.concat(res, "\n"))
-    end
-
-    --printHierarchy(h)
-    local hd,map2 = {},{}
-    local function traverse(h)
-        if not h.children or #h.children==0 then return end
-        local name = h.type
-        map2[name] = true
-        for _,c in ipairs(h.children) do
-            map2[c.type] = true
-            hd[#hd+1] = string.format('   "%s" -> "%s"', name, c.type)
-            traverse(c)
-        end
-    end
-    traverse(h)
-    n=0
-    for _,_ in pairs(map2) do n=n+1 end
-    print("Nodes:", n)
-    table.sort(hd)
-    table.insert(hd, 1, "strict digraph tree {")
-    table.insert(hd, 2, '   rankdir="LR";')
-    table.insert(hd, "}")
-    print("\n"..table.concat(hd, "\n"))
 end
 
 function QuickApp:testFun()

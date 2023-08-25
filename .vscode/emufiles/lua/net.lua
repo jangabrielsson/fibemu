@@ -243,6 +243,7 @@ function net.WebSocketClient()
             local f = self._callback[event]
             if f then f(...) end
         end
+        if headers then headers = json.encode(headers) end
         self._sock = fibaro.fibemu.pyhooks.createWebSocket(url, headers, createCB(cb))
     end
 
@@ -421,6 +422,7 @@ function mqtt.Client.connect(uri, options)
 
     return client
 end
+-----------------------------------------------------------------------------
 
 local function callHC3S(x,y,z,w) -- sleep to let threads catch up (ex. importFQA)
     local a,b,c = callHC3(x,y,z,w)

@@ -481,6 +481,7 @@ function util.epcall(fib,TAG,pre,stackPrint,cctx,f, ...)
       calledFrom = format(" called from %s:%s",cctx.source,cctx.currentline)
     end
     return xpcall(function() f(unpack(args)) end, function(err)
+        err = tostring(err)
         local i = 2
         local ctx = os.debug.getinfo(i)
         while ctx and (ctx.what and ctx.what == 'C' or ctx.name and stackSkips[ctx.name or ""]) do
@@ -496,6 +497,7 @@ function util.epcall(fib,TAG,pre,stackPrint,cctx,f, ...)
         end
         res[#res + 1] = ctx
         local line, errmsg = err:match(".-:(%d+):%s*(.*)")
+        errmsg = errmsg or err
         local c = table.remove(res, 1)
         local name = c.name and (c.name .. ":") or ""
         errmsg = format("%s, %s:%s%s%s", errmsg, c.source, name, c.currentline, calledFrom)

@@ -1,5 +1,8 @@
 --%%name=Ping
 
+local a = setTimeout(function() end,0)
+local b = clearTimeout(a)
+
 local dev = fibaro.fibemu.install("examples/QA_pong.lua")
 
 function QuickApp:onInit()

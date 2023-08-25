@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware  # NEW
 import logging
 from fastapi.responses import JSONResponse
 from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import Response
@@ -140,13 +141,17 @@ async def read_item5(request: Request):
 async def read_item6(file,request: Request):
     return templates.TemplateResponse(file, {"request": request, "emu": fibenv.get('fe')})
 
-@app.get("/frontend/home", response_class=HTMLResponse,include_in_schema=False)
-async def read_item8(request: Request):
-    return RedirectResponse(url="/frontend/index.html")
+@app.get("/frontend", response_class=FileResponse)
+async def catch_all2(request: Request):
+    return ".vscode/emufiles/frontend/dist/index.html"
 
-@app.get("/frontend", response_class=HTMLResponse,include_in_schema=False)
-async def read_item8(request: Request):
-    return RedirectResponse(url="/frontend/index.html")
+@app.get("/frontend/{path:path}", response_class=FileResponse)
+async def catch_all(path: str, request: Request):
+    return ".vscode/emufiles/frontend/dist/index.html"
+
+@app.exception_handler(404)
+async def custom_404_handler(_, __):
+    return FileResponse(".vscode/emufiles/frontend/dist/index.html")
 
 @app.get("/info/qa/{id}", response_class=HTMLResponse,include_in_schema=False)
 async def read_item(id: int, request: Request):

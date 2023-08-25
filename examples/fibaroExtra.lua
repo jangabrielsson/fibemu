@@ -1,4 +1,3 @@
----@diagnostic disable: cast-local-type, undefined-field
 --[[
 TQAE - fibaroExtra for the Fibaro Home Center 3
 Copyright (c) 2021 Jan Gabrielsson
@@ -16,6 +15,7 @@ Email: jan@gabrielsson.com
 -- luacheck: globals ignore plugin api net netSync setTimeout clearTimeout setInterval clearInterval json
 -- luacheck: globals ignore __assert_type __fibaro_get_device __TAG __fibaro_get_device_property
 -- luacheck: globals ignore utils hc3_emulator urlencode sceneId table string _MODULES
+---@diagnostic disable: cast-local-type, undefined-field, need-check-nil
 fibaro,QuickApp = fibaro or {},QuickApp or {}
 
 -------------------- Base ----------------------------------------------

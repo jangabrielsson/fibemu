@@ -10,7 +10,7 @@
 --%%debug=http:true,hc3_http:true
 --%%debug=noStock:false
 
---%%file=../TQAE/lib/fibaroExtra.lua,fibaroExtra;
+--%%file=examples/fibaroExtra.lua,fibaroExtra;
 
 --%%u={{button='turnOn', text='On', onReleased='turnOn'},{button='turnOff', text='Off', onReleased='turnOff'}}
 --%%u={{button='t1', text='A', onReleased='t1'},{button='t2', text='B', onReleased='t1'},{button='t3', text='C', onReleased='t1'},{button='t4', text='D', onReleased='t1'},{button='t5', text='E', onReleased='t1'}}
@@ -21,6 +21,12 @@
 
 function QuickApp:onInit()
     self:debug("Started",self.id)
+    local child
+
+    -- self:event({type='device'},function()
+    --     setTimeout(function() fibaro.call(child.id,"turnOn") end, 1000)
+    --     setTimeout(function() fibaro.call(child.id,"turnOff") end, 4000)
+    -- end)
 
     class 'MyChild'(QuickerAppChild)
     function MyChild:__init(args)
@@ -38,13 +44,15 @@ function QuickApp:onInit()
         self:updateProperty("value", false)
     end
 
-    local child = MyChild{
+    child = MyChild{
         uid = 'x',
         name = 'MyChild',
         type = 'com.fibaro.binarySwitch',
     }
 
-    setTimeout(function() fibaro.call(child.id,"turnOn") end, 1000)
-
-    self:event({type='device'},function() end)
+    setTimeout(function() print("Hello") end, 1000)
+    setTimeout(function() 
+        print("World")
+        self:removeChildDevice(child.id)
+    end, 4000)
 end
