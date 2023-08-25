@@ -574,6 +574,8 @@ end
 
 function r.createDevice(d) return r.createResource("devices", d) end
 
+function r.removeDevice(d) return r.deleteResource("devices", d) end
+
 function r.updateDeviceProp(d, remote)
     local arg = type(d) == 'string' and json.decode(d) or d
     initr("devices")

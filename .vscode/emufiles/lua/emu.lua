@@ -442,8 +442,8 @@ end
 function QA.delete(id)
     if DIR[id] then
         killQA(id)
-        DIR[id] = nil
         resources.removeDevice(id)
+        DIR[id] = nil
         for cid, cqa in pairs(DIR) do
             if cqa.dev.parentId == id then
                 QA.delete(cid)
