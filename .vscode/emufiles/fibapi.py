@@ -140,6 +140,10 @@ async def read_item5(request: Request):
 async def read_item6(file,request: Request):
     return templates.TemplateResponse(file, {"request": request, "emu": fibenv.get('fe')})
 
+@app.get("/frontend/home", response_class=HTMLResponse,include_in_schema=False)
+async def read_item8(request: Request):
+    return RedirectResponse(url="/frontend/index.html")
+
 @app.get("/frontend", response_class=HTMLResponse,include_in_schema=False)
 async def read_item8(request: Request):
     return RedirectResponse(url="/frontend/index.html")
