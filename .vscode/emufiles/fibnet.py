@@ -6,9 +6,9 @@ from requests import exceptions
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 import asyncio
-import socket
+import socket, ssl
 import errno
-import os
+import os, json
 import sys
 import websocket
 import paho.mqtt.client as mqtt
@@ -265,6 +265,11 @@ class LuaWebSocket:
         self.closed = True
         self.fibemu = fibemu
         self.cb = cb
+        headers = json.loads(headers) if headers else {}
+        sslCon=ssl.SSLContext(ssl.PROTOCOL_TLS)
+        sslCon.options |= (
+            ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1 | ssl.OP_NO_TLSv1_2
+        )
         self.ws = websocket.WebSocketApp(url=url,  # "wss://api.gemini.com/v1/marketdata/BTCUSD",
                                          header=headers,
                                          on_open=lambda ws: self.on_open(ws),
@@ -274,7 +279,8 @@ class LuaWebSocket:
                                              ws, err),
                                          on_close=lambda ws, stat, msg: self.on_close(ws, stat, msg))
         self.closed = False
-        Thread(target=self.ws.run_forever).start()
+        print(f"SSL VERSION: {ssl.OPENSSL_VERSION}", file=sys.stderr)
+        Thread(target=self.ws.run_forever, kwargs={'sslopt':{"cert_reqs": ssl.CERT_NONE}}).start()
 
     def on_message(self, ws, message):
         callCB(self.fibemu, self.cb, "dataReceived", message)
@@ -285,7 +291,7 @@ class LuaWebSocket:
     def on_close(self, ws, close_status_code, close_msg):
         self.closed = True
         self.close()
-        callCB(self.fibemu, self.cb, "disconnected")
+        callCB(self.fibemu, self.cb, "disconnected", str(close_status_code))
 
     def on_open(self, ws):
         callCB(self.fibemu, self.cb, "connected")
@@ -315,6 +321,9 @@ class LuaMQTT:
         self.client.connect(url, port, keepalive)
         Thread(target=self.client.loop_forever).start()
 
+    def disconnect(self):
+        self.client.disconnect()
+
 # The callback for when the client receives a CONNACK response from the server.
     def on_connect(self, client, userdata, flags, rc):
         callCB(self.fibemu, self.cb, "on_connect", userdata, flags, rc)
@@ -322,6 +331,16 @@ class LuaMQTT:
     def on_message(self, client, userdata, msg):
         callCB(self.fibemu, self.cb, "on_message", userdata, msg)
 
+    def on(self, cbs):
+        self.callbacks = cbs
+
     # client.subscribe("$SYS/#")
-    def subscribe(self, topic):
+    def subscribe(self, topic, options):
+        return self.client.subscribe(topic)
+
+    # client.unsubscribe("$SYS/#")
+    def unsubscribe(self, topic):
+        return self.client.subscribe(topic)
+
+    def publish(self, topic):
         return self.client.subscribe(topic)
