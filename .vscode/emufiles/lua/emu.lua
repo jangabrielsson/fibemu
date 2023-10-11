@@ -389,7 +389,9 @@ local function createQArunner(runner, id)
         end
     end
     local stat, res = cresume(c, t, id) -- Start QA
-    if not stat then print(res) end
+    if not stat then 
+        print(res) 
+    end
 end
 
 local function killQA(id)

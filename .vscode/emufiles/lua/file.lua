@@ -404,6 +404,7 @@ end
 local function loadFiles(id)
     local qa = DIR[id]
     local env = qa.env
+    local loadedFiles = {}
     for _, qf in pairs(qa.files) do
         if qf.content == nil then
             local file = io.open(qf.fname, "r")
@@ -411,12 +412,17 @@ local function loadFiles(id)
             qf.content = file:read("*all")
             file:close()
         end
+        if loadedFiles[qf.name] then
+            QA.syslogerr(qa.tag, "Duplicate user file name '%s'", qf.name)
+            return false
+        end
+        loadedFiles[qf.name] = true
         if qa.debug.userfiles then
             QA.syslog(qa.tag, "Loading user file %s", qf.fname or qf.name)
         end
         local qa2, res = load(qf.content, qf.fname, "t", env) -- Load QA
         if not qa2 then
-            QA.syslogerr(qa.tag, "%s - %s", qf.fname or qf.nam, res)
+            QA.syslogerr(qa.tag, "%s - %s", qf.fname or qf.name, res)
             return false
         end
         qf.qa = qa2

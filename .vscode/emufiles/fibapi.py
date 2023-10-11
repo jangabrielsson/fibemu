@@ -141,17 +141,21 @@ async def read_item5(request: Request):
 async def read_item6(file,request: Request):
     return templates.TemplateResponse(file, {"request": request, "emu": fibenv.get('fe')})
 
-@app.get("/frontend", response_class=FileResponse)
-async def catch_all2(request: Request):
-    return ".vscode/emufiles/frontend/dist/index.html"
+# @app.get("/frontend", response_class=FileResponse)
+# async def catch_all2(request: Request):
+#     return ".vscode/emufiles/frontend/dist/index.html"
 
-@app.get("/frontend/{path:path}", response_class=FileResponse)
-async def catch_all(path: str, request: Request):
-    return ".vscode/emufiles/frontend/dist/index.html"
+# @app.get("/frontend/{path:path}", response_class=FileResponse)
+# async def catch_all(path: str, request: Request):
+#     return ".vscode/emufiles/frontend/dist/index.html"
 
 @app.exception_handler(404)
-async def custom_404_handler(_, __):
+async def custom_404_handler(request: Request, exc: Exception):
+    path = request.url.path
+    #if path.startswith("/frontend"):
     return FileResponse(".vscode/emufiles/frontend/dist/index.html")
+    #else:
+    #    raise exc
 
 @app.get("/info/qa/{id}", response_class=HTMLResponse,include_in_schema=False)
 async def read_item(id: int, request: Request):
@@ -461,6 +465,7 @@ class RefreshStatesQuery(BaseModel):
 @app.get("/api/refreshStates", tags=["RefreshStates methods"])
 async def get_refreshStates_events(response: Response, query: RefreshStatesQuery = Depends()):
     res = fibenv.get('fe').getEvents(query.last)
+    #print(f"API: {res}",file=sys.stderr)
     code = 200
     response.status_code = code
     return res if code < 300 else None

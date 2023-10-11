@@ -327,6 +327,7 @@ local function postEvent(typ, data)
         data = data,
         created = os.time(),
     }
+    --print("ADDED",json.encode(e))
     QA.addEvent(json.encode(e))
     refreshStates.logEvent(e)
 end

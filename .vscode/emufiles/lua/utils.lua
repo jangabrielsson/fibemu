@@ -490,7 +490,7 @@ function util.epcall(fib,TAG,pre,stackPrint,cctx,f, ...)
             ctx = os.debug.getinfo(i)
         end
         local res = {}
-        while ctx.func ~= f do
+        while ctx and ctx.func ~= f do
             table.insert(res, ctx)
             i = i + 1
             ctx = os.debug.getinfo(i)

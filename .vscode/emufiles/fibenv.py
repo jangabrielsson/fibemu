@@ -96,6 +96,7 @@ class FibaroEnvironment:
         self.rthread.start()
 
     def addEvent(self,event):
+        ##print(f"PyaddEvent: {event}",file=sys.stderr)
         event = json.loads(event)
         self.eventCount += 1
         event = {'last': self.eventCount, 'event':event}

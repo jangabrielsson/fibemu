@@ -13,6 +13,7 @@ import ConfigPanel from './components/ConfigPanel.vue';
 import EventPanel from './components/EventPanel.vue';
 import GlobalVarPanel from './components/GlobalVarPanel.vue';
 import TypesPanel from './components/TypesPanel.vue';
+import NotFoundPanel from './components/NotFoundPanel.vue';
 
 const isDev = import.meta.env.DEV;
 const backend = isDev ? 'http://localhost:5004' : '';
@@ -29,6 +30,7 @@ const router = createRouter({
         { path: '/frontend/config', component: ConfigPanel },
         { path: '/frontend/about', component: AboutPanel },
         { path: '/frontend/types', component: TypesPanel },
+        { path: '/:catchAll(.*)', component: NotFoundPanel },
     ],
 });
 
