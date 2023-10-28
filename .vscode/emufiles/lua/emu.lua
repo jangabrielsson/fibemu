@@ -64,7 +64,7 @@ os.orgtime = os.time
 os.orgdate = os.date
 local orgtime, orgdate = os.time, os.date
 local timeOffset = 0
-function os.time(a) return a == nil and orgtime() + timeOffset or orgtime(a) end
+function os.time(a) return a == nil and math.floor(orgtime() + timeOffset + 0.5) or orgtime(a) end
 
 function os.date(a, b) return b == nil and orgdate(a, os.time()) or orgdate(a, b) end
 
@@ -657,6 +657,26 @@ function QA.dispatcher()
     end
     return 0.5
 end
+
+function QA.speedDispatcher() -- work in progress, need to fix addTimer and systemTimer
+    local t, c, task = timers.peek()
+    local cl = clock() + timeOffset
+    --if t then print("loop",task.type,t-cl,task.log or "") else print("loop") end
+    if t then
+        local diff = t - cl
+        if diff <= 0 then
+            timers.pop()
+            c(task)
+            return 0
+        else
+            timeOffset = timeOffset + diff - 0.01
+            return 0.01
+        end
+    end
+    return 0.25
+end
+
+--QA.dispatcher = QA.speedDispatcher
 
 if not config.nogreet then
     QA.syslog("boot", "QA emulator started")

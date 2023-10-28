@@ -859,6 +859,13 @@ async def get_Diagnostics(response: Response):
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
+# ''' mobile push methods '''
+# @app.get("/api/mobile/push", tags=["Mobile push methods"])
+# async def get_Mobile_Push(response: Response):
+#     items,code = fibenv.get('fe').luaCall("getResource","mobile/push")
+#     response.status_code = code
+#     return list(items.values()) if code < 300 else None
+
 ''' proxy methods '''
 class ProxyParams(BaseModel):
     url: str

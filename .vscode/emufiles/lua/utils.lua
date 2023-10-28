@@ -352,7 +352,8 @@ function util.debug(flags, tag, str, typ)
       str,
       colorEnd
     )
-    print(outstr) --io.write(outstr,"\r\n")
+    --QA.pyhooks.printStdout(outstr)
+    print(outstr)
   else
     print(format("%s [%s] [%s]: %s", os.date("[%d.%m.%Y] [%H:%M:%S]"), typ, tag, str))
   end

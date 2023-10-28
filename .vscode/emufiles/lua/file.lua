@@ -120,6 +120,15 @@ local function installQA(fname, conf)
         return
     end
 
+    local parseCode = code:gsub("(%-%-%%%%include=.-)[\n\r]", function(str)
+        local fname2 = str:match("include=(.+)")
+        local f2 = io.open(fname2, "r")
+        if not f2 then QA.syslogerr("install", "Include file not found - %s", fname2) return end
+        local icode = f2:read("*all")
+        f2:close()
+        return icode
+    end)
+
     local function eval(str)
         local stat, res = pcall(function() return load("return " .. str, nil, "t", { config = config })() end)
         if stat then return res, true else return nil, false end
@@ -205,7 +214,7 @@ local function installQA(fname, conf)
     end
 
     function chandler.remote(var, val, vars)
-        local typ, list = val:match("([%w_]-):(.+)")
+        local typ, list = val:match("([%w_/]-):(.+)")
         local items = {}
         list:gsub("([^,]+)", function(item) items[#items + 1] = tonumber(item) or item end)
         vars.remote[typ] = vars.remote[typ] or {}
@@ -213,14 +222,14 @@ local function installQA(fname, conf)
     end
 
     local vars = { files = {}, writes = {}, remote = {}, debug = {}, qvars = {}, interfaces = {} }
-    code:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
+    parseCode:gsub("%-%-%%%%([%w_]+)=(.-)[\n\r]", function(var, val)
         if chandler[var] then
             chandler[var](var, val, vars)
         else
             QA.syslogerr("install", "%s - Unknown header variable '%s'", fname, var)
         end
     end)
-    code:gsub("%-%-FILE:(.-)[\n\r]", function(val) --backward compatible
+    parseCode:gsub("%-%-FILE:(.-)[\n\r]", function(val) --backward compatible
         chandler.file('file', val, vars)
     end)
     table.insert(vars.files, { name = 'main', isMain = true, content = code, fname = fname })

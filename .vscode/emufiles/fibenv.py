@@ -66,6 +66,7 @@ class FibaroEnvironment:
     def refreshStates(self,start,url,options):
         if self.config.get('local'):
             return
+        # print(f"refreshStates: {start} {url} {options}",file=sys.stderr)
         options = convertLuaTable(options)
         def refreshRunner():
             last,retries = 0,0
@@ -76,9 +77,13 @@ class FibaroEnvironment:
                     if resp.status_code == 200:
                         data = resp.json()
                         last = data['last'] if data['last'] else last
+                        ## print(f"Data: {data}",file=sys.stderr)
                         if data.get('events'):
                             for event in data['events']:
                                 self.postEvent({"type":"refreshStates","event":event})
+                        elif data.get('alarmChanges'):
+                            for change in data['alarmChanges']:
+                                print(f"alarmChange: {change}",file=sys.stderr)
                     elif resp.status_code == 401:
                         print(f"HC3 credentials error",file=sys.stderr)
                         print(f"Exiting refreshStates loop",file=sys.stderr)
@@ -121,6 +126,9 @@ class FibaroEnvironment:
             )
         return res
 
+    def printStdout(self, str):
+        print(str, file=sys.stdout)
+
     def run(self):
 
         def runner():
@@ -129,6 +137,7 @@ class FibaroEnvironment:
             self.globals = globals
             self.events = deque()
             hooks = {
+                'printStdout':lambda str: self.printStdout(str),
                 'clock':time.time,
                 'http':fibnet.httpCall,
                 'httpAsync':lambda method, url, options, data, local: fibnet.httpCallAsync(self, method, url, options, data, local),

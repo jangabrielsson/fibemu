@@ -8,7 +8,11 @@ local propFilter = {
 
 local EventTypes = { -- There are more, but these are what I seen so far...
     AlarmPartitionArmedEvent = {
-        f=function(d,e) return true end,
+        f=function(d,e) return resources.modifyResource(
+            "alarms/v1/partitions",
+            d.partitionId,
+            nil,
+            true) end,
         l=function(d,e) return fmt("%s",e.type) end
     },
     AlarmPartitionBreachedEvent = {

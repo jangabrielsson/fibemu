@@ -159,7 +159,7 @@ function tool.upload(file, rsrc, name, path)
         printerrf("Error parsing %s: %s", name, err)
         return true
     end
-
+    fqa = err
     local stat, res, info = api.post("/quickApp/", fqa, "hc3")
     if not stat then
         printerrf("Error uploading QA: %s %s", res, tostring(info))

@@ -244,7 +244,7 @@ local function pruneViewLayout(vl)
   local x = vl['$jason'].body.sections.items
   local items,flag = {},false
   for i = 1,#x do
-      print(json.encode(x[i]))
+      --print(json.encode(x[i]))
       if not stockRow(x[i]) then items[#items+1] = x[i] else flag=true end
   end
   if flag then

@@ -85,22 +85,12 @@ _MODULES.base={ author = "jan@gabrielsson.com", version = '0.4', depends={},
 
     local old_tostring = tostring
     fibaro._orgToString = old_tostring
-    if hc3_emulator then 
-      function tostring(obj)
-        if type(obj)=='table' and not hc3_emulator.getmetatable(obj) then
-          if obj.__tostring then return obj.__tostring(obj) 
-          elseif debugFlags.json then return json.encodeFast and json.encodeFast(obj) or json.encode(obj)  end
-        end
-        return old_tostring(obj)
+    function tostring(obj)
+      if type(obj)=='table' and not getmetatable(obj) then
+        if obj.__tostring then return type(obj.__tostring)=='string' and obj.__tostring or obj.__tostring(obj) 
+        elseif debugFlags.json then return json.encodeFast and json.encodeFast(obj) or json.encode(obj)  end
       end
-    else
-      function tostring(obj)
-        if type(obj)=='table' then
-          if obj.__tostring then return obj.__tostring(obj) 
-          elseif debugFlags.json then return json.encodeFast and json.encodeFast(obj) or json.encode(obj)  end
-        end
-        return old_tostring(obj)
-      end
+      return old_tostring(obj)
     end
 
     local _init,_onInit = QuickApp.__init,nil
@@ -308,7 +298,7 @@ _MODULES.utilities={ author = "jan@gabrielsson.com", version = '0.4', depends={'
     end
 
     do
-      local sortKeys = {"type","device","deviceID","value","oldValue","val","key","arg","event","events","msg","res"}
+      local sortKeys = {"type","device","deviceID","id","value","oldValue","val","key","arg","event","events","msg","res"}
       local sortOrder={}
       for i,s in ipairs(sortKeys) do sortOrder[s]="\n"..string.char(i+64).." "..s end
       local function keyCompare(a,b)
@@ -1451,6 +1441,7 @@ _MODULES.triggers={ author = "jan@gabrielsson.com", version = '0.4', depends={'b
               lastRefresh=states.last
               if states.events and #states.events>0 then 
                 for _,e in ipairs(states.events) do
+                  --print("XX",e)
                   fibaro._postRefreshState(e)
                 end
               end
@@ -2196,9 +2187,9 @@ _MODULES.event={ author = "jan@gabrielsson.com", version = '0.4', depends={'base
       if t < 0 then return elseif t < now then t = t+now end
       if debugFlags.post and (type(ev)=='function' or not ev._sh) then fibaro.trace(__TAG,format("Posting %s at %s%s",tostring(ev),os.date("%c",t),type(log)=='string' and ("("..log..")") or "")) end
       if type(ev) == 'function' then
-        return setTimeout(function() ev(ev) end,1000*(t-now),log)
+        return setTimeout(function() ev(ev) end,1000*(t-now),log),t
       elseif isEvent(ev) then
-        return setTimeout(function() handleEvent(ev) end,1000*(t-now),log)
+        return setTimeout(function() handleEvent(ev) end,1000*(t-now),log),t
       else
         error("post(...) not event or function;"..tostring(ev))
       end

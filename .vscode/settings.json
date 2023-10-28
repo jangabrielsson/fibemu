@@ -42,6 +42,7 @@
         "duplicate-set-field",
         "param-type-mismatch"
     ],
+    "Lua.editor.defaultFormatter": "JohnnyMorganz.stylua",
     "Lua.workspace.library": [
         ".vscode/emufiles/lspaddon/library"
     ],
