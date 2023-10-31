@@ -323,13 +323,17 @@ local function html2color(str, startColor, dflTxt)
     if s == "</font>" then
       p = p - 1; return st[p]
     else
-      local color = s:match("color=([#%w]+)")
+      local color = s:match("color=\"?([#%w]+)\"?")
       color = COLORMAP[color] or (fibaro.colorMap[color] and COLORMAP[fibaro.colorMap[color] or dflTxt]) or
           COLORMAP['black']
       p = p + 1; st[p] = color
       return color
     end
   end)
+end
+
+function table.copyShallow(tab)
+  local res = {}; for k, v in pairs(tab) do res[k] = v end return res
 end
 
 function util.debug(flags, tag, str, typ)
@@ -339,9 +343,10 @@ function util.debug(flags, tag, str, typ)
     end
   end
   typ = typ:upper()
-  str = flags.html and html2color(str, nil, fibColors['TEXT']) or
+  str = (flags.html or true) and html2color(str, nil, fibColors['TEXT']) or
       str:gsub("(</?font.->)", "") -- Remove color tags
   str = str:gsub("(&nbsp;)", " ")  -- remove html space
+  str = str:gsub("</br>", "\n")  -- remove html space
   if flags.color then
     local txt_color = COLORMAP[(fibColors['TEXT'] or "black")]
     local typ_color = COLORMAP[(fibColors[typ] or "black")]

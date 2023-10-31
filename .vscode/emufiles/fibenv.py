@@ -9,13 +9,16 @@ import logging
 import requests
 from requests import exceptions
 import queue
+from itertools import islice
 from collections import deque
 import json
+import math
 import time, sys, os
 from datetime import datetime
 import fibapi, fibnet
 
 MAX_EVENTS = 400
+MAX_DEBUGMSGS = 50
 
 def convertLuaTable(obj):
     if lupa.lua_type(obj) == 'table':
@@ -48,6 +51,8 @@ class FibaroEnvironment:
         self.lua = LuaRuntime(unpack_returned_tuples=True)
         self.queue = queue.Queue()
         self.eventCount = 0
+        self.debugMsgId = math.floor(time.time())
+        self.debugMsgs = deque()
 
     def postEvent(self,event,extra=None): # called from another thread
         self.queue.put((event,extra))  # safely qeued for lua thread
@@ -62,6 +67,32 @@ class FibaroEnvironment:
         except Exception as e:
             print(f"Python->Lua Call Error: {e}",file=sys.stderr)
         return res,code or 501
+
+    def getDebugMessages(self,dict):
+        filter = dict.get('filter','')
+        tags = filter.split(',') if filter else []
+        fromf = int(dict.get('from','0'))
+        to = int(dict.get('to','0'))
+        last = int(dict.get('last','0'))
+        offset = int(dict.get('offset','-1'))
+        messages = self.debugMsgs
+        offset = 100 if offset < 1 else offset
+        filtered = (m for m in messages if m['timestamp'] >= fromf)
+        msgs  = list(islice(filtered, offset))
+        res = {
+            'messages':msgs,
+            'nextLast':0,
+        }
+        return res
+
+    def addDebugMessage(self,type,tag,msg,timestamp):
+        ##print(f"addDebugMessage: {type} {tag} {msg} {timestamp}",file=sys.stderr)
+        self.debugMsgId += 1
+        entry = {'id':self.debugMsgId,'type': type, 'tag':tag, 'message':msg, 'timestamp':timestamp}
+        self.debugMsgs.appendleft(entry)
+        if len(self.debugMsgs) > MAX_DEBUGMSGS:
+            self.debugMsgs.pop()
+        pass
 
     def refreshStates(self,start,url,options):
         if self.config.get('local'):
@@ -147,6 +178,7 @@ class FibaroEnvironment:
                 'createWebSocket':lambda url,headers,cb: fibnet.LuaWebSocket(self,url,headers,cb),
                 'listDir':lambda d: json.dumps(os.listdir(d)),
                 'deletFile':os.remove,
+                'addDebugMessage':lambda typ,tag,msg,ts: self.addDebugMessage(typ,tag,msg,ts),
                 'setLogLevel':setLogLevel,
                 'exit':lambda code: sys.exit(code)
             }

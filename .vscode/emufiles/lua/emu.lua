@@ -236,6 +236,7 @@ local function createEnvironment(id)
 
     function env.__fibaro_add_debug_message(tag, str, typ)
         assert(str, "Missing tag for debug")
+        QA.pyhooks.addDebugMessage(typ, tag, str, os.time())
         util.debug(debugFlags, tag, str, typ)
     end
 
@@ -462,6 +463,7 @@ end
 function QA.fun.debugMessages(arg)
     arg = json.decode(arg)
     util.debug({ color = true }, arg.tag, arg.message, arg.messageType)
+    QA.pyhooks.addDebugMessage(arg.messageType, arg.tag, arg.message, os.time())
     return "OK", 200
 end
 

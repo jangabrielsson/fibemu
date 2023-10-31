@@ -13,6 +13,7 @@ from fastapi  import Depends
 from fastapi import status 
 from fastapi import Request
 from pydantic import BaseModel
+from pydantic import Field
 from pydantic import typing
 import time,json,sys
 from datetime import datetime
@@ -251,6 +252,17 @@ class ActionParams(BaseModel):
 async def call_quickapp_method(id: int, name: str, args: ActionParams):
     t = time.time()
     fibenv.get('fe').postEvent({"type":"onAction","deviceId":id,"actionName":name,"args":json.dumps(args.args)})
+    return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
+
+## /api/callAction?deviceID=${QA.value}&name=eval&arg1=${encodeURIComponent(command)}`
+@app.get("/api/callAction", tags=["Device methods"])
+async def callAction_quickapp_method(response: Response, request: Request):
+    qps = request.query_params._dict
+    id = qps['deviceID']; del qps['deviceID']
+    name = qps['name']; del qps['name']
+    args = [a for a in qps.values()]
+    t = time.time()
+    fibenv.get('fe').postEvent({"type":"onAction","deviceId":int(id),"actionName":name,"args":json.dumps(args)})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }
 
 class DeviceQueryParams(BaseModel):
@@ -602,6 +614,23 @@ async def add_debug_message(args: DebugMessageSpec, response: Response):
     var,code = fibenv.get('fe').luaCall("debugMessages",args.json())
     response.status_code = code
     return var if code < 300 else None
+
+''' DebugMsgQuery methods '''
+class DebugMsgQuery(BaseModel):
+    filter: list[str] = []
+    fromfield: int = Field(alias='from', default=0)
+    to: int = 0
+    last: int = 0
+    offset: int = 0
+
+@app.get("/api/debugMessages", tags=["DebugMessages methods"])
+async def get_debug_message(response: Response, request: Request):
+    fe = fibenv.get('fe')
+    res = fe.getDebugMessages(request.query_params._dict)
+    code = 200
+    response.status_code = code
+    return res if code < 300 else None
+
 
 ''' QuickApp methods '''
 @app.get("/api/quickApp/{id}/files", tags=["QuickApp methods"])
