@@ -90,7 +90,7 @@ class LuaTCPSocket:
         self.sock.setblocking(False)
 
     def settimeout(self, value):
-        self.socket.settimeout(value/1000)
+        self.sock.settimeout(value/1000)
         self.sock.setblocking(False)
 
     def connect(self, ip, port, cb):
