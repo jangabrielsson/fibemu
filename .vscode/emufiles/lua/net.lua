@@ -42,6 +42,9 @@ local function callHC3(method, path, data, hc3)
     local lcl = hc3 ~= "hc3"
     local fibemu = fibaro and fibaro.fibemu or QA
     local conf = fibemu.config
+    if path:match("/alarms/v1/partitions/[%d]*/?actions/[tryAa]+rm") then -- ToDo, generalize this
+       hc3 = true; lcl=false
+    end
     local host = hc3 and conf.host or conf.whost
     local port = hc3 and conf.port or conf.wport
     local creds = hc3 and conf.creds or nil

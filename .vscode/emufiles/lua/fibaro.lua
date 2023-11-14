@@ -76,25 +76,31 @@ function fibaro.__houseAlarm(action)
     end
 end
 
-function fibaro.alert(alertType, ids, notification, isCritical, subject)
-    __assert_type(alertType, "string")
-    __assert_type(ids, "table")
-    __assert_type(notification, "string")
-    local isDefined = "false"
-    local actions = {
+local function mapUsersToDevices(users)
+    local devices =  api.get("/devices?type=iOS_device") or {}
+    local map,devs = {},{}; for _,id in ipairs(users) do map[id] = true end
+    for _,iod in ipairs(devices) do 
+        if map[iod.properties.lastLoggedUser or ""] then devs[#devs+1] = iod.id end
+    end
+    return devs
+end
+
+function fibaro.alert(type, id, notification)
+    __assert_type(type, "string")__assert_type(id, "table")__assert_type(notification, "string")
+    local valid = {
         email = "sendGlobalEmailNotifications",
         push = "sendGlobalPushNotifications",
         simplePush = "sendPush",
         sms = "sendGlobalSMSNotifications"
     }
-    if actions[alertType] == nil then
-        error("Wrong parameter: '" .. alertType .. "'. Available parameters: email, push, simplePush", 2)
+    local action = valid[type]
+    if not action then
+        error("Wrong parameter: '" .. type .. "'. Available parameters: email, push, simplePush, sms", 2)
     end
-    for _, id in ipairs(ids) do
-        __assert_type(id, "number")
-    end
-    for _, id in ipairs(ids) do
-        fibaro.call(id, actions[alertType], notification, isDefined)
+    id = type == "push" and mapUsersToDevices(id) or id
+    for _, idn in ipairs(id) do
+        __assert_type(idn, "number")
+        fibaro.call(id, action, notification, "false")
     end
 end
 
@@ -139,6 +145,7 @@ function fibaro.get(deviceId, propertyName)
     if property then
         return property.value, property.modified
     end
+    return nil
 end
 
 function fibaro.getValue(deviceId, propertyName)
@@ -148,6 +155,7 @@ function fibaro.getValue(deviceId, propertyName)
     if property then
         return property.value
     end
+    return nil
 end
 
 function fibaro.getType(deviceId)
@@ -171,6 +179,7 @@ function fibaro.getSectionID(deviceId)
     if dev ~= nil then
         return __fibaro_get_room(dev.roomID).sectionID
     end
+    return nil
 end
 
 function fibaro.getRoomName(roomId)

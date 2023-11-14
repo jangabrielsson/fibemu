@@ -259,6 +259,74 @@ function QuickAppChild:__init(device)
   if self.onInit then self:onInit() end
 end
 
+class 'RefreshStateSubscriber'
+local refreshStatePoller
+
+function RefreshStateSubscriber:subscribe(filter, handler)
+  return self.subject:filter(function(event) return filter(event) end):subscribe(function(event) handler(event) end)
+end
+
+function RefreshStateSubscriber:__init()
+  self.subscribers = {}
+  self.http = net.HTTPClient({ timeout = 50000 })
+  function self.handle(event)
+    for sub,_ in pairs(self.subscribers) do
+      if sub.filter(event) then sub.handler(event) end
+    end
+  end
+end
+
+local MTsub = { __tostring = function(self) return "Subscription" end }
+
+local SUBTYPE = '%SUBSCRIPTION%'
+function RefreshStateSubscriber:subscribe(filter, handler)
+  local sub = setmetatable({ type=SUBTYPE, filter = filter, handler = handler },MTsub)
+  self.subscribers[sub]=true
+  return sub
+end
+
+function RefreshStateSubscriber:unsubscribe(subscription)
+  if type(subscription)=='table' and subscription.type==SUBTYPE then 
+    self.subscribers[subscription]=nil
+  end
+end
+
+function RefreshStateSubscriber:run()
+  if not self.running then self.running = true; refreshStatePoller(self) end
+end
+
+function RefreshStateSubscriber:stop()
+  self.running = false
+end
+
+function refreshStatePoller(robj)
+  if robj.running then
+      local url = 'http://127.0.0.1:11111/api/refreshStates'
+      url = robj.refreshStateLast and (url .. '?last=' .. robj.refreshStateLast) or url
+      robj.http:request(url, {
+          options = { method = 'GET',},
+          success = function(response)
+              if response.status  == 200 then
+                  local data = json.decode(response.data)
+                  robj.refreshStateLast = data.last
+                  if data.events ~= nil then
+                      for _, event in pairs(data.events) do
+                        robj.handle(event)
+                      end
+                  end
+                  refreshStatePoller(robj)
+              else
+                refreshStatePoller(robj)
+              end
+          end,
+          error = function(error)
+            refreshStatePoller(robj)
+          end,
+      })
+  end
+end
+
+
 function __onAction(id, actionName, args)
   print("__onAction", id, actionName, args)
   onAction(id, { deviceId = id, actionName = actionName, args = json.decode(args).args })

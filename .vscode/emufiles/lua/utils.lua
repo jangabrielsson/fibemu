@@ -311,6 +311,7 @@ local colorEnd = '\027[0m'
 local fibColors = {
   ["SYS"] = 'brown',
   ["SYSERR"] = 'red',
+  ["SYSWRN"] = 'red',
   ["DEBUG"] = 'green',
   ["TRACE"] = 'blue',
   ["WARNING"] = 'red',
@@ -338,7 +339,7 @@ function table.copyShallow(tab)
   local res = {}; for k, v in pairs(tab) do res[k] = v end return res
 end
 
-function util.debug(flags, tag, str, typ)
+function util.debug(flags, tag, str, typ, eos)
   if flags.logFilters and #flags.logFilters > 0 then
     for _,filter in ipairs(flags.logFilters or {}) do
         if str:match(filter) then return end
@@ -353,7 +354,7 @@ function util.debug(flags, tag, str, typ)
     local txt_color = COLORMAP[(fibColors['TEXT'] or "black")]
     local typ_color = COLORMAP[(fibColors[typ] or "black")]
     local outstr = format("%s%s [%s%-6s%s] [%-7s]: %s%s",
-      txt_color, os.date("[%d.%m.%Y] [%H:%M:%S]"),
+      txt_color, (eos or os).date("[%d.%m.%Y] [%H:%M:%S]"),
       typ_color, typ, txt_color,
       tag,
       str,
@@ -362,7 +363,7 @@ function util.debug(flags, tag, str, typ)
     --QA.pyhooks.printStdout(outstr)
     print(outstr)
   else
-    print(format("%s [%s] [%s]: %s", os.date("[%d.%m.%Y] [%H:%M:%S]"), typ, tag, str))
+    print(format("%s [%s] [%s]: %s", (eos or os).date("[%d.%m.%Y] [%H:%M:%S]"), typ, tag, str))
   end
 end
 

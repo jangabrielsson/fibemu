@@ -790,6 +790,42 @@ async def get_Partition(id: int, response: Response):
     response.status_code = code
     return item if code < 300 else None
 
+@app.post("/alarms/v1/partitions/actions/arm", tags=["Partition methods"]) ## Arm all partitions
+async def post_PartitionArm0(id: int, response: Response):
+    item,code = fibenv.get('fe').luaCall("getResource","alarms/v1/partitions",id)
+    response.status_code = code
+    return item if code < 300 else None
+
+@app.post("/alarms/v1/partitions/{id}/actions/arm", tags=["Partition methods"]) ## Arm id partition
+async def post_PartitionArm(id: int, response: Response):
+    item,code = fibenv.get('fe').luaCall("getResource","alarms/v1/partitions",id)
+    response.status_code = code
+    return item if code < 300 else None
+
+@app.delete("/alarms/v1/partitions/actions/arm", tags=["Partition methods"]) ## Unarm all partitions
+async def delete_PartitionArm0(id: int, response: Response):
+    item,code = fibenv.get('fe').luaCall("getResource","alarms/v1/partitions",id)
+    response.status_code = code
+    return item if code < 300 else None
+
+@app.delete("/alarms/v1/partitions/{id}/actions/arm", tags=["Partition methods"]) ## Unarm id partition
+async def delete_PartitionArm(id: int, response: Response):
+    item,code = fibenv.get('fe').luaCall("getResource","alarms/v1/partitions",id)
+    response.status_code = code
+    return item if code < 300 else None
+
+@app.post("/alarms/v1/partitions/actions/tryArm", tags=["Partition methods"]) ## Tryarm all partitions
+async def post_PartitionTryArm0(id: int, response: Response):
+    item,code = fibenv.get('fe').luaCall("getResource","alarms/v1/partitions",id)
+    response.status_code = code
+    return item if code < 300 else None
+
+@app.post("/alarms/v1/partitions/{id}/actions/arm", tags=["Partition methods"]) ## Tryarm id partition
+async def post_PartitionTryArm(id: int, response: Response):
+    item,code = fibenv.get('fe').luaCall("getResource","alarms/v1/partitions",id)
+    response.status_code = code
+    return item if code < 300 else None
+    
 ''' alarm devices methods '''
 @app.get("/api/alarms/v1/devices/", tags=["Alarm devices methods"])
 async def get_alarm_devices(response: Response):

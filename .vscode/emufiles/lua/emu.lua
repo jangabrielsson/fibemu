@@ -139,6 +139,9 @@ end
 function QA.syslogerr(typ, fmt, ...)
     util.debug({ color = true }, typ, format(fmt, ...), "SYSERR")
 end
+function QA.syslogwarn(typ, fmt, ...)
+    util.debug({ color = true }, typ, format(fmt, ...), "SYSWRN")
+end
 
 local function systemTimer(fun, ms, msg)
     local t = clock() + ms / 1000
@@ -193,6 +196,7 @@ local function createEnvironment(id)
     }
 
     for _, k in ipairs(funs) do env[k] = _G[k] end
+    env.os = { time = os.time, date = os.date, difftime = os.difftime, clock = os.clock, setTime = os.setTime }
     env._G = env
     env._ENV = env
     env.type = luaType
@@ -237,7 +241,7 @@ local function createEnvironment(id)
     function env.__fibaro_add_debug_message(tag, str, typ)
         assert(str, "Missing tag for debug")
         QA.pyhooks.addDebugMessage(typ, tag, str, os.time())
-        util.debug(debugFlags, tag, str, typ)
+        util.debug(debugFlags, tag, str, typ,env.os)
     end
 
     env.plugin = { mainDeviceId = dev.id }
@@ -320,7 +324,7 @@ local function runner(fc, id)
     local errfun = env.fibaro.error
     debugFlags = env.fibaro.fibemu.debugFlags
 
-    local function log(fmt, ...) util.debug(debugFlags, env.__TAG, format(fmt, ...), "SYS") end
+    local function log(fmt, ...) util.debug(debugFlags, env.__TAG, format(fmt, ...), "SYS",env.os) end
 
     local function checkErr(str, f, ...)
         local ok, err = pcall(f, ...)
@@ -540,9 +544,9 @@ function Events.onAction(event)
             api.post("/devices/" .. id .. "/action/" .. event.actionName, { args = args }, "hc3")
         else
             if QA.isLocal("devices", target_id) then
-                QA.syslogerr("onAction", "No action, QA declared local, ID:%s", target_id)
+                QA.syslogwarn("onAction", "No action, QA declared local, ID:%s", target_id)
             else
-                QA.syslogerr("onAction", "Unknown QA, ID:%s", id)
+                QA.syslogwarn("onAction", "Unknown QA, ID:%s", id)
             end
         end
         return
