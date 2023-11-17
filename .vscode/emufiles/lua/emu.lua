@@ -358,6 +358,7 @@ local function runner(fc, id)
     local ok, err
     while true do -- QA coroutine loop
         local task = coroutine.yield({ type = 'next', log = "X" })
+        --print(json.encodeFast(task))
         ::foo::
         if task.type == 'timer' then
             ok, err = pcall(task.fun)
@@ -388,9 +389,12 @@ local function createQArunner(runner, id)
     local function t(task)
         local res, task = cresume(c, task)
         --print("X",task.type,task.log,coroutine.status(c))
-        if task.type == 'timer' then
+        if res and task.type == 'timer' then
             timers.add(id, clock() + task.ms, t, task)
             cresume(c)
+        elseif res == false then
+            print(task)
+            QA.isDead = true
         end
     end
     local stat, res = cresume(c, t, id) -- Start QA
@@ -552,6 +556,7 @@ function Events.onAction(event)
         return
     end
     if DIR[target_id].addTask then
+        --print("Adding task",json.encode(event))
         DIR[target_id].addTask(0, {
             type = 'onAction', deviceId = arg_id, actionName = event.actionName, args = args
         })
@@ -649,6 +654,7 @@ end
 --]]
 function QA.dispatcher()
     local t, c, task = timers.peek()
+    --print(task and task.type)
     local cl = clock()
     --if t then print("loop",task.type,t-cl,task.log or "") else print("loop") end
     if t then

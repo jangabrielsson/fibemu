@@ -13,6 +13,7 @@ function util.timerQueue()
   local function addTimer(id, t, fun, args, nosleep)
     ref = ref + 1
     local tstruct = { id = id, t = t, fun = fun, args = args, ref = ref }
+    --print("addTimer", id, args.type, ref)
     if sleepers[id] and not nosleep then
       sleepers[id][#sleepers[id] + 1] = tstruct
       return ref
@@ -26,9 +27,13 @@ function util.timerQueue()
   local function popTimer()
     local t = queue[1]
     table.remove(queue, 1)
+    local r = {}
+    --for _,e in ipairs(queue) do r[#r+1] = e.ref end
+    --print("popTimer", t.id, t.args.type, t.ref, json.encode(r))
     return t.t, t.fun, t.args
   end
   local function removeTimer(ref)
+    --print("premoveTimer", ref)
     local i = 1
     while i <= #queue do
       if queue[i].ref == ref then
@@ -75,12 +80,19 @@ function util.timerQueue()
     if #timers == 0 then return end
     local i, qs = 1, #queue
     for _, t in ipairs(timers) do
+      i = 1
       while i <= qs and queue[i].t <= t.t do i = i + 1 end
       if i > qs then
         queue[#queue + 1] = t
+        qs = qs+1
       else
+        qs=qs+1
         table.insert(queue, i, t)
-        i = i + 1
+      end
+    end
+    for i = 1,#queue-1 do
+      if queue[i].t > queue[i+1].t then
+        print("Bad queue")
       end
     end
   end
