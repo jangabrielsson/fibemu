@@ -14,6 +14,7 @@ end
 
 function net._setupPatches(config)
     apiPatches[':11111/api/refreshStates'] = ":" .. config.wport .. "/api/refreshStates"
+    apiPatches['/localhost/'] = "/" .. config.host .. "/"
 end
 
 local http_hooks

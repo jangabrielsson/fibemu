@@ -238,7 +238,9 @@ function QuickAppBase:internalStorageGet(key)
   __assert_type(key, 'string')
   if key then
     local res, stat = api.get("/plugins/" .. self.id .. "/variables/" .. key)
-    return stat == 200 and res.value or nil
+    if stat ~= 200 then return nil end
+    res = json.decode(res.value)
+    return res.value
   else
     local res, stat = api.get("/plugins/" .. self.id .. "/variables")
     if stat ~= 200 then return nil end

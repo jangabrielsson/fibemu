@@ -36,7 +36,8 @@
         "__fibaroUseAsyncHandler",
         "QuickerAppChild",
         "MyChild",
-        "UDPServer"
+        "UDPServer",
+        "QwikAppChild"
     ],
     "Lua.diagnostics.disable": [
         "duplicate-set-field",

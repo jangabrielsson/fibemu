@@ -222,11 +222,25 @@ local function createEnvironment(id)
 
     function env.__fibaro_get_device(id) return resources.getResource("devices", id) end
 
-    function env.__fibaro_get_devices() return util.toarray(resources.getResource("devices") or {}) end
+    function env.__fibaro_get_devices() 
+        return util.toarray(
+            resources.getResource("devices") or {},
+            function(v) return type(v)=='table' end
+        ) 
+    end
 
     function env.__fibaro_get_room(id) return resources.getResource("rooms", id) end
 
     function env.__fibaro_get_scene(id) return resources.getResource("scenes", id) end
+
+    function env.__fibaro_get_devices_by_type(typ)
+        local ds = env.__fibaro_get_devices()
+        local res = {}
+        for _, d in ipairs(ds) do
+            if d.type == typ then res[#res + 1] = d end
+        end
+        return res
+    end
 
     function env.__fibaro_get_device_property(id, prop)
         local d = resources.getResource("devices", id)
@@ -236,7 +250,17 @@ local function createEnvironment(id)
         end
     end
 
-    function env.__fibaro_get_breached_partitions() end
+    function  env.__fibaro_get_partition(id)
+        return api.get('/alarms/v1/partitions/'..id)
+    end
+    
+    function env.__fibaro_get_partitions()
+        return api.get('/alarms/v1/partitions')
+    end
+    
+    function env.__fibaro_get_breached_partitions()
+        return api.get("/alarms/v1/partitions/breached")
+    end
 
     function env.__fibaro_add_debug_message(tag, str, typ)
         assert(str, "Missing tag for debug")

@@ -317,6 +317,8 @@ local COLORMAP = {
 }
 COLORMAP.brown = COLORMAP.sandybrown
 COLORMAP.lightred = COLORMAP.red
+COLORMAP.salmon = COLORMAP.red
+COLORMAP.buttermilk = COLORMAP.yellow
 os.COLORMAP = COLORMAP
 local colorEnd = '\027[0m'
 
@@ -398,9 +400,11 @@ end
 
 function util.basicAuthorization(user, password) return "Basic " .. util.base64encode(user .. ":" .. password) end
 
-function util.toarray(t)
+local function id(x) return true end
+function util.toarray(t,f)
+  f = f or id
   local a = {}
-  for k, v in pairs(t) do a[#a + 1] = v end
+  for k, v in pairs(t) do if f(v) then a[#a + 1] = v end end
   return a
 end
 
