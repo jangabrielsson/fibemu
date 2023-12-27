@@ -12,8 +12,9 @@
         "command": "python3",
         //"communication": "pipe"
       },
+      "cwd": "${workspaceFolder}",
       "args": [
-        "${workspaceFolder}/.vscode/emufiles/__init__.py",
+        ".vscode/emufiles/__init__.py",
         "-f",
         "${file}"
       ],
@@ -30,8 +31,9 @@
         "command": "python3",
         //"communication": "pipe"
       },
+      "cwd": "${workspaceFolder}",
       "args": [
-        "${workspaceFolder}/.vscode/emufiles/__init__.py",
+        ".vscode/emufiles/__init__.py",
         "-l",
         //"-i","dev/init.lua"
         "-f",
@@ -50,8 +52,9 @@
         "command": "python3",
         //"communication": "pipe"
       },
+      "cwd": "${workspaceFolder}",
       "args": [
-        "${workspaceFolder}/.vscode/emufiles/__init__.py",
+        ".vscode/emufiles/__init__.py",
         "-f",
         "${file}"
       ],
@@ -69,8 +72,9 @@
         "command": "python3",
         //"communication": "pipe"
       },
+      "cwd": "${workspaceFolder}",
       "args": [
-        "${workspaceFolder}/.vscode/emufiles/__init__.py",
+        ".vscode/emufiles/__init__.py",
         "-l",
         //"-i","dev/init.lua"
         "-f",
