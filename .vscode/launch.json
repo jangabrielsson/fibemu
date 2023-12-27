@@ -16,7 +16,7 @@
       "args": [
         ".vscode/emufiles/__init__.py",
         "-f",
-        "${file}"
+        "${relativeFile}" //"${file}"
       ],
       //"scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
       //"scriptFiles": ["*.lua", "**/*.lua"],
@@ -37,7 +37,7 @@
         "-l",
         //"-i","dev/init.lua"
         "-f",
-        "${file}"
+        "${relativeFile}" //"${file}"
       ],
       //"scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
       //"scriptFiles": ["*.lua", "**/*.lua"],
@@ -56,7 +56,7 @@
       "args": [
         ".vscode/emufiles/__init__.py",
         "-f",
-        "${file}"
+        "${relativeFile}" //"${file}"
       ],
       "scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
       "scriptFiles": ["*.lua", "**/*.lua"],
@@ -78,7 +78,7 @@
         "-l",
         //"-i","dev/init.lua"
         "-f",
-        "${file}"
+        "${relativeFile}" //"${file}"
       ],
       "scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
       "scriptFiles": ["*.lua", "**/*.lua"],
@@ -135,8 +135,9 @@
       "program": {
         "command": "python3",
       },
+      "cwd": "${workspaceFolder}",
       "args": [
-        "${workspaceFolder}/.vscode/emufiles/__init__.py",
+        ".vscode/emufiles/__init__.py",
         "-nw",
         "-l",
         "-ng",
