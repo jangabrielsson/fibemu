@@ -30,7 +30,7 @@ if __name__ == "__main__":
             for key, value in config_d.items():
                 config[key] = value
     except Exception as e:
-        print(e)
+        print(f'config.json: {e}')
 
     parser.add_argument('-f', "--file", help='initial QA to load')
     parser.add_argument('-f2', "--file2", help='second QA to load')
