@@ -37,7 +37,9 @@
         "QuickerAppChild",
         "MyChild",
         "UDPServer",
-        "QwikAppChild"
+        "QwikAppChild",
+        "sourceTrigger",
+        "_sceneId"
     ],
     "Lua.diagnostics.disable": [
         "duplicate-set-field",

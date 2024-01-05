@@ -8,7 +8,7 @@
 ---@alias sceneId integer The ID of a scene 
 
 ---@class fibaro
-fibaro = {}
+fibaro = { fibemu = {} }
 
 --@alias hub fibaro
 
@@ -78,7 +78,7 @@ function fibaro.getType(deviceId) end
 ---Retrieves name of device
 ---
 ---@param deviceId deviceId ID of device.
----@return deviceId
+---@return string
 function fibaro.getName(deviceId) end
 
 ---Retrieves room ID of device
