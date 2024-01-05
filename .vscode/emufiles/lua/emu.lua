@@ -593,7 +593,7 @@ function Events.uiEvent(event)
         QA.syslogerr("uiEvent", "Unknown QA, ID:%s", id)
         return
     end
-    if event.eventType == "onChanged" then
+    if event.eventType == "onChanged" or event.eventType == "onToggled" then
         -- If slider change value, update our own ui struct for Web UI usage
         Events.updateView({
             deviceId = id,

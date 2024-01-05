@@ -189,10 +189,10 @@ defaultRsrcs['settings/info'] = {
     decimalMark = ".",
     timezoneOffset = 3600,
     currency = "EUR",
-    softVersion = "5.090.17",
+    softVersion = "5.142.83", 
     beta = false,
     currentVersion = {
-        version = "5.090.17",
+        version = "5.142.83",
         type = "stable"
     },
     installVersion = {

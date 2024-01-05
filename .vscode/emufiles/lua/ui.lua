@@ -147,6 +147,10 @@ local function collectViewLayoutRow(u,map)
               min = u.min,
               step = u.step
             }
+          elseif u.type=='select' then
+            local cb = map["select"..u.name]
+            if cb == u.name.."Clicked" then cb = nil end
+            row[#row+1]={select=u.name, text=u.text, options=u.options, onToggled=cb}
           end
         else
           for _,v in pairs(u) do conv(v) end
@@ -176,7 +180,8 @@ local function collectViewLayoutRow(u,map)
     local map = {}
     traverse(callbacks,function(e)
         if e.eventType=='onChanged' then map["slider"..e.name]=e.callback
-        elseif e.eventType=='onReleased' then map["button"..e.name]=e.callback end
+        elseif e.eventType=='onReleased' then map["button"..e.name]=e.callback
+        elseif e.eventType=='onToggled' then map["select"..e.name]=e.callback end
       end)
     local UI = viewLayout2UI(view,map)
     return UI

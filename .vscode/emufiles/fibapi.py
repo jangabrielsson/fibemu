@@ -224,6 +224,7 @@ async def emu_get_qa(id: int, request: Request):
     ui = qa.UI
     uiMap = qa.uiMap
     ui = convertLuaTable(ui)
+    #print(json.dumps(ui),file=sys.stderr)
     uiMap = convertLuaTable(uiMap)
     d = convertLuaTable(qa.dev)
     props = d.get('properties') if d.get('properties') else dict()
@@ -486,6 +487,7 @@ async def get_refreshStates_events(response: Response, query: RefreshStatesQuery
 @app.get("/api/plugins/callUIEvent", tags=["Plugins methods"])
 async def call_UI_Event(deviceID: int, eventType: str, elementName: str, value: str | None = None):
     t = time.time()
+    #print(f"call_UI_Event: {deviceID} {eventType} {elementName} {value}",file=sys.stderr)
     value = [value] if value else []
     fibenv.get('fe').postEvent({"type":"uiEvent","deviceId":deviceID,"eventType":eventType,"elementName":elementName,"values":value})
     return { "endTimestampMillis": time.time(), "message": "Accepted", "startTimestampMillis": t }

@@ -145,7 +145,7 @@ function tool.download_unpack(file, rsrc, id, path)
         outf("--%%%%file=%s,%s;", fd.fname, n)
     end
     local theaders = table.concat(headers, "\n")
-    mainFD.code = theaders .. "\n" .. mainFD.code .. "\n\n" .. mainFD.code
+    mainFD.code = theaders .. "\n" .. mainFD.code --.. "\n\n" .. mainFD.code
     if not writeFile(mainFname, mainFD.code) then return true end
     return true
 end

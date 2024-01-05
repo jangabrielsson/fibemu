@@ -19,6 +19,13 @@
                 <hr v-if="uiMap[item.id].text === '-------------------------------'">
                 <span v-else v-html="uiMap[item.id].text"></span>
               </div>
+              <select v-if="item.type == 'select'" :id="item.id" v-model="selectedOption"
+              @change="selectChanged($event.target.id, $event.target.value)">
+                <option disabled value="">Choose</option>
+                <option v-for="option in uiMap[item.id].options" :key="option.value" :value="option.value">
+                  {{ option.text }}
+                </option>
+              </select>
             </div>
           </div>
         </div>
@@ -84,6 +91,12 @@ export default {
       // this.uiMap[id].value = value;
       this.$emit("slider-changed", id, value)
       fetch(this.$store.state.backend + `/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onChanged&elementName=${id}&value=${value}`);
+    },
+    selectChanged(id,value) {
+      console.log(`Select '${id}' = '${value}''`);
+      //this.$emit("select-changed", id, value)
+      //{"eventType":"onToggled","deviceId":1245,"values":["auto"],"elementName":"modeSelector"}
+      fetch(this.$store.state.backend + `/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onToggled&elementName=${id}&value=${value}`);
     },
   },
   watch: {
