@@ -5,5 +5,5 @@
 
 local function printf(fmt,...) print(string.format(fmt,...)) end
 function QuickApp:onInit()
-    foo()
+    Foo()
 end

@@ -1,3 +1,3 @@
-function foo()
+function Foo()
     print("FOO")
 end
