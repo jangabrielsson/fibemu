@@ -507,7 +507,7 @@ class UpdateViewParams(BaseModel):
     deviceId: int
     componentName: str
     propertyName: str
-    newValue: str
+    newValue: Any
 
 @app.post("/api/plugins/updateView", tags=["Plugins methods"])
 async def update_qa_view(args: UpdateViewParams):

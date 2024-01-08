@@ -15,6 +15,7 @@ function plugin.createChildDevice(props) return api.post("/plugins/createChildDe
 class 'QuickAppBase'
 
 function QuickAppBase:__init(dev)
+  if type(dev)=='number' then dev = api.get("/devices/" .. dev) end
   self._TYPE       = 'userdata'
   self.id          = dev.id
   self.name        = dev.name
@@ -158,12 +159,24 @@ function QuickAppBase:updateProperty(prop, val)
   end
 end
 
+local function equal(e1,e2)
+  if e1==e2 then return true
+  else
+    if type(e1) ~= 'table' or type(e2) ~= 'table' then return false
+    else
+      for k1,v1 in pairs(e1) do if e2[k1] == nil or not equal(v1,e2[k1]) then return false end end
+      for k2,_  in pairs(e2) do if e1[k2] == nil then return false end end
+      return true
+    end
+  end
+end
+
 function QuickAppBase:updateView(elm, typ, val)
   __assert_type(elm, 'string')
   __assert_type(typ, 'string')
   self._view[elm] = self._view[elm] or {}
   local oldVal = self._view[elm][typ]
-  if val ~= oldVal then
+  if not equal(val,oldVal) then
     --if  then self:debug("updateView:",elm,typ,'"'..val..'"') end
     self._view[elm][typ] = val
     api.post("/plugins/updateView", { deviceId = self.id, componentName = elm, propertyName = typ, newValue = val })

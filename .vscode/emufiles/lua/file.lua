@@ -196,6 +196,32 @@ local function installQA(fname, conf)
         end
     end
 
+    function chandler.merge(var, val, vars) --%%merge=fname1,fname2,...,oufile;
+        val = val:match("(.*);") or val
+        local files = val:split(",")
+        if #files < 2 then
+            QA.syslogerr("install", "Bad merge expr '%s'", val)
+            return
+        end
+        local code = {}
+        for i=1,#files-1 do
+            local f = io.open(files[i], "r")
+            if not f then
+                QA.syslogerr("install", "(merge) File not found - %s", files[i])
+                return
+            end
+            code[#code+1] = string.format("------- %s ----------", files[i])
+            code[#code+1] = f:read("*all")
+            f:close()
+        end
+        local f = io.open(files[#files], "w")
+        if not f then
+            QA.syslogerr("install", "(merge) Can't create file - %s", files[#files])
+            return
+        end
+        f:write(table.concat(code, "\n"))
+    end
+
     function chandler.interface(var, val, vars) --%%interface=x,y,z
         for _, ifc in ipairs(val:split(",")) do
             vars.interfaces[ifc] = true
