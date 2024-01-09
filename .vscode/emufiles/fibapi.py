@@ -924,7 +924,7 @@ async def get_Favorite_ColorsV2(response: Response):
 async def get_Diagnostics(response: Response):
     items,code = fibenv.get('fe').luaCall("getResource","diagnostics")
     response.status_code = code
-    return list(items.values()) if code < 300 else None
+    return items if code < 300 else None
 
 # ''' mobile push methods '''
 # @app.get("/api/mobile/push", tags=["Mobile push methods"])

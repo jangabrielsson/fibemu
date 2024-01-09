@@ -19,10 +19,10 @@
                 <hr v-if="uiMap[item.id].text === '-------------------------------'">
                 <span v-else v-html="uiMap[item.id].text"></span>
               </div>
-              <select v-if="item.type == 'select'" :id="item.id" v-model="selectedOption"
+              <select v-if="item.type == 'select'" :id="item.id"
               @change="selectChanged($event.target.id, $event.target.value)">
-                <option disabled value="">Choose</option>
-                <option v-for="option in uiMap[item.id].options" :key="option.value" :value="option.value">
+                <option disabled selected="true" value="">Choose</option>
+                <option v-for="option in uiMap[item.id].options" :selected="uiMap[item.id].selectedItem===option.value" :key="option.value" :value="option.value">
                   {{ option.text }}
                 </option>
               </select>
