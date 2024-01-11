@@ -1,5 +1,5 @@
 --%%name=WindowSensor
---%%type=com.fibaro.doorSensor
+--%%type=com.fibaro.windowSensor
 
 function QuickApp:turnOn(delay)
     self:debug("Turned on")
