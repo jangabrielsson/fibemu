@@ -47,7 +47,7 @@ string.fformat = fformat
 
 local function arr2str(del,...)
   local args = {...}
-  for i=1,#args do if args[i]~=nil then args[#args+1]=encodeObject(args[i]) end end 
+  for i=1,#args do if args[i]~=nil then args[i]=encodeObject(args[i]) end end 
   return table.concat(args,del)
 end 
 

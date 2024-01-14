@@ -196,7 +196,7 @@ local function createEnvironment(id)
     }
 
     for _, k in ipairs(funs) do env[k] = _G[k] end
-    env.os = { time = os.time, date = os.date, difftime = os.difftime, clock = os.clock, setTime = os.setTime, COLORMAP = os.COLORMAP }
+    env.os = { debug = debug, time = os.time, date = os.date, difftime = os.difftime, clock = os.clock, setTime = os.setTime, COLORMAP = os.COLORMAP }
     env._G = env
     env._ENV = env
     env.type = luaType

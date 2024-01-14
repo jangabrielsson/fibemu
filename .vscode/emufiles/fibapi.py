@@ -570,7 +570,9 @@ async def internal_storage_set(id: int, name: str, response: Response):
     var,code = fibenv.get('fe').luaCall("getQAKey",id,name)
     response.status_code = code
     if code < 300:
-        var = {'name':name,'value':var}
+        #print(f"{type(var)} {var}",file=sys.stderr)
+        var = json.loads(var)
+        #print(f"{type(var)} {var}",file=sys.stderr)
     return var if code < 300 else None
 
 class InternalStorageParams(BaseModel):

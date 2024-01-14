@@ -156,6 +156,8 @@ local function installQA(fname, conf)
 
     function chandler.type(var, val, vars) vars.type = val:match('"(.-)"') or val end
 
+    function chandler.storage(var, val, vars) vars.storage = val:match('"(.-)"') or val end
+
     function chandler.allRemote(var, val, vars) vars.allRemote = eval(val) == true end
 
     function chandler.id(var, val, vars) vars.id = tonumber(val) end

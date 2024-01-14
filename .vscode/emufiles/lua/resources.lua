@@ -1,4 +1,4 @@
-local r, config, refreshStates = {}, nil, nil
+local r, rsrcs, config, refreshStates = {}, {}, nil, nil
 local copy, emu, binser
 local defaultRsrcs = {}
 
@@ -8,6 +8,21 @@ function r.init(conf, libs)
     copy, emu, binser = libs.util.copy, libs.emu, libs.binser
     for name, fun in pairs(r) do QA.fun[name] = fun end -- export resource functions
     defaultRsrcs['settings/network'].networkConfig.wlan0.ipConfig.ip = emu.config.whost
+    if conf.storage then
+        local f = io.open(conf.storage, "r")
+        if f then
+            local data = f:read("*a")
+            local stat,res = pcall(json.decode,data)
+            if stat then
+                local id,data = next(res)
+                rsrcs.keys[tonumber(id)] = data
+                --QA.syslog("resource","loaded keys: %s",res)
+            else
+                --QA.syslog("resource","failed to load keys: %s",res)
+            end
+        end
+        conf.storageKeys = rsrcs.keys
+    end
 end
 
 local function updateDates()
@@ -283,7 +298,7 @@ local keys = {
     ['panels/favoriteColors/v2'] = "id",
 }
 
-local rsrcs = {
+rsrcs = {
     globalVariables = nil,
     devices = nil,
     rooms = nil,
@@ -619,28 +634,39 @@ end
 --------- QA keys -------------
 rsrcs.keys = {}
 function r.getQAKey(id, name)
-    keys[id] = keys[id] or {}
-    return name and keys[id][name] or keys[id], 200
+    rsrcs.keys[id] = rsrcs.keys[id] or {}
+    return name and rsrcs.keys[id][name] or rsrcs.keys[id], 200
 end
 
 function r.deleteQAKey(id, name)
-    if keys[id] == nil then return end
-    if name then keys[id][name] = nil else keys[id] = nil end
+    if rsrcs.keys[id] == nil then return end
+    if name then rsrcs.keys[id][name] = nil else rsrcs.keys[id] = nil end
     return nil, 200
 end
 
 function r.createQAKey(id, name, value)
-    keys[id] = keys[id] or {}
-    if keys[id] ~= nil then return nil, 404 end
-    keys[id][name] = value
+    rsrcs.keys[id] = rsrcs.keys[id] or {}
+    if rsrcs.keys[id] ~= nil then return nil, 404 end
+    rsrcs.keys[id][name] = value
     return value, 200
 end
 
 function r.setQAKey(id, name, value)
-    keys[id] = keys[id] or {}
-    if keys[id] == nil then return nil, 404 end
-    keys[id][name] = value
+    rsrcs.keys[id] = rsrcs.keys[id] or {}
+    if rsrcs.keys[id] == nil then return nil, 404 end
+    rsrcs.keys[id][name] = value
     return value, 200
 end
 
+function r.flushQAKeys(id)
+    if config.storage and rsrcs.keys[id] then 
+        local f = io.open(config.storage, "w")
+        if f then
+            local store = { [tostring(id)] = rsrcs.keys[id] }
+            f:write(json.encode(store))
+            f:close()
+        end
+    end
+    return true, 200
+end
 return r
