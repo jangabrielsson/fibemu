@@ -347,7 +347,7 @@ function __onAction(id, actionName, args)
 end
 
 function onAction(id, event)
-  print("onAction: ", json.encode(event))
+  (fibaro.fibemu and fibaro.fibemu._print or print)("onAction: ", json.encode(event))
   if quickApp.actionHandler then return quickApp:actionHandler(event) end
   if event.deviceId == quickApp.id then
     return quickApp:callAction(event.actionName, table.unpack(event.args))
@@ -358,7 +358,7 @@ function onAction(id, event)
 end
 
 function onUIEvent(id, event)
-  print("UIEvent: ", json.encode(event))
+  (fibaro.fibemu and fibaro.fibemu._print or print)("UIEvent: ", json.encode(event))
   if quickApp.UIHandler then
     quickApp:UIHandler(event)
     return

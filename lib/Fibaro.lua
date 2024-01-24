@@ -12,12 +12,13 @@ end
 
 setDefaults('html',true)
 
-function print(a,...)
+print = function(a,...)
   a = a == nil and "" or a
   if not inhibitPrint[a] or debugFlags[inhibitPrint[a]] then
     oldPrint(a,...) 
   end
 end
+if fibaro.fibemu then fibaro.fibemu._print = print end
 
 local htmlCodes={['\n']='<br>', [' ']='&nbsp;'}
 local function fix(str) return str:gsub("([\n%s])",function(c) return htmlCodes[c] or c end) end
@@ -46,9 +47,9 @@ end
 string.fformat = fformat
 
 local function arr2str(del,...)
-  local args = {...}
-  for i=1,#args do if args[i]~=nil then args[i]=encodeObject(args[i]) end end 
-  return table.concat(args,del)
+  local args,res  = {...},{}
+  for i=1,#args do if args[i]~=nil then res[#res+1]=encodeObject(args[i]) end end 
+  return table.concat(res,del)
 end 
 
 local function print_debug(typ,tag,str)
@@ -62,32 +63,20 @@ local function print_debug(typ,tag,str)
   __fibaro_add_debug_message(tag or __TAG, str, typ)
   return str
 end
-
-function fibaro.debug(tag,...) 
-  return print_debug('debug',tag,arr2str(" ",...))
-end
-function fibaro.trace(tag,a,...)
-  return print_debug('trace',tag,arr2str(" ",a,...)) 
-end
-function fibaro.error(tag,...)
-  return print_debug('error',tag,arr2str(" ",...))
-end
-function fibaro.warning(tag,...) 
-  return print_debug('warning',tag,arr2str(" ",...))
-end
-function fibaro.debugf(tag,fmt,...) 
-  return print_debug('debug',tag,fformat(fmt,...)) 
-end
-function fibaro.tracef(tag,fmt,...) 
-  return print_debug('trace',tag,fformat(fmt,...)) 
-end
-function fibaro.errorf(tag,fmt,...)
-  return print_debug('error',tag,fformat(fmt,...)) 
-end
-function fibaro.warningf(tag,fmt,...) 
-  return print_debug('warning',tag,fformat(fmt,...))
-end
-
+fibaro.print_debug = print_debug
+local function color(col,str) return fmt('<font color="%s">%s</font>',col,str) end
+function fibaro.debug(tag,...) return print_debug('debug',tag,arr2str(" ",...)) end
+function fibaro.trace(tag,a,...) return print_debug('trace',tag,arr2str(" ",a,...)) end
+function fibaro.error(tag,...) return print_debug('error',tag,arr2str(" ",...)) end
+function fibaro.warning(tag,...) return print_debug('warning',tag,arr2str(" ",...)) end
+function fibaro.debugf(tag,fmt,...) return print_debug('debug',tag,fformat(fmt,...)) end
+function fibaro.tracef(tag,fmt,...) return print_debug('trace',tag,fformat(fmt,...)) end
+function fibaro.errorf(tag,fmt,...) return print_debug('error',tag,fformat(fmt,...)) end
+function fibaro.warningf(tag,fmt,...) return print_debug('warning',tag,fformat(fmt,...)) end
+function fibaro.debugfc(tag,col,fmt,...) return print_debug('debug',tag,color(col,fformat(fmt,...))) end
+function fibaro.tracefc(tag,col,fmt,...) return print_debug('trace',tag,color(col,fformat(fmt,...))) end
+function fibaro.errorfc(tag,col,fmt,...) return print_debug('error',tag,color(col,fformat(fmt,...))) end
+function fibaro.warningfc(tag,col,fmt,...) return print_debug('warning',tag,color(col,fformat(fmt,...))) end
 --------------------- Scene function  -----------------------------------------
 function fibaro.isSceneEnabled(sceneID) 
   __assert_type(sceneID,"number" )
@@ -278,4 +267,10 @@ function fibaro.setClimateZoneToVacationMode(id, mode, start, stop, heatTemp, co
         vacationSetPointHeating = tonumber(heatTemp) and heatTemp or nil,
         vacationSetPointCooling = tonumber(coolTemp) and coolTemp or nil
       }})
+end
+
+------------------- QA ---------------------------
+function fibaro.putFQA(content) -- Should be .fqa json
+  if type(content)=='table' then content = json.encode(content) end
+  return api.post("/quickApp/",content)
 end

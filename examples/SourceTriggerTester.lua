@@ -10,13 +10,9 @@ function QuickApp:onInit()
     return stp(st,event,time,...)
   end
 
-  st:subscribe({type='runAt'},
+  st:subscribe({type='weather'},
       function(event)
-        event.ref[1] = nil
-        if event.action(event.env) == 'BREAK' then return end
-        if event.interval then 
-          event.ref[1] = st:post(event,event.interval) 
-        end
+        print(json.encode(event))
       end)
 
   local function runAt(args)
@@ -47,4 +43,22 @@ function QuickApp:onInit()
     end,
   catch=true}
 
+  for k,v in pairs(api.get("/weather")) do
+    st:post({type='weather', property=k, value=v})
+  end
+end
+
+----{type='weather',property=<string>, value=<number>, old=<number>}
+local SubWeathersnow = SourceTriggerSubscriber()
+SubWeathersnow:subscribe(
+  {type='weather',property= "WeatherCondition", value="cloudy"}, ------------partlyCloudy   fog    clear   storm   snow   rain    cloudy----------
+  function(event)      
+    print("SubWeathersnow")
+  SubWeathersnow:stop()
+  print("SubWeathersnow2")
+end)
+-----oninit-------
+SubWeathersnow:run()
+for k,v in pairs(api.get("/weather")) do -- post weather events to ourselves when wwe start up
+  SubWeathersnow:post({type='weather', property=k, value=v})
 end

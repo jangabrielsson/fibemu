@@ -3,7 +3,7 @@ local sunCalc
 
 local function hms2sec(str)
   local h,m,s = str:match("(%d%d):(%d%d):?(%d*)")
-  return 3600*h+60*m+(s or 0)
+  return 3600*h+60*m+(s and s~="" or 0)
 end
 
 local function epoch(args)

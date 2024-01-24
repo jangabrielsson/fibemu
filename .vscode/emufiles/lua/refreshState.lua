@@ -266,6 +266,14 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         f=function(d,e) return true end,
         l=function(d,e) return fmt("%s",e.type) end
     },
+    ZwaveNodeWokeUpEvent = {
+        f=function(d,e) return true end,
+        l=function(d,e) return fmt("%s",e.type) end
+    },
+    ZwaveNodeWentToSleepEvent = {
+        f=function(d,e) return true end,
+        l=function(d,e) return fmt("%s",e.type) end
+    },
     RefreshRequiredEvent = {
         f=function(d,e) return true end,
         l=function(d,e) return fmt("%s",e.type) end
@@ -287,7 +295,10 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         f=function(d,e) return true end,
         l=function(d,e) return fmt("%s consumptionPower:%s productionPower:%s",e.type,d.consumptionPower,d.productionPower) end
     },
-
+    DeviceNotificationState = {
+        f=function(d,e) return true end,
+        l=function(d,e) return fmt("%s",e.type) end
+    },
     DeviceInterfacesUpdatedEvent = {
         f=function(d,e) return true end,
         l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end

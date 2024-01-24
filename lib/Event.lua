@@ -1,15 +1,21 @@
 fibaro.debugFlags = fibaro.debugFlags or {}
 local debugFlags = fibaro.debugFlags
+local exports = {
+  BROADCASTVAR = "HC3BROADCAST"
+}
 
+local Event
 local _trigger = {}
 local _builtin = {}
 local _handler = {}
 local _eMap = {}
 local post,handleEvent,trueFor,again
 local fmt = string.format
+local function DEBUG(tag,...) if debugFlags[tag] then fibaro.debug(__TAG,fmt(...)) end end
+fibaro.DEBUG = fibaro.DEBUG or DEBUG
 
 ---@diagnostic disable-next-line: undefined-field
-assert(os.hms2sec,"Please load lib/os.lua before lib/Event.lua")
+assert(os.hms2sec,"Please load lib/OS.lua before lib/Event.lua")
 ---@diagnostic disable-next-line: undefined-field
 local hms2sec,midnight = os.hms2sec,os.midnight
 ---@diagnostic disable-next-line: undefined-field
@@ -49,7 +55,6 @@ if not equal then
   end
 end
 local function copy(t) local r = {}; for k,v in pairs(t) do r[k]=v end return r end
-local function DEBUG(tag,...) if debugFlags[tag] then fibaro.debug(__TAG,fmt(...)) end end
 local function timeStr(time) 
   if type(time) == 'string' then time = toTime(time) end
   if time < 35*24*3600 then time=time+os.time() end
@@ -79,7 +84,11 @@ end
 
 local function isEvent(e) return type(e) == 'table' and type(e.type)=='string' end
 local eventMT = {
-  __tostring = function(e) return fmt("#%s{%s",e.type,encode(e):match(",(.*)")) end
+  __tostring = function(e) 
+    local s = encode(e,nil,true)
+    s = s:match(",(.*)")
+    return s and fmt("#%s{%s",e.type,s) or fmt("#%s{}",e.type)
+  end
 }
 local function addEventMT(event) if not getmetatable(event) then setmetatable(event,eventMT) end return event end
 
@@ -87,7 +96,7 @@ local managedEvent = {}
 function managedEvent.timer(k,event)
   event = addEventMT(copy(event))
   event.id = k
-  DEBUG('post',"post %s at %s",event,timeStr(event.time))
+  fibaro.DEBUG('post',"post %s at %s",event,timeStr(event.time))
   local t = toTime(event.time)
   post({type='schedule',event=event,_sh=true},event.time)
   return event
@@ -149,7 +158,6 @@ toHash['profile'] = function(e) return 'profile'..(e.property or "") end
 toHash['weather'] = function(e) return 'weather'..(e.property or "") end
 toHash['custom-event'] = function(e) return 'custom-event'..(e.name or "") end
 toHash['deviceEvent'] = function(e) return 'deviceEvent'..(e.id or "")..(e.value or "") end
-toHash['sceneEvent'] = function(e) return 'sceneEvent'..(e.id or "")..(e.value or "") end
 toHash['sceneEvent'] = function(e) return 'sceneEvent'..(e.id or "")..(e.value or "") end
 toHash['timer'] = function(e) return 'timer'..(e.id or "")..(e.time or "") end
 toHash['cron'] = function(e) return 'cron'..(e.id or "")..(e.time or "") end
@@ -314,7 +322,7 @@ function post(event,time,silent)
   time = time < 72*3600 and now+time or time
   time = time-now
   if time < 0 then return nil end
-  if not (event._sh or silent) then DEBUG('post',"post %s at %s",event,timeStr(time)) end
+  if not (event._sh or silent) then fibaro.DEBUG('post',"post %s at %s",event,timeStr(time)) end
   return setTimeout(function() handleEvent(event) end,1000*time)
 end
 
@@ -330,16 +338,35 @@ function fibaro.remove(k)
   
 end
 
---[[
 Event.scheduler{type='schedule'}
 function Event:scheduler(event)
   if isEnabled(event.event.id) then
     post(event.event,0,true) 
-    DEBUG('post',"post %s at %s",event.event,timeStr(event.event.time)) 
+    fibaro.DEBUG('post',"post %s at %s",event.event,timeStr(event.event.time)) 
   end
   post(event,event.event.time)
 end
+
 Event.func{type='function'}
 function Event:func(event) event.fun() end
 
---]]
+local function enableBroadcast()
+  assert(fibaro._APP.trigger,"Please load lib/Trigger.lua before lib/Event.lua")
+  local count = 0
+  if api.get("/globalVariables/"..exports.BROADCASTVAR) == nil then
+    api.post("/globalVariables", {name=exports.BROADCASTVAR, value=""})
+  end
+  fibaro._APP.trigger.GlobalSourceTriggerGV = exports.BROADCASTVAR
+  function exports.broadcast(event)
+    count = count+1
+    event._transID = "B"..quickApp.id..count
+    fibaro.setGlobalVariable(exports.BROADCASTVAR, json.encode(event))
+  end
+end
+
+exports.Event = Event
+exports.addEventMT = addEventMT
+exports.enableBroadcast = enableBroadcast
+
+fibaro._APP = fibaro._APP or {}
+fibaro._APP.event = exports

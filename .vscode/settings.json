@@ -39,6 +39,7 @@
         "UDPServer",
         "QwikAppChild",
         "sourceTrigger",
+        "RefreshStateSubscriber"
         "_sceneId"
     ],
     "Lua.diagnostics.disable": [

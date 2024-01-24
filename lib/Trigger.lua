@@ -1,4 +1,18 @@
-local _GLOBAL = false
+local exports = {
+  GlobalSourceTriggerGV = "gkjhkjdfhgjhdsfgjhsdfgjhfdkj"
+}
+
+local function equal(e1,e2)
+  if e1==e2 then return true
+  else
+    if type(e1) ~= 'table' or type(e2) ~= 'table' then return false
+    else
+      for k1,v1 in pairs(e1) do if e2[k1] == nil or not equal(v1,e2[k1]) then return false end end
+      for k2,_  in pairs(e2) do if e1[k2] == nil then return false end end
+      return true
+    end
+  end
+end
 
 local function quickVarEvent(d,_,post)
   local old={}; for _,v in ipairs(d.oldValue) do old[v.name] = v.value end
@@ -60,13 +74,11 @@ local EventTypes = {
   HomeBreachedEvent = function(d,_,post) post({type='alarm', property='homeBreached', value=d.breached}) end,
   WeatherChangedEvent = function(d,_,post) post({type='weather',property=d.change, value=d.newValue, old=d.oldValue}) end,
   GlobalVariableChangedEvent = function(d,_,post)
-    if d.variableName == GlobalSourceTriggerGV then
-      if _GLOBAL then
-        local stat,va = pcall(json.decode,d.newValue)
-        if not stat then return end
-        va._transID = nil
-        post(va)
-      end
+    if d.variableName == exports.GlobalSourceTriggerGV then
+      local stat,va = pcall(json.decode,d.newValue)
+      if not stat then return end
+      va._transID = nil
+      post(va)
     else
       post({type='global-variable', name=d.variableName, value=d.newValue, old=d.oldValue})
     end
@@ -143,3 +155,21 @@ local EventTypes = {
     end
   end,
 }
+
+local refresh = RefreshStateSubscriber()
+local function filter(ev) return exports.filter(ev) end
+
+local function handler(ev)
+  if EventTypes[ev.type] then
+    EventTypes[ev.type](ev.data,ev,exports.post)
+  end
+end
+refresh:subscribe(filter,handler)
+
+exports.start = function() refresh:run() end
+exports.stop = function() refresh:stop() end
+exports.filter = function(ev) return true end
+exports.post = function(ev)  end
+
+fibaro._APP = fibaro._APP or {}
+fibaro._APP.trigger = exports
