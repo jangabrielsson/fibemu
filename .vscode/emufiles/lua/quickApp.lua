@@ -397,13 +397,13 @@ local zombieCode = [[
             if IGNORE[action.actionName] then
               return quickApp:callAction(action.actionName, table.unpack(action.args))
             end
-            local url = fmt("%s/api/devices/%s/action/%s",path,qaID,action.actionName)
+            local url = fmt("%s/api/devices/%s/action/%s",path,action.deviceId,action.actionName)
             net.HTTPClient():request(url,{options={method='POST', data=json.encode({args=action.args})}})
          end
          function quickApp:UIHandler(UIEvent) 
            local value = UIEvent.values and UIEvent.values[1]
            if value == nil then value = "null" end
-           local url = fmt("%s/api/plugins/callUIEvent?deviceID=%s&eventType=%s&elementName=%s&value=%s",path,qaID,UIEvent.eventType,UIEvent.elementName,value)
+           local url = fmt("%s/api/plugins/callUIEvent?deviceID=%s&eventType=%s&elementName=%s&value=%s",path,UIEvent.deviceId,UIEvent.eventType,UIEvent.elementName,value)
            net.HTTPClient():request(url,{options={method='GET'}})
          end
          quickApp:debug("Events intercepted by emulator at "..ip)
@@ -438,11 +438,13 @@ local zombieCode = [[
 ]]
 
 function QuickApp:_setupZombie()
-  local zid = fibaro.fibemu.zombie
+  local function trace(...) self:trace(string.format(...)) end
+  local QA = fibaro.fibemu
+  local zid = QA.zombie
   if not zid then self:warning("No zombie ID set") return end
   local zd = api.get("/devices/"..zid,"hc3")
   if not zd then self:warning("No zombie device found with id "..zid) return end
-  self:trace("Zombie found")
+  trace("Zombie found. hc3:%s - emu:%s",zid,self.id)
   local zf = api.get("/quickApp/"..zid.."/files/ZOMBIE",'hc3')
   if zf and zf.content ~= zombieCode then
     self:warning("Zombie file will be updated")
@@ -461,9 +463,9 @@ function QuickApp:_setupZombie()
     self:trace("Zombie file installed for QA:"..zid)
   end
   local tick=0
-  local ip = fibaro.fibemu.config.hostIP
-  local port = fibaro.fibemu.config.wport
-  local fvar = fibaro.fibemu.FIBEMUVAR
+  local ip = QA.config.hostIP
+  local port = QA.config.wport
+  local fvar = QA.FIBEMUVAR
   local postfix = ":"..self.id..":"..ip..":"..port -- <tick>:<QAid>:<ip>:<port>
   api.post("/globalVariables",{ name=fvar,value=""  },'hc3')
   local function ping()
@@ -472,6 +474,22 @@ function QuickApp:_setupZombie()
     setTimeout(ping,3000)
   end
   ping()
+  local cd,children = api.get("/devices?parentId="..zid,"hc3") or {},{}
+  for _,c in ipairs(cd) do
+    children[c.id]=true
+    local dev = QA.libs.files.createChildDevice(self.id, {
+      name = c.name,
+      type = c.type,
+      initialProperties = c.properties,
+      parentId = self.id,
+      initialInterfaces = c.interfaces
+    })
+    trace("Zombie child mapped. hc3:%s - emu:%s",c.id,dev.dev.id)
+    dev.dev.zombieId = c.id
+    QA.setZombie(dev.dev.id,c.id)
+  end
+  self.zombieChildren = children
   self.zombieId = zid
+  QA.setZombie(self.id,zid)
   return zid
 end

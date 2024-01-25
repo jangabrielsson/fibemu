@@ -149,6 +149,11 @@ local function systemTimer(fun, ms, msg)
 end
 QA.systemTimer = systemTimer
 
+local zombies,revzombies={},{}
+function QA.setZombie(parent,zombie) zombies[zombie]=parent revzombies[parent]=zombie end
+function QA.isZombie(id) return zombies[id] end
+function QA.hasZombie(id) return revzombies[id] end
+
 function string.split(str, sep)
     local fields, s = {}, sep or "%s"
     str:gsub("([^" .. s .. "]+)", function(c) fields[#fields + 1] = c end)
@@ -510,6 +515,15 @@ function QA.fun.createChildDevice(args)
     args = json.decode(args)
     if not tonumber(args.parentId) then return {}, 400 end
     local qa = files.createChildDevice(args.parentId, args)
+    if QA.hasZombie(args.parentId) then
+        args.parentId = QA.hasZombie(args.parentId)
+        --args.initialInterfaces = {}
+        if args.initialProperties and next(args.initialProperties)==nil then 
+            args.initialProperties = nil
+          end
+        local c,res,h,t = api.post("/plugins/createChildDevice",args,"hc3")
+        QA.setZombie(qa.dev.id,c.id)
+    end
     return qa.dev, 200
 end
 
@@ -517,6 +531,11 @@ function QA.fun.deleteChildDevice(id)
     local qa = DIR[id]
     if qa and not qa.child then return nil, 501 end
     QA.delete(id)
+    if QA.hasZombie(id) then
+        local zid = QA.hasZombie(id)
+        api.delete("/devices/" .. zid, "hc3")
+        QA.setZombie(id,nil)
+    end
     return qa.dev, 200
 end
 
@@ -563,6 +582,11 @@ local Events = {}
 
 function Events.onAction(event)
     local id = event.deviceId
+    local zid = QA.isZombie(id)
+    if zid and not DIR[id] then
+        event.deviceId = zid
+        return Events.onAction(event)
+    end
     local target_id, arg_id = id, id
     local args = json.decode(event.args)
     if DIR[target_id] and DIR[target_id].child then -- children sends events to parent
@@ -590,6 +614,11 @@ end
 
 function Events.uiEvent(event)
     local id = event.deviceId
+    local zid = QA.isZombie(id)
+    if zid and not DIR[id] then
+        event.deviceId = zid
+        return Events.uiEvent(event)
+    end
     if not DIR[id] then -- ToDo, should forward to remote devices
         QA.syslogerr("uiEvent", "Unknown QA, ID:%s", id)
         return
@@ -631,7 +660,7 @@ function Events.updateView(ev) -- Used to update our own ui struct for Web UI us
         if not qa.zombie then return end
         id = qa.zombie
     end
-    --QA.syslogerr("updateView", "Unknown QA, ID:%s", ev.deviceId) -- ToDo, Should forward to remote devices
+    -- not emulated devices (residing on the HC3) and zombies gets updated on the HC3
     api.post("/plugins/updateView", { deviceId = id, componentName = ev.componentName, propertyName = ev.propertyName, newValue = ev.newValue }, "hc3")
 end
 
