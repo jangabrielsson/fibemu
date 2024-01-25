@@ -620,6 +620,9 @@ function r.updateDeviceProp(d, remote)
         end
     end
     d.properties[prop] = newValue
+    if QA.DIR[id].zombie then
+        api.put("/devices/" .. QA.DIR[id].zombie, { properties = { [prop] = newValue } }, "hc3")
+    end
     postEvent("DevicePropertyUpdatedEvent", { id = id, property = prop, newValue = newValue, oldValue = oldValue })
     return nil, 200
 end

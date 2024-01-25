@@ -272,6 +272,7 @@ local function createEnvironment(id)
     env.__TAG = "QUICKAPP" .. dev.id
     env.fibaro = {}
     env.fibaro.fibemu = QA
+    env.fibaro.fibemu.zombie = qa.zombie
     -- env.fibaro.debugFlags = debugFlags
     env.fibaro._emulator = "fibemu"
     env.fibaro._IPADDRESS = config.whost
@@ -618,6 +619,7 @@ end
 
 function Events.updateView(ev) -- Used to update our own ui struct for Web UI usage
     local qa = DIR[ev.deviceId]
+    local id = ev.deviceID
     if qa then
         local map = qa.uiMap
         if map[ev.componentName] then
@@ -626,9 +628,11 @@ function Events.updateView(ev) -- Used to update our own ui struct for Web UI us
             QA.syslogerr("updateView", "Unknown componentName, QA ID:%s - %s",
                 ev.deviceId, tostring(ev.componentName))
         end
-    else
-        QA.syslogerr("updateView", "Unknown QA, ID:%s", ev.deviceId) -- ToDo, Should forward to remote devices
+        if not qa.zombie then return end
+        id = qa.zombie
     end
+    --QA.syslogerr("updateView", "Unknown QA, ID:%s", ev.deviceId) -- ToDo, Should forward to remote devices
+    api.post("/plugins/updateView", { deviceId = id, componentName = ev.componentName, propertyName = ev.propertyName, newValue = ev.newValue }, "hc3")
 end
 
 function Events.installQA(event)

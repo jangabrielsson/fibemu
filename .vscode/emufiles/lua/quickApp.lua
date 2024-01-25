@@ -189,6 +189,7 @@ function QuickApp:__init(device)
   QuickAppBase.__init(self, device)
   self.childDevices = {}
   self:setupUICallbacks()
+  if fibaro.fibemu.zombie then self:_setupZombie() end
   if self.onInit then
     self:onInit()
   end
@@ -378,3 +379,99 @@ function onUIEvent(id, event)
   end
 end
 
+-------------- Zombie ----------------
+local zombieCode = [[
+  do
+    local actionH,UIh,patched = nil,nil,false
+    local path = ""
+    local fmt = string.format
+    local function urlencode (str)
+      return str and string.gsub(str ,"([^% w])",function(c) return string.format("%%% 02X",string.byte(c))  end)
+    end
+    local IGNORE={updateView=true,setVariable=true,updateProperty=true,MEMORYWATCH=true,PROXY=true,APIPOST=true,APIPUT=true,APIGET=true} -- Rewrite!!!!
+    local function enable(qaID,ip)
+      path = fmt("http://%s",ip)
+      if patched==false then
+         actionH,UIh = quickApp.actionHandler,quickApp.UIHandler
+         function quickApp:actionHandler(action)
+            if IGNORE[action.actionName] then
+              return quickApp:callAction(action.actionName, table.unpack(action.args))
+            end
+            local url = fmt("%s/api/devices/%s/action/%s",path,qaID,action.actionName)
+            net.HTTPClient():request(url,{options={method='POST', data=json.encode({args=action.args})}})
+         end
+         function quickApp:UIHandler(UIEvent) 
+           local value = UIEvent.values and UIEvent.values[1]
+           if value == nil then value = "null" end
+           local url = fmt("%s/api/plugins/callUIEvent?deviceID=%s&eventType=%s&elementName=%s&value=%s",path,qaID,UIEvent.eventType,UIEvent.elementName,value)
+           net.HTTPClient():request(url,{options={method='GET'}})
+         end
+         quickApp:debug("Events intercepted by emulator at "..ip)
+       end
+       patched=true
+    end
+ 
+    local function disable()
+     if patched==true then
+       if actionH then quickApp.actionHandler = actionH end
+       if UIh then quickApp.UIHandler = UIh end
+       actionH,UIh=nil,nil
+       quickApp:debug("Events restored from emulator")
+       patched=false
+     end
+    end
+    
+    setInterval(function()
+     local stat,res = pcall(function()
+     local var,err = __fibaro_get_global_variable("FIBEMU")
+     if var then
+       local modified = var.modified
+       local ip = var.value
+       --print(modified,os.time()-5,modified-os.time()+5)
+       if modified > os.time()-5 then enable(ip:match("^%d+:(%d+):(.*)"))
+       else disable() end
+     end
+    end)
+    if not stat then print(res) end
+    end,3000)
+ end
+]]
+
+function QuickApp:_setupZombie()
+  local zid = fibaro.fibemu.zombie
+  if not zid then self:warning("No zombie ID set") return end
+  local zd = api.get("/devices/"..zid,"hc3")
+  if not zd then self:warning("No zombie device found with id "..zid) return end
+  self:trace("Zombie found")
+  local zf = api.get("/quickApp/"..zid.."/files/ZOMBIE",'hc3')
+  if zf and zf.content ~= zombieCode then
+    self:warning("Zombie file will be updated")
+    local stat,res = api.delete("/quickApp/"..zid.."/files/ZOMBIE",{},'hc3') -- Delete old file
+    zf = nil
+  end
+  if not zf then
+    local res,err = api.post("/quickApp/"..zid.."/files",{
+        name="ZOMBIE",
+        isMain=false,
+        isOpen=false,
+        content=zombieCode,
+        type='lua'
+        },'hc3')
+    assert(err==200,"Failed to install zombie proxy file:"..err)
+    self:trace("Zombie file installed for QA:"..zid)
+  end
+  local tick=0
+  local ip = fibaro.fibemu.config.hostIP
+  local port = fibaro.fibemu.config.wport
+  local fvar = fibaro.fibemu.FIBEMUVAR
+  local postfix = ":"..self.id..":"..ip..":"..port -- <tick>:<QAid>:<ip>:<port>
+  api.post("/globalVariables",{ name=fvar,value=""  },'hc3')
+  local function ping()
+    api.put("/globalVariables/"..fvar,{value=tostring(tick)..postfix},'hc3')
+    tick  = tick+1
+    setTimeout(ping,3000)
+  end
+  ping()
+  self.zombieId = zid
+  return zid
+end

@@ -162,6 +162,8 @@ local function installQA(fname, conf)
 
     function chandler.id(var, val, vars) vars.id = tonumber(val) end
 
+    function chandler.zombie(var, val, vars) vars.zombie = tonumber(val) end
+
     function chandler.proxy(var, val, vars) vars.proxy = tonumber(val) end
 
     function chandler.noStock(var, val, vars) vars.noStock = eval(val) end
@@ -310,6 +312,7 @@ local function installQA(fname, conf)
         dev = dev,
         files = vars.files,
         name = dev.name,
+        zombie = vars.zombie,
         tag = tag,
         debug = vars.debug,
         remotes = vars.remote,
