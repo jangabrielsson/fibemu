@@ -26,6 +26,11 @@
                   {{ option.text }}
                 </option>
               </select>
+              <button v-if="item.type == 'switch'" type="button" class="btn btn-secondary"
+                :style="{'background-color': uiMap[item.id].value === 'true' ? 'blue' : '', 'color': uiMap[item.id].value === 'true' ? 'white' : ''}"
+                @click.prevent="switchChanged(item.id, item.value)">
+                <span v-html="uiMap[item.id].text"></span>
+              </button>
             </div>
           </div>
         </div>
@@ -93,9 +98,15 @@ export default {
       fetch(this.$store.state.backend + `/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onChanged&elementName=${id}&value=${value}`);
     },
     selectChanged(id,value) {
-      console.log(`Select '${id}' = '${value}''`);
+      console.log(`Select '${id}' = '${value}'`);
       //this.$emit("select-changed", id, value)
       //{"eventType":"onToggled","deviceId":1245,"values":["auto"],"elementName":"modeSelector"}
+      fetch(this.$store.state.backend + `/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onToggled&elementName=${id}&value=${value}`);
+    },
+    switchChanged(id,value) {
+      value = this.uiMap[id].value === "true" ? "false" : "true";
+      console.log(`Switch '${id}' pressed '${value}'`);
+      this.uiMap[id].value = value;
       fetch(this.$store.state.backend + `/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onToggled&elementName=${id}&value=${value}`);
     },
   },

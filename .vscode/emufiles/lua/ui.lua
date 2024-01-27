@@ -29,7 +29,8 @@ local ELMS = {
     return {name=d.name,style={dynamic="1"},type="image", url=d.url}
   end,
   switch = function(d,w)
-    return {name=d.name,style={weight=w or d.weight or "0.50"},type="switch", value=d.value or "true"}
+    d.value = d.value == nil and "false" or tostring(d.value)
+    return {name=d.name,style={weight=w or d.weight or "0.50"},text=d.text,type="switch", value=d.value}
   end,
   option = function(d,_)
     return {name=d.name, type="option", value=d.value or "Hupp"}
@@ -147,10 +148,10 @@ local function collectViewLayoutRow(u,map)
               min = u.min,
               step = u.step
             }
-          elseif u.type=='select' then
-            local cb = map["select"..u.name]
+          elseif u.type=='select' or u.type=='switch' then
+            local cb = map[u.type..u.name]
             if cb == u.name.."Clicked" then cb = nil end
-            row[#row+1]={select=u.name, text=u.text, options=u.options, onToggled=cb}
+            row[#row+1]={[u.type]=u.name, text=u.text, options=u.options, onToggled=cb}
           end
         else
           for _,v in pairs(u) do conv(v) end

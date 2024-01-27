@@ -97,6 +97,9 @@ export default {
         selectChanged(id,value) {
             this.uiMap[id].value = value;
         },
+        switchChanged(id,value) {
+            this.uiMap[id].value = value;
+        },
         updateQA() {
             console.log(`Refresh QA ${this.id}`);
             this.httpGet(this.$store.state.backend + "/emu/qa/" + this.id, (data) => {
@@ -125,6 +128,9 @@ export default {
                             item.id = item.label;
                         } else if (item.type == "select") {
                             item.id = item.select;
+                        } else if (item.type == "switch") {
+                            console.log("Switch: " + item.text);
+                            item.id = item.switch;
                         }
                     });
                 });

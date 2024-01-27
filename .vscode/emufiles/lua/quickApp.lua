@@ -406,6 +406,7 @@ local zombieCode = [[
            local url = fmt("%s/api/plugins/callUIEvent?deviceID=%s&eventType=%s&elementName=%s&value=%s",path,UIEvent.deviceId,UIEvent.eventType,UIEvent.elementName,value)
            net.HTTPClient():request(url,{options={method='GET'}})
          end
+         if quickApp._zombie then quickApp:_zombie(true) end
          quickApp:debug("Events intercepted by emulator at "..ip)
        end
        patched=true
@@ -416,6 +417,7 @@ local zombieCode = [[
        if actionH then quickApp.actionHandler = actionH end
        if UIh then quickApp.UIHandler = UIh end
        actionH,UIh=nil,nil
+       if quickApp._zombie then quickApp:_zombie(false) end
        quickApp:debug("Events restored from emulator")
        patched=false
      end
