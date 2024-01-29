@@ -358,7 +358,10 @@ function onAction(id, event)
   quickApp:warning(string.format("Child with id:%s not found", id))
 end
 
+local function tryboolean(str) if str=='true' then return true elseif str=='false' then return false else return str end end
+
 function onUIEvent(id, event)
+  if event.values and event.values[1] ~= nil then event.values[1] = tryboolean(event.values[1]) end
   (fibaro.fibemu and fibaro.fibemu._print or print)("UIEvent: ", json.encode(event))
   if quickApp.UIHandler then
     quickApp:UIHandler(event)
@@ -397,13 +400,13 @@ local zombieCode = [[
             if IGNORE[action.actionName] then
               return quickApp:callAction(action.actionName, table.unpack(action.args))
             end
-            local url = fmt("%s/api/devices/%s/action/%s",path,action.deviceId,action.actionName)
+            local url = fmt("%s/api/devices/%s/action/%s",path,-action.deviceId,action.actionName)
             net.HTTPClient():request(url,{options={method='POST', data=json.encode({args=action.args})}})
          end
          function quickApp:UIHandler(UIEvent) 
            local value = UIEvent.values and UIEvent.values[1]
            if value == nil then value = "null" end
-           local url = fmt("%s/api/plugins/callUIEvent?deviceID=%s&eventType=%s&elementName=%s&value=%s",path,UIEvent.deviceId,UIEvent.eventType,UIEvent.elementName,value)
+           local url = fmt("%s/api/plugins/callUIEvent?deviceID=%s&eventType=%s&elementName=%s&value=%s",path,-UIEvent.deviceId,UIEvent.eventType,UIEvent.elementName,value)
            net.HTTPClient():request(url,{options={method='GET'}})
          end
          if quickApp._zombie then quickApp:_zombie(true) end

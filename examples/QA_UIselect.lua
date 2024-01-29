@@ -1,8 +1,8 @@
 --%%name="Select test"
 --%%type=com.fibaro.binarySwitch
 
---%%u={select='modeSelector',text='modes',options={{text='Auto',value='auto'},{text='Manual',value='manual'},{text='Eco',value='eco'}},onToggled='modeSelector'}
---%%u={{button='b1',text='newOptions',onReleased='newOptions'},{button='b2',text='setManual',onReleased='setManual'},{button='b3',text='setAuto',onReleased='setAuto'}}
+-- %%u={select='modeSelector',text='modes',options={{text='Auto',value='auto'},{text='Manual',value='manual'},{text='Eco',value='eco'}},onToggled='modeSelector'}
+-- %%u={{button='b1',text='newOptions',onReleased='newOptions'},{button='b2',text='setManual',onReleased='setManual'},{button='b3',text='setAuto',onReleased='setAuto'}}
 --%%u={switch='s1',text='switch1',onReleased='sb'}
 
 function QuickApp:modeSelector(event)

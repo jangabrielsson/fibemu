@@ -107,8 +107,8 @@ local function uiStruct2uiCallbacks(UI)
     function(e)
       if e.name then
         -- {callback="foo",name="foo",eventType="onReleased"}
-        local defu = e.button and "Clicked" or e.slider and "Change" or (e.switch or e.select) and "Toggle" or ""
-        local deff = e.button and "onReleased" or e.slider and "onChanged" or (e.switch or e.select) and "onToggled" or ""
+        local defu = (e.button or e.switch) and "Clicked" or e.slider and "Change" or e.select and "Toggle" or ""
+        local deff = (e.button or e.switch) and "onReleased" or e.slider and "onChanged" or e.select and "onToggled" or ""
         local cbt = e.name..defu
         if e.onReleased then
           cbt = e.onReleased
@@ -133,10 +133,10 @@ local function collectViewLayoutRow(u,map)
         if u.name then
           if u.type=='label' then
             row[#row+1]={label=u.name, text=u.text}
-          elseif u.type=='button'  then
-            local cb = map["button"..u.name]
+          elseif u.type=='button' or u.type=='switch' then
+            local cb = map[u.type..u.name]
             if cb == u.name.."Clicked" then cb = nil end
-            row[#row+1]={button=u.name, text=u.text, onReleased=cb}
+            row[#row+1]={[u.type]=u.name, text=u.text, value=u.value, onReleased=cb}
           elseif u.type=='slider' then
             local cb = map["slider"..u.name]
             if cb == u.name.."Clicked" then cb = nil end
@@ -148,7 +148,7 @@ local function collectViewLayoutRow(u,map)
               min = u.min,
               step = u.step
             }
-          elseif u.type=='select' or u.type=='switch' then
+          elseif u.type=='select' then
             local cb = map[u.type..u.name]
             if cb == u.name.."Clicked" then cb = nil end
             row[#row+1]={[u.type]=u.name, text=u.text, options=u.options, onToggled=cb}

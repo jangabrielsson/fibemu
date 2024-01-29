@@ -34,9 +34,9 @@ end
 function QuickApp:onInit()
   print("Zombie test")
   self.rid = self.zombieId or self.id
-  --api.post("/plugins/updateView", { deviceId = self.id, componentName = 'l1', propertyName = 'text', newValue = 'DEF' })
+  api.post("/plugins/updateView", { deviceId = self.id, componentName = 'l1', propertyName = 'text', newValue = 'DEF' })
   --self:updateProperty('value',true)
-  --self:setVariable('v1',"123")
+  self:setVariable('l1',"123")
   --api.get(string.format("/plugins/callUIEvent?deviceID=%s&eventType=onReleased&elementName=__turnon&value=null",self.zombieId))
   -- local d = self:createChildDevice({
   --   name = "ZombieChild",

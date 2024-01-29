@@ -582,8 +582,8 @@ local Events = {}
 
 function Events.onAction(event)
     local id = event.deviceId
-    local zid = QA.isZombie(id)
-    if zid and not DIR[id] then
+    local zid = QA.isZombie(-id)
+    if zid then  -- Incoming from HC3 zombie, forward to local deviceID
         event.deviceId = zid
         return Events.onAction(event)
     end
@@ -614,8 +614,8 @@ end
 
 function Events.uiEvent(event)
     local id = event.deviceId
-    local zid = QA.isZombie(id)
-    if zid and not DIR[id] then
+    local zid = QA.isZombie(-id)
+    if zid then -- Incoming from HC3 zombie, forward to local deviceID
         event.deviceId = zid
         return Events.uiEvent(event)
     end

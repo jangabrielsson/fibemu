@@ -107,7 +107,7 @@ export default {
       value = this.uiMap[id].value === "true" ? "false" : "true";
       console.log(`Switch '${id}' pressed '${value}'`);
       this.uiMap[id].value = value;
-      fetch(this.$store.state.backend + `/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onToggled&elementName=${id}&value=${value}`);
+      fetch(this.$store.state.backend + `/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onReleased&elementName=${id}&value=${value}`);
     },
   },
   watch: {
