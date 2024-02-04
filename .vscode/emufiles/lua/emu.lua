@@ -201,7 +201,7 @@ local function createEnvironment(id)
     }
 
     for _, k in ipairs(funs) do env[k] = _G[k] end
-    env.os = { debug = debug, time = os.time, date = os.date, difftime = os.difftime, clock = os.clock, setTime = os.setTime, COLORMAP = os.COLORMAP }
+    env.os = { exit = os.exit, debug = debug, time = os.time, date = os.date, difftime = os.difftime, clock = os.clock, setTime = os.setTime, COLORMAP = os.COLORMAP }
     env._G = env
     env._ENV = env
     env.type = luaType
@@ -552,11 +552,6 @@ function QA.fun.publishEvent(args)
         }
     }
     refreshStates.newEvent(ev)
-    return true, 200
-end
-
-function QA.fun.exportFQA(args)
-    args = json.decode(args)
     return true, 200
 end
 
