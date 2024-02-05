@@ -120,10 +120,14 @@ local function installQA(fname, conf)
         return
     end
 
+    local eRoot = ""
+    code:gsub("(%-%-%%%%root=.-)[\n\r]",function(str)
+        eRoot = str:match("root=(.+)")
+    end)
     local parseCode = code:gsub("(%-%-%%%%include=.-)[\n\r]", function(str)
-        local fname2 = str:match("include=(.+)")
+        local fname2 = eRoot..str:match("include=(.+)")
         local f2 = io.open(fname2, "r")
-        if not f2 then QA.syslogerr("install", "Include file not found - %s", fname2) return end
+        if not f2 then QA.syslogerr("install", "Include file not found - %s", fname2) return "" end
         local icode = f2:read("*all")
         f2:close()
         return icode
@@ -136,7 +140,7 @@ local function installQA(fname, conf)
 
     local fileoffset = ""
     local chandler = {}
-    function chandler.root(var, val, vars) fileoffset = val end
+    function chandler.root(var, val, vars) fileoffset = val eRoot=val end
 
     function chandler.u(var, val, vars)
         vars.ui = vars.ui or {}

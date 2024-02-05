@@ -13,8 +13,24 @@
 --%%u={{button='test', text='A', onReleased='testA'},{button='test', text='B', onReleased='testB'}}
 --%%u={slider="slider", max="80", onChanged='sliderA'}
 --%%u={label="lblA", text='This is a text'}
+--%%u={select='modeSelector',text='modes',options={{text='Auto',value='auto'},{text='Manual',value='manual'},{text='Eco',value='eco'}},onToggled='modeSelector'}
+--%%u={{button='b1',text='newOptions',onReleased='newOptions'},{button='b2',text='setManual',onReleased='setManual'},{button='b3',text='setAuto',onReleased='setAuto'}}
+--%%u={switch='s1',text='switch1',onReleased='sb'}
 
 local fibemu = fibaro.fibemu 
+
+function QuickApp:modeSelector(event)
+    print(event.values[1])
+end
+
+function QuickApp:sb(event)
+    print(event.values[1])
+    --self:updateView("s1","value","true")
+end
+
+function QuickApp:setAuto(event)
+    print(event.values[1])
+end
 
 function QuickApp:onInit()
     self:debug("Started", self.id)
