@@ -167,6 +167,7 @@ local function installQA(fname, conf)
     function chandler.proxy(var, val, vars) vars.proxy = tonumber(val) end
 
     function chandler.noStock(var, val, vars) vars.noStock = eval(val) end
+    function chandler.fullLua(var, val, vars) vars.fullLua = eval(val) end
 
     function chandler.debug(var, val, vars) --%%debug=flag1:val1,flag2:val2
         local dbs = {}
@@ -308,6 +309,7 @@ local function installQA(fname, conf)
     end
 
     DIR[id] = {
+        fullLua = vars.fullLua == true,
         fname = fname,
         dev = dev,
         files = vars.files,

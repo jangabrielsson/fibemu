@@ -34,6 +34,9 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 -- SOFTWARE.
 --
+local ctx = ...
+ctx = ctx or {}
+local rawget,rawset = ctx.rawget or rawget,ctx.rawset or rawset
 json = { _version = "0.1.2" }
 -------------------------------------------------------------------------------
 -- Encode

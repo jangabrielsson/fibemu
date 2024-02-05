@@ -1,12 +1,18 @@
 local pconfig, hooks, luapath = ...
-local function doload(fname) return dofile(luapath .. fname) end
+local function doload(fname) 
+    fname = luapath .. fname
+    local f = assert(loadfile(fname,"bt",_G))
+    return f()
+end
 
 local RESTART_TIME = 5000 -- 5s wait before restarting QA
 local EMU_GLOBAL = "FIBEMU"
 
 doload("json.lua")
 doload("net.lua")
+print("Loading")
 doload("class.lua")
+print("Loaded")
 
 pconfig = json.decode(pconfig)
 
@@ -195,13 +201,25 @@ local function createEnvironment(id)
     os.debug = debug
 
     local funs = {
-        "os", "io", "pairs", "ipairs", "select", "print", "math", "string", "pcall", "xpcall", "table", "error",
+        "os", "pairs", "ipairs", "select", "print", "math", "string", "pcall", "xpcall", "table", "error",
         "next", "json", "tostring", "tonumber", "assert", "unpack", "utf8", "collectgarbage", "type",
-        "setmetatable", "getmetatable", "rawset", "rawget", "coroutine" -- extra stuff
+        "setmetatable", "getmetatable" -- extra stuff
     }
-
     for _, k in ipairs(funs) do env[k] = _G[k] end
-    env.os = { exit = os.exit, debug = debug, time = os.time, date = os.date, difftime = os.difftime, clock = os.clock, setTime = os.setTime, COLORMAP = os.COLORMAP }
+
+    if qa.fullLua then
+        for _, k in ipairs({ 
+            "io","load", "loadfile", "dofile", "require", "package", "module", "debug",
+            "rawset", "rawget", "coroutine", "io", }) do
+            env[k] = _G[k]
+        end
+    end
+
+    env.os = { 
+        exit = os.exit, debug = debug, time = os.time, date = os.date, difftime = os.difftime, 
+        clock = os.clock, setTime = os.setTime, COLORMAP = os.COLORMAP,
+        rawset = rawset, rawget = rawget
+    }
     env._G = env
     env._ENV = env
     env.type = luaType
@@ -290,7 +308,7 @@ local function createEnvironment(id)
         if qa.debug.libraryfiles then
             QA.syslog(qa.tag, "Loading library " .. fn)
         end
-        local stat, res = pcall(function() return loadfile(fn, "t", env)() end)
+        local stat, res = pcall(function() return loadfile(fn, "t", env)(_G) end)
         if not stat then
             QA.syslogerr(qa.tag, "%s - %s", fn, res)
             qa.env = nil

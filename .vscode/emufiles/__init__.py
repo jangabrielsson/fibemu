@@ -8,6 +8,12 @@ import subprocess
 from fibenv import FibaroEnvironment
 
 app = fibapi.app
+# file_path = "hc3/QuickApps/53_MyEventRunner4/EventRunner.lua"
+# ##file_path = "examples/backup.lua"
+# with open(file_path) as file:
+#     # Process the file contents here
+#     content = file.read()
+#     print(content)
 
 # main startup
 if __name__ == "__main__":
