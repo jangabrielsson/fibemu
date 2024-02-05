@@ -1,3 +1,10 @@
+<#
+in windows 11:
+run PowerShell
+set rights for running script: Set-ExecutionPolicy RemoteSigned
+run script in your folder: .\kill-port.ps1 5004
+result should be: SUCCESS: The process with PID xxxxx has been terminated.
+#>
 param ($port)
 
 $foundProcesses = netstat -ano | findstr :$port
