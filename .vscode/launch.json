@@ -16,7 +16,7 @@
       "args": [
         ".vscode/emufiles/__init__.py",
         "-f",
-        "${relativeFile}" //"${file}"
+        "${relativeFile}" //"${file}",
       ],
       //"scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
       //"scriptFiles": ["*.lua", "**/*.lua"],
