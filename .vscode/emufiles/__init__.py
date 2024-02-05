@@ -1,5 +1,6 @@
 import uvicorn
 import sys
+import re
 import os, socket
 import argparse
 import fibapi
@@ -30,14 +31,6 @@ if __name__ == "__main__":
     except Exception:
         config = {}
 
-    try:
-        with open('config.json') as f:
-            config_d = json.load(f)
-            for key, value in config_d.items():
-                config[key] = value
-    except Exception as e:
-        print(f'config.json: {e}')
-
     parser.add_argument('-f', "--file", help='initial QA to load')
     parser.add_argument('-f2', "--file2", help='second QA to load')
     parser.add_argument('-f3', "--file3", help='third QA to load')
@@ -57,6 +50,27 @@ if __name__ == "__main__":
     parser.add_argument('-extra', '--extra', nargs='*', help='extra arguments for QA', default=[]) 
 
     args = parser.parse_args()
+
+    try:
+        with open('config.json') as f:
+            config_d = json.load(f)
+            for key, value in config_d.items():
+                config[key] = value
+    except Exception as e:
+        with open(args.file) as f:
+            code = f.read()
+            root = re.search("\-\-%%root=(.+)",code)
+            if root:
+                prefix = root.group(1).strip()
+                path = prefix+'config.json'
+                try:
+                    with open(path) as f:
+                        config_d = json.load(f)
+                        for key, value in config_d.items():
+                            config[key] = value
+                except Exception as e:
+                    print(f'config.json: {e}')
+
     config['local'] = args.local
     config['user'] = args.user or config.get('user') or os.environ.get('HC3_USER')
     config['password'] = args.password or config.get('password') or os.environ.get('HC3_PASSWORD')
