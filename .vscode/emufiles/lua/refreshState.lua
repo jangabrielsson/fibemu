@@ -169,7 +169,10 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         f=function(d,e) return true end,
         l=function(d,e) return fmt("%s",e.type) end
     },
-
+    ClimateZoneTemperatureChangedEvent = {
+        f=function(d,e) return true end,
+        l=function(d,e) return fmt("%s",e.type) end
+    },
     NotificationCreatedEvent = {
         f=function(d,e) return true end,
         l=function(d,e) return fmt("%s ID:%s",e.type,d.id) end

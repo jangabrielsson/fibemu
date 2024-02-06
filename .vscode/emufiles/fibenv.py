@@ -104,8 +104,9 @@ class FibaroEnvironment:
             while True:
                 try:
                     nurl = url + str(last)
-                    resp = requests.get(nurl, headers = options['headers'])
+                    resp = requests.get(nurl, headers = options['headers'], timeout=30)
                     if resp.status_code == 200:
+                        retries = 0
                         data = resp.json()
                         last = data['last'] if data['last'] else last
                         ## print(f"Data: {data}",file=sys.stderr)
@@ -119,6 +120,8 @@ class FibaroEnvironment:
                         print(f"HC3 credentials error",file=sys.stderr)
                         print(f"Exiting refreshStates loop",file=sys.stderr)
                         return
+                except exceptions.TimeoutError as e:
+                    pass
                 except exceptions.ConnectionError as e:
                     retries += 1
                     if retries > 5:
