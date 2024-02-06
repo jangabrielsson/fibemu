@@ -294,6 +294,7 @@ local keys = {
     --['panels/family'] = "id",
     ['panels/sprinklers'] = "id",
     ['panels/humidity'] = "id",
+    ['panels/climate'] = "id",
     ['panels/favoriteColors'] = "id",
     ['panels/favoriteColors/v2'] = "id",
 }
@@ -324,6 +325,7 @@ rsrcs = {
     ['panels/family'] = nil,
     ['panels/sprinklers'] = nil,
     ['panels/humidity'] = nil,
+    ['panels/climate'] = nil,
     ['panels/favoriteColors'] = nil,
     diagnostics = nil,
     sortOrder = nil,

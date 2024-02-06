@@ -879,6 +879,13 @@ async def get_Panels_Location(response: Response):
     response.status_code = code
     return list(items.values()) if code < 300 else None
 
+''' panels/climate methods '''
+@app.get("/api/panels/climate", tags=["Panels climate methods"])
+async def get_Panels_Climate(response: Response):
+    items,code = fibenv.get('fe').luaCall("getResource","panels/climate")
+    response.status_code = code
+    return list(items.values()) if code < 300 else None
+
 ''' panels/notification methods '''
 @app.get("/api/panels/notifications", tags=["Panels notifications methods"])
 async def get_Panels_Notifications(response: Response):
