@@ -129,7 +129,12 @@ if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['
 if not config.lcl then refreshStates.start() end
 
 function QA.syslog(typ, fmt, ...)
-    util.debug({ color = true }, typ, format(fmt, ...), "SYS")
+    local args = { ...}
+    if #args==0 then
+        util.debug({ color = true }, typ, fmt, "SYS")
+    else
+        util.debug({ color = true }, typ, format(fmt, ...), "SYS")
+    end
 end
 
 ------- Greeting -----------------------------
