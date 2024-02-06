@@ -63,6 +63,8 @@ def httpCall(method, url, options, data, local):
                 res = req.delete(url, headers=headers, data=data, timeout=timeout)
 
         res = asyncio.run(res) if local else res
+        if res.text.startswith("<!DOCTYPE html>"):
+            return 500, "Internal Server Error", res.headers
         return res.status_code, res.text, res.headers
     except Exception as e:
         return 500, e.__doc__, {}
