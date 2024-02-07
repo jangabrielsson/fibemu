@@ -467,7 +467,8 @@ local function loadFiles(id)
         if qa.debug.userfiles then
             QA.syslog(qa.tag, "Loading user file %s", qf.fname or qf.name)
         end
-        local qa2, res = load(qf.content, qf.fname, "t", env) -- Load QA
+        local path = QA.pyhooks.expandPath(qf.fname)
+        local qa2, res = load(qf.content, path, "t", env) -- Load QA
         if not qa2 then
             QA.syslogerr(qa.tag, "%s - %s", qf.fname or qf.name, res)
             return false

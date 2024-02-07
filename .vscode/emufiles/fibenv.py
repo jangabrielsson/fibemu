@@ -179,6 +179,8 @@ class FibaroEnvironment:
                 'createUDPSocket':lambda: fibnet.LuaUDPSocket(self),
                 'createWebSocket':lambda url,headers,cb: fibnet.LuaWebSocket(self,url,headers,cb),
                 'listDir':lambda d: json.dumps(os.listdir(d)),
+                'getcwd':os.getcwd,
+                'expandPath':os.path.realpath,
                 'deletFile':os.remove,
                 'addDebugMessage':lambda typ,tag,msg,ts: self.addDebugMessage(typ,tag,msg,ts),
                 'setLogLevel':setLogLevel,

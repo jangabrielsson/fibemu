@@ -60,6 +60,7 @@ local debugFlags = QA.debug
 debugFlags.color = true
 debugFlags.refresh = true
 QA.pyhooks = pyhooks
+QA.cwd = pyhooks.getcwd()
 QA.debugFlags = debugFlags
 QA.config = config
 QA.loadstring = load
