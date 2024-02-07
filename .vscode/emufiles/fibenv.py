@@ -7,7 +7,6 @@ from threading import active_count
 import multiprocessing
 import logging
 import requests
-from requests import exceptions
 import queue
 from itertools import islice
 from collections import deque
@@ -120,16 +119,15 @@ class FibaroEnvironment:
                         print(f"HC3 credentials error",file=sys.stderr)
                         print(f"Exiting refreshStates loop",file=sys.stderr)
                         return
-                except exceptions.TimeoutError as e:
-                    pass
-                except exceptions.ConnectionError as e:
+                except requests.exceptions.ConnectionError as e:
                     retries += 1
                     if retries > 5:
                         print(f"Connection error: {nurl}",file=sys.stderr)
                         print(f"Exiting refreshStates loop",file=sys.stderr)
                         return
                 except Exception as e:
-                    print(f"Error: {e} {nurl}",file=sys.stderr)
+                    ##print(f"Error: {e} {nurl}",file=sys.stderr)
+                    pass
                     
         self.rthread = Thread(target=refreshRunner, args=())
         self.rthread.start()
