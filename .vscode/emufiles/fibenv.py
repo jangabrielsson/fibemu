@@ -119,6 +119,8 @@ class FibaroEnvironment:
                         print(f"HC3 credentials error",file=sys.stderr)
                         print(f"Exiting refreshStates loop",file=sys.stderr)
                         return
+                except requests.exceptions.Timeout as e:
+                    pass
                 except requests.exceptions.ConnectionError as e:
                     retries += 1
                     if retries > 5:
@@ -126,8 +128,7 @@ class FibaroEnvironment:
                         print(f"Exiting refreshStates loop",file=sys.stderr)
                         return
                 except Exception as e:
-                    ##print(f"Error: {e} {nurl}",file=sys.stderr)
-                    pass
+                    print(f"Error: {e} {nurl}",file=sys.stderr)
                     
         self.rthread = Thread(target=refreshRunner, args=())
         self.rthread.start()
