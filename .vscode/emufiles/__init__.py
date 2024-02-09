@@ -13,7 +13,7 @@ app = fibapi.app
 # main startup
 if __name__ == "__main__":
     global config
-    version = "0.41"
+    version = "0.42"
 
     parser = argparse.ArgumentParser(
                     prog='fibemu',
