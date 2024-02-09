@@ -115,7 +115,7 @@ local function installQA(fname, conf)
             dispName = fname:gsub(prefix,"")
             fname = FDIR.."/"..dispName
             dispName = "hc3fs:/"..dispName
-        end
+        else FDIR = "" end
     else
     end
     if not conf.silent then QA.syslog("install", "QA '%s'", dispName) end
@@ -133,9 +133,18 @@ local function installQA(fname, conf)
         return
     end
 
+    local function resolveRoot(name)
+        if name == "<automatic>" then
+            local nname = fname:match("^(.-)[%w_ ‰.]+$")
+            if nname then return nname end
+        end
+        return name
+    end
+
     local eRoot = ""
     code:gsub("(%-%-%%%%root=.-)[\n\r]",function(str)
         eRoot = str:match("root=(.+)")
+        eRoot = resolveRoot(eRoot)
     end)
     local parseCode = code:gsub("(%-%-%%%%include=.-)[\n\r]", function(str)
         local fname2 = eRoot..str:match("include=(.+)")
@@ -153,8 +162,8 @@ local function installQA(fname, conf)
 
     local fileoffset = ""
     local chandler = {}
-    function chandler.root(var, val, vars) fileoffset = val eRoot=val end
-    function chandler.root2(var, val, vars) fileoffset = val eRoot=val end
+    function chandler.root(var, val, vars) val=resolveRoot(val) fileoffset = val eRoot=val end
+    function chandler.root2(var, val, vars) val=resolveRoot(val) fileoffset = val eRoot=val end
 
     function chandler.u(var, val, vars)
         vars.ui = vars.ui or {}

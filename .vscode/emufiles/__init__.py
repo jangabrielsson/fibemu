@@ -9,17 +9,12 @@ import subprocess
 from fibenv import FibaroEnvironment
 
 app = fibapi.app
-# file_path = "hc3/QuickApps/53_MyEventRunner4/EventRunner.lua"
-# ##file_path = "examples/backup.lua"
-# with open(file_path) as file:
-#     # Process the file contents here
-#     content = file.read()
-#     print(content)
 
 # main startup
 if __name__ == "__main__":
     global config
     version = "0.41"
+
     parser = argparse.ArgumentParser(
                     prog='fibemu',
                     description='QA/HC3 emulator for HC3',
@@ -51,25 +46,16 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    try:
-        with open('config.json') as f:
-            config_d = json.load(f)
-            for key, value in config_d.items():
-                config[key] = value
-    except Exception as e:
-        with open(args.file) as f:
-            code = f.read()
-            root = re.search("\-\-%%root=(.+)",code)
-            if root:
-                prefix = root.group(1).strip()
-                path = prefix+'config.json'
-                try:
-                    with open(path) as f:
-                        config_d = json.load(f)
-                        for key, value in config_d.items():
-                            config[key] = value
-                except Exception as e:
-                    print(f'config.json: {e}')
+    path = os.path
+    configPaths = ["config.json",path.join(path.dirname(args.file),"config.json")]
+    for c in configPaths:
+        if path.exists(c):
+            with open(c) as f:
+                config_d = json.load(f)
+                for key, value in config_d.items():
+                    config[key] = value
+            break
+    
 
     config['local'] = args.local
     config['user'] = args.user or config.get('user') or os.environ.get('HC3_USER')
