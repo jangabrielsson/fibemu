@@ -41,8 +41,20 @@ else
     print("Not waiting for debugger")
 end
 
+local hc3fspath = ""
+local tmpdir = os.getenv("TMP") or os.getenv("TEMP") or os.getenv("TMPDIR") or ""
+for _,p in ipairs({tmpdir.."hc3fs.path",".fdir.txt"}) do
+    local f = io.open(p,"r")
+    if f then
+        hc3fspath = f:read("*a") or ""
+        f:close()
+        break;
+   end
+end
+
 local config = pconfig
 config.creds = util.basicAuthorization(config.user or "", config.password or "")
+config.hc3fspath = hc3fspath
 
 config.lcl = config['local'] or false
 local pyhooks = hooks
@@ -224,7 +236,7 @@ local function createEnvironment(id)
     env.os = { 
         exit = os.exit, debug = debug, time = os.time, date = os.date, difftime = os.difftime, 
         clock = os.clock, setTime = os.setTime, COLORMAP = os.COLORMAP,
-        rawset = rawset, rawget = rawget
+        rawset = rawset, rawget = rawget, getenv = os.getenv, execute = os.execute, remove = os.remove,
     }
     env._G = env
     env._ENV = env

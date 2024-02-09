@@ -106,16 +106,14 @@ local FDIR = ""
 local function installQA(fname, conf)
     local dispName,id=fname,nil
     conf = conf or {}
-    local f = io.open(".fdir.txt", "r")
-    if f then
-        FDIR = f:read("*all")
-        f:close()
+    if QA.config.hc3fspath and QA.config.hc3fspath~="" then
         local prefix = fname:match("^([%.%/\\]+)")
         if prefix and #prefix > 7 then
+            FDIR = QA.config.hc3fspath
             dispName = fname:gsub(prefix,"")
             fname = FDIR.."/"..dispName
             dispName = "hc3fs:/"..dispName
-        else FDIR = "" end
+        else QA.config.hc3fs = "" end
     else
     end
     if not conf.silent then QA.syslog("install", "QA '%s'", dispName) end
