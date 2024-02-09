@@ -102,10 +102,23 @@ local function installFQA(fqa, conf)
     return DIR[dev.id]
 end
 
+local FDIR = ""
 local function installQA(fname, conf)
-    local id
+    local dispName,id=fname,nil
     conf = conf or {}
-    if not conf.silent then QA.syslog("install", "QA '%s'", fname) end
+    local f = io.open(".fdir.txt", "r")
+    if f then
+        FDIR = f:read("*all")
+        f:close()
+        local prefix = fname:match("^([%.%/\\]+)")
+        if prefix and #prefix > 7 then
+            dispName = fname:gsub(prefix,"")
+            fname = FDIR.."/"..dispName
+            dispName = "hc3fs:/"..dispName
+        end
+    else
+    end
+    if not conf.silent then QA.syslog("install", "QA '%s'", dispName) end
     local f = io.open(fname, "r")
     if not f then
         QA.syslogerr("install", "File not found - %s", fname)
@@ -246,7 +259,7 @@ local function installQA(fname, conf)
 
     function chandler.file(var, val, vars) --%%file=path,name;
         local fn, qn = table.unpack(val:sub(1, -2):split(","))
-        vars.files[#vars.files + 1] = { fname = fileoffset .. fn, name = qn, isMain = false, content = nil }
+        vars.files[#vars.files + 1] = { fname = FDIR..fileoffset .. fn, name = qn, isMain = false, content = nil }
     end
 
     function chandler.remote(var, val, vars)
@@ -467,7 +480,12 @@ local function loadFiles(id)
         if qa.debug.userfiles then
             QA.syslog(qa.tag, "Loading user file %s", qf.fname or qf.name)
         end
-        local path = QA.pyhooks.expandPath(qf.fname)
+        local path = qf.fname
+        if FDIR ~="" and path:sub(1,#FDIR)==FDIR then
+           path = "hc3fs:"..path:gsub(FDIR,"")
+        else
+            path = QA.pyhooks.expandPath(path)
+        end
         local qa2, res = load(qf.content, path, "t", env) -- Load QA
         if not qa2 then
             QA.syslogerr(qa.tag, "%s - %s", qf.fname or qf.name, res)
