@@ -5,6 +5,7 @@ local _handler = {}
 local _eMap = {}
 local post,handleEvent,trueFor,again,toTime,transformEvent
 local _inited = false
+local Event
 
 fibaro.debugFlags = fibaro.debugFlags or {}
 
@@ -39,6 +40,7 @@ end
 local function DEBUG(tag,...) 
   if fibaro.debugFlags[tag] then fibaro.trace(__TAG,color('skyblue',fmt(...))) end 
 end
+local function color(col,str) return fmt('<font color="%s">%s</font>',col,str) end
 
 ---------------- Lua Table to String ---------------
 local function encTsort(a,b) return a[1] < b[1] end
@@ -328,6 +330,11 @@ function managedEvent.cron(k,event)
   addCronItem(event)
   return event
 end
+function _builtin:_managedEvent(typ,fun)
+  assert(type(typ)=='string',"Type expected")
+  assert(type(fun)=='function',"Function expected")
+  managedEvent[typ] = fun
+end
 
 local function coerce(x,y) local x1 = tonumber(x) if x1 then return x1,tonumber(y) else return x,y end end
 local constraints = {}
@@ -506,31 +513,55 @@ end
 local handlerMT = {
   again = again, 
   trueFor = trueFor,
-  post = function(_,event,time) return post(event,time) end,
-  cancel = function(_,ref) return fibaro.cancel(ref) end,
+  post = function(k,event,time)
+    local timers = k._timers
+    if not timers then timers = {}; k._timers=timers end
+    local ref
+    ref = post(event,time,nil,function(event) timers[ref]=nil end)
+    timers[ref] = true
+  end,
+  cancel = function(k,ref) 
+    fibaro.cancel(ref) 
+    local timers = k._timers
+    if timers then timers[ref] = nil end  
+  end,
+  cancelAll = function(k) 
+    local timers = k._timers
+    if timers then for t,_ in pairs(timers) do k:cancel(t) end  return true end
+  end,
   enable = function(k) return fibaro.enable(k.id) end,
-  disable = function(k) return fibaro.disable(k.id) end,
+  disable = function(k) k:cancelAll(); return fibaro.disable(k.id) end,
   timer = function(k,t,f,...)
     local args = {...}
     return k:post({type='function',fun=f, args=args},t) 
   end,
-  debugf = function(_,...) debugfun(fibaro.debug,...) end,
-  tracef = function(_,...) debugfun(fibaro.trace,...) end,
-  warningf = function(_,...) debugfun(fibaro.warning,...) end,
-  errorf = function(_,...) debugfun(fibaro.error,...) end,
+  debug = function(self,...) fibaro.debug(__TAG,self._tag,...) end,
+  trace = function(self,...) fibaro.trace(__TAG,self._tag,...) end,
+  warning = function(self,...) fibaro.warning(__TAG,self._tag,...) end,
+  error = function(self,...) fibaro.error(__TAG,self._tag,...) end,
+  debugf = function(self,fmt,...) debugfun(fibaro.debug,(self._tag or "")..fmt,...) end,
+  tracef = function(self,fmt,...) debugfun(fibaro.trace,(self._tag or "")..fmt,...) end,
+  warningf = function(self,fmt,...) debugfun(fibaro.warning,(self._tag or "")..fmt,...) end,
+  errorf = function(self,fmt,...) debugfun(fibaro.error,(self._tag or "")..fmt,...) end,
 }
 
 local function createHandler(k,f)
-  return setmetatable({
-    id = k,
-  },{
-    __index = function(t,k) return handlerMT[k] end,
+  local ht = { id = k }
+  return setmetatable({},{
+    __newindex = function(t,k,v)
+      if k == '_tag' and v~=nil then v = "["..color(ht._tagColor or 'green',v).."] " end
+      ht[k] = v
+    end,
+    __index = function(t,k) return ht[k]==nil and handlerMT[k] or ht[k] end,
     __call = function(t,e,match) f(t,e,match) end
   })
 end
 
+local anonEvent = 1;
+local anonEventName = "event:"
 Event = setmetatable({},{
     __index = function(t,k)
+      if k == '_' then k = anonEventName..anonEvent end
       if _builtin[k] then return _builtin[k] end
       if not _inited then init() end
       return function(...)
@@ -543,6 +574,7 @@ Event = setmetatable({},{
       end
     end,
     __newindex = function(t,k,f)
+      if k == '_' then k = anonEventName..anonEvent; anonEvent = anonEvent + 1 end
       assert(not _builtin[k],"Can't redefine builtin Event function:"..k)
       assert(_trigger[k],"Event not defined for: "..tostring(k))
       assert(not _handler[k],"Handler already defined for: "..tostring(k))
@@ -566,7 +598,7 @@ function handleEvent(event)
   end)
 end
 
-function post(event,time,silent)
+function post(event,time,silent,guard)
   assert(isEvent(event),"Event expected")
   addEventMT(event)
   local now = os.time()
@@ -575,14 +607,14 @@ function post(event,time,silent)
   time = time-now
   if time < 0 then return nil end
   if not (event._sh or silent) then DEBUG('post',"post %s at %s",event,timeStr(time)) end
-  return setTimeout(function() handleEvent(event) end,1000*time)
+  local handler = handleEvent
+  if guard then handler = function(event) guard(event) return handleEvent(event) end end
+  return setTimeout(function() handler(event) end,1000*time)
 end
 
 fibaro.post = post
 
-function fibaro.cancel(ref)
-  clearTimeout(ref)
-end
+function fibaro.cancel(ref) clearTimeout(ref) end
 
 local function isEnabled(k) return not _handler[k]._disabled end
 function fibaro.enable(k) _handler[k]._disabled = nil end
@@ -594,9 +626,10 @@ end
 
 function _builtin:post(...) return post(...) end
 function _builtin:cancel(...) return clearTimeout(...) end
+function _builtin:cancelAll(k) return _handler[k]:cancelAll() end
 function _builtin:enable(k) _handler[k]._disabled = nil end
 function _builtin:disable(k) _handler[k]._disabled = true end
-function _builtin:remove(...) print("Not implmeneted") end
+function _builtin:remove(...) print("Not implemented") end
 function _builtin:attachRefreshstate(...)
   assert(fibaro._APP.trigger,"Trigger lib not included")
   function fibaro._APP.trigger.post(event) 
@@ -633,7 +666,52 @@ function Event:func(event)
   if not stat then fibaro.error(err) end
 end
 
+local Event2
+do
+  local ID,FID = nil,nil
+  local key = {}
+  local props,dprops = {},{tag='_tag',tagColor='_tagColor',debug='_debug'}
+  local builtin = {}
+  function key.id(t,k,v) FID=v; ID = v=="_" and (anonEventName..anonEvent) or v; props = {} end
+  function key.handler(t,k,v) 
+    Event[FID] = v
+    for k,v in pairs(props) do if k~='tag' then _handler[ID][dprops[k]] = v end end
+    _handler[ID]._tag = props.tag and tostring(props.tag) or props.tag==nil and ID or nil
+    if props.debug then
+      fibaro.trace(__TAG,color('yellow',ID.." defined"))
+    end
+    ID=nil  
+  end
+  Event2 = setmetatable({},{
+    __index = function(t,k)
+      return builtin[k]
+    end,
+    __newindex = function(t,k,v)
+      if key[k] then 
+        if k=='id' then assert(ID==nil,"Event: not closed previous Event declaration:"..(ID or ""))
+        else assert(ID~=nil,"Event: no Event.id declared") end
+        key[k](t,k,v) 
+        return 
+      elseif dprops[k] then props[k]=v; return end
+      error("Invalid Event key: "..k,2)
+    end,
+    __call = function(t,event)
+      Event[ID](event)
+    end
+  }
+)
+function builtin:post(event,time) return Event:post(event,time) end
+function builtin:cancel(ref) return Event:cancel(ref) end
+function builtin:cancelAll(k) return Event:cancelAll(k) end
+function builtin:enable(k) return Event:enable(k) end
+function builtin:disable(k) return Event:disable(k) end
+function builtin:remove(...) Event:remove(...) end
+function builtin:attachRefreshstate() return Event:attachRefreshstate() end
+end
 
+-------------------------------------
+Event_basic = Event
+Event_std = Event2
 
 ------- lib/Trigger.lua ----------
 local exports = {

@@ -1,85 +1,148 @@
 --%%merge=examples/EventLib.lua,lib/Trigger.lua,examples/EventAndTriggerLib.lua;
---%%file=examples/EventAndTriggerLIb.lua,eventLib;
+--%%file=examples/EventLib.lua,Event;
+--%%file=lib/Trigger.lua,Trigger;
 --%%file=examples/SpeedLib.lua,speedLib;
 
 -- fibaro.speedTime(4)
+-- fibaro.debugFlags.post = true
 
-Event.start{type='QAstart'}
-function Event:start(event)
+local Event = Event_std
+
+Event.id='start'
+Event{type='QAstart'}
+function Event:handler(event)
   Event:attachRefreshstate()
 end
 
 -- Defining an event handler
-Event.id1{type='device', id={20,30}, value=true}
---Event.id1{type='device', id=30, value=true}
-function Event:id1(event)
+Event.id='id1'
+Event{type='device', id={20,30}, value=true}
+--Event{type='device', id=30, value=true}
+function Event:handler(event)
   print("Device ",event.id," turned true")
 end
 
 Event:post({type='device', id=20, value=true})
 Event:post({type='device', id=30, value=true})
 
-Event.id2{type='device', id=46, property='centralSceneEvent', value={keyId='$key', keyAttribute='$attr'}}
-function Event:id2(event,vars)
-  print("Key",vars.key,"Atttribute",vars.attr)
+Event.id='id2'
+Event{type='device', id=46, property='centralSceneEvent', value={keyId='$key', keyAttribute='$attr'}}
+function Event:handler(event,vars)
+  self:debug("Key",vars.key,"Atttribute",vars.attr)
 end
 
-Event.cronTest{type='cron', time='* * * * *'}
-function Event:cronTest(event)
-  print("Cron, every minute")
+Event.id='cronTest'
+Event{type='cron', time='* * * * *'}
+function Event:handler(event)
+  self:debug("Cron, every minute")
 end
 
-Event.timerTest1{type='timer', time='+/00:00:05'}
-function Event:timerTest1(event)
-  print("Timer1 every 5sec, unaligned")
+Event.id='timerTest1'
+Event{type='timer', time='+/00:00:05'}
+function Event:handler(event)
+  self:debug("Timer1 every 5sec, unaligned")
 end
 
-Event.timerTest2{type='timer', time='+/00:00:05', aligned=true}
-function Event:timerTest2(event)
-  print("Timer2 every 5sec, aligned")
+Event.id='timerTest2'
+Event{type='timer', time='+/00:00:05', aligned=true}
+function Event:handler(event)
+  self:debug("Timer2 every 5sec, aligned")
 end
 
-Event.sensorOff{type='device', id=88, property='value'}
-function Event:sensorOff(event)
+Event.id='sensorOff'
+Event{type='device', id=88, property='value'}
+function Event:handler(event)
   if not self:trueFor(5,event.value==false) then return end
   self:debugf("Sensor %s trueFor %ds",event.id,5*self:again())
 end
-
 Event:post({type='device', id=88, property='value', value=false})
 
--- Event.a{type='t'}
--- function Event:a(event)
---   print(self.id,event)
--- end
+Event.id='ex3'
+Event{type='device', id=88, property='value'}
+function Event:handler(event)
+  -- self:debugf(fmt,...)
+  -- self:tracef(fmt,...)
+  -- self:warningf(fmt,...)
+  -- self:errorf(fmt,...)
+  -- self:post(event[,time])
+  -- self:cancel(timer)
+  -- self:enable(evh)
+  -- self:disable(evh)
+  -- self:timer(timme,fun,...)
+  -- self:trueFor(time,fun)
+  -- self:again([n])
+  -- return self.BREAK
+  end
 
--- Event.b{type='t'}
--- function Event:b(event)
---   print(self.id,event)
--- end
-
+-- Alternative way to define event handlers
 -- Event('c',{type='t'},function(self,event) print(self.id,event) end)
-
--- fibaro.debugFlags.post = true
-
--- Event.d{type='timer', time='+/00:00:05', aligned=true}
--- function Event:d(event)
---   print(self.id,event)
---   if self.date.sec > 30 then self:disable() self:timer('m/00',self.enable,self) end
--- end
-
--- Event.e{type='cron', time='* * * * *'}
--- function Event:e(event)
---   print(self.id,event)
--- end
-
--- Event.f{type='foo'}
--- function Event:f(event)
---   if not self:trueFor(5,event.ok=='ok') then return end
---   self:debugf("%s trueFor 5 %s",self.id,event)
---   self:debugf("Again %s",self:again())
--- end
-
--- fibaro.post({type='foo',ok='ok'})
-
+-- Event:post({type='t', value=1})
 
 -- fibaro.runTimers()
+
+-- "Anonymous" event handlers. Will be assigned an id of type "event:"..n
+Event.id='_'
+Event{type='e1'}
+function Event:handler(event)
+  print("Event",self.id)
+end
+
+Event.id='_'
+Event{type='e1'}
+function Event:handler(event)
+  print("Event",self.id)
+end
+
+Event.id='_'
+Event{type='e1'}
+function Event:handler(event)
+  print("Event",self.id)
+end
+
+Event:post({type='e1'})
+
+----------------------------
+
+Event_std.id='sensorOff4'
+Event_std{type='device', id=100, property='value', value=false}
+Event_std.debug=true
+function Event_std:handler(event)
+  self:debug("Sensor",event.id,"off")
+end
+
+Event:post({type='device', id=100, property='value', value=false})
+
+Event_std.id='cancelTest'
+Event_std{type='tc'}
+function Event_std:handler(event)
+  self:post({type='tc2'},5)
+  self:post({type='tc2'},7)
+  self:post({type='tc2'},8)
+end
+
+Event_std.id='cancelTest2'
+Event_std{type='tc2'}
+function Event_std:handler(event)
+  self:debug("TEST2")
+  Event_std:cancelAll('cancelTest')
+end
+
+Event_std:post({type='tc'})
+
+function fibaro.call_(id,fun,...)
+  print("fibaro.call",id,fun,...)
+end
+
+Event_std.id='lightWithSensor'
+Event_std.tagColor='red'
+Event_std{type='device', id=100, property='value', value=true}
+function Event_std:handler(event)
+  self:debug("Light on")
+  if self:cancelAll() then self:debug("reset timer") end
+  fibaro.call_(101,'turnOn')
+  self:timer('+/00:00:10',fibaro.call_,101,'turnOff')
+end
+
+Event_std:post({type='device', id=100, property='value', value=true})
+Event_std:post({type='device', id=100, property='value', value=false},'+/00:00:05')
+Event_std:post({type='device', id=100, property='value', value=true},'+/00:00:09')
