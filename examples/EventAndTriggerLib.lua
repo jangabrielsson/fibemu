@@ -441,6 +441,7 @@ local function addEvent(k,event)
   em[#em+1] = {event=event, pattern=pattern, handlers={k}}
 end
 
+local BREAK = '%%BREAK%%'
 local function lookupEvent(e,handler)
   local keys = fromHash[e.type] and fromHash[e.type](e) or {e.type}
   for _,key in ipairs(keys) do
@@ -450,7 +451,8 @@ local function lookupEvent(e,handler)
         local match = {}
         if unify(eventGroup.pattern,e,match) then
           for _,k in ipairs(eventGroup.handlers) do
-            handler(k,match)
+            local res = handler(k,match) 
+            if res == BREAK then return end
           end
         end
       end
@@ -535,6 +537,7 @@ local function debugfun(f,...)
 end
 
 local handlerMT = {
+  BREAK = BREAK,
   again = again, 
   trueFor = trueFor,
   post = function(k,event,time)
@@ -578,7 +581,7 @@ local function createHandler(k,f)
       ht[k] = v
     end,
     __index = function(t,k) return ht[k]==nil and handlerMT[k] or ht[k] end,
-    __call = function(t,e,match) f(t,e,match) end
+    __call = function(t,e,match) return f(t,e,match) end
   })
 end
 
@@ -613,13 +616,14 @@ Event = setmetatable({},{
 
 function handleEvent(event)
   addEventMT(event)
-  lookupEvent(event,function(k,match) 
+  return lookupEvent(event,function(k,match) 
     local handler = _handler[k]
     if handler._disabled then return end
     handler.date = os.date("*t")
     handler._event = event
     handler._match = match
-    return handler(event,match) 
+    local res = handler(event,match) 
+    return res
   end)
 end
 

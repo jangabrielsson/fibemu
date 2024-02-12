@@ -164,3 +164,18 @@ function Event:handler(event)
 end
 
 Event:post({type='device',id=99,value=true}) -- test
+
+Event.id='_'
+Event{type='double'}
+function Event:handler(ev)
+  print("Double",self.id)
+  return self.BREAK -- Next matching handler will be skipped
+end
+
+Event.id='_'
+Event{type='double'}
+function Event:handler(ev)
+  print("Double",self.id)
+end
+
+Event:post({type='double'})
