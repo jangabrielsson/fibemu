@@ -135,14 +135,32 @@ end
 
 Event_std.id='lightWithSensor'
 Event_std.tagColor='red'
-Event_std{type='device', id=100, property='value', value=true}
-function Event_std:handler(event)
-  self:debug("Light on")
-  if self:cancelAll() then self:debug("reset timer") end
-  fibaro.call_(101,'turnOn')
-  self:timer('+/00:00:10',fibaro.call_,101,'turnOff')
+Event_std{type='device', id=100, property='value', value='$value'}
+function Event_std:handler(event,vars)
+  if vars.value then -- sensor breached
+    if self:cancelAll() then self:debug("reset timer") end -- cancelAll returns true of any timer is cancelled
+  	self:debug("Light on")
+    fibaro.call_(101,'turnOn')
+  else               -- sensor safe
+    self:timer('+/00:00:10',fibaro.call_,101,'turnOff')
+  end
 end
 
-Event_std:post({type='device', id=100, property='value', value=true})
-Event_std:post({type='device', id=100, property='value', value=false},'+/00:00:05')
-Event_std:post({type='device', id=100, property='value', value=true},'+/00:00:09')
+Event_std:post({type='device', id=100, property='value', value=true})               -- fake sensor on
+Event_std:post({type='device', id=100, property='value', value=false},'+/00:00:05') -- fake sensor off
+Event_std:post({type='device', id=100, property='value', value=true},'+/00:00:09')  -- fake sensor on
+Event_std:post({type='device', id=100, property='value', value=false},'+/00:00:12') -- fake sensor off
+
+local days = {"Sunday","Monday","Tuesday","Wednesday","Tursday","friday","Saturday"}
+Event.id="between"
+Event{type='device', id=99, value=true}
+function Event:handler(event)
+  if self:between('17:00','sunset+00:30') then
+    self:debug("Sensor breached between 17 and aunset+30min")
+  else
+    self:debug("Sensor breached outside 17 to sunset+30min")
+  end
+  self:debug("Btw, it's",days[self.date.wday],"today")
+end
+
+Event:post({type='device',id=99,value=true}) -- test

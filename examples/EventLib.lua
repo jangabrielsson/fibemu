@@ -1,3 +1,16 @@
+--[[
+EventLib
+Copyright (c) 2024 Jan Gabrielsson
+Email: jan@gabrielsson.com
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+
+ Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+--]]
+local _version = "0.5"
+local _author = "jan@gabrielsson.com"
 local _trigger = {}
 local _builtin = {}
 local _handler = {}
@@ -300,6 +313,15 @@ function toTime(time)
     return 60-t2.sec+t1+os.time()
   else return hm2sec(time) end
 end
+
+function fibaro.between(start,stop,optTime)
+  __assert_type(start,"string" )
+  __assert_type(stop,"string" )
+  start,stop,optTime=toTime(start),toTime(stop),optTime and toTime(optTime) or toTime(os.date("%H:%M"))
+  stop = stop>=start and stop or stop+24*3600
+  optTime = optTime>=start and optTime or optTime+24*3600
+  return start <= optTime and optTime <= stop
+end
 ------------------
 
 local function isEvent(e) return type(e) == 'table' and type(e.type)=='string' end
@@ -437,7 +459,9 @@ end
 
 ---------------------------------
 local function init()
+  fibaro.debug(__TAG,"EventLib v".._version,_author)
   Event:post({type='QAstart', _sh=true})
+  _inited=true
 end
 
 local eventTransformers = {}
@@ -534,6 +558,7 @@ local handlerMT = {
     local args = {...}
     return k:post({type='function',fun=f, args=args},t) 
   end,
+  between = function(_,...) return fibaro.between(...) end,
   debug = function(self,...) fibaro.debug(__TAG,self._tag,...) end,
   trace = function(self,...) fibaro.trace(__TAG,self._tag,...) end,
   warning = function(self,...) fibaro.warning(__TAG,self._tag,...) end,
