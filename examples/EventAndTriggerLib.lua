@@ -43,17 +43,22 @@ local function append(a,...)
   end
 return r end
 
-local function color(col,c) return fmt('<font color="%s">%s</font>',col or 'white',c) end
+local function color(col,str) return fmt('<font color="%s">%s</font>',col,str) end
 local function timeStr(time) 
   if type(time) == 'string' then time = toTime(time) end
   if time < 35*24*3600 then time=time+os.time() end
-  return os.date("%H:%M:%S",time)
+  return os.date("%H:%M:%S",time),time
 end
 
 local function DEBUG(tag,...) 
   if fibaro.debugFlags[tag] then fibaro.trace(__TAG,color('skyblue',fmt(...))) end 
 end
-local function color(col,str) return fmt('<font color="%s">%s</font>',col,str) end
+
+table.map = map
+table.copy = copy
+table.equal = equal
+table.append = append
+fibaro.color = color
 
 ---------------- Lua Table to String ---------------
 local function encTsort(a,b) return a[1] < b[1] end
@@ -336,13 +341,16 @@ local managedEvent = {}
 function managedEvent.timer(k,event)
   event = addEventMT(copy(event))
   event.id = k
-  DEBUG('post',"post %s at %s",event,timeStr(event.time))
   local t = toTime(event.time)
   if event.aligned and type(event.time) == 'string' and event.time:sub(1,2) == '+/' then
     local t0 = toTime(event.time:sub(3))
     t = ((t-t0) // t0 + 1)*t0
   end
   --if event.aligned then print("ALIGN",os.date("%c",t)) end
+  if fibaro.debugFlags.post then
+    local tstr,t = timeStr(t)
+    DEBUG('post',"post %s at %s-%s",event,os.date("%d/%m",t),tstr) 
+  end
   post({type='schedule',event=event,_sh=true},t)
   return event
 end
@@ -451,8 +459,7 @@ local function lookupEvent(e,handler)
         local match = {}
         if unify(eventGroup.pattern,e,match) then
           for _,k in ipairs(eventGroup.handlers) do
-            local res = handler(k,match) 
-            if res == BREAK then return end
+            if handler(k,match) == BREAK then return end
           end
         end
       end
@@ -504,7 +511,7 @@ function trueFor(self,time,cond)
       self._trueForMatch = self._match
       return false
     else
-      self._trueForTime  = time
+      self._trueForTime  = toTime(time)
       self._trueForEvent = self._event
       self._trueForMatch = self._match
       local function success()
@@ -611,6 +618,7 @@ Event = setmetatable({},{
     __call = function(t,k,event,f)
       t[k](event)
       _handler[k]=createHandler(k,f)
+      -- return ??
     end
   })
 
@@ -622,8 +630,7 @@ function handleEvent(event)
     handler.date = os.date("*t")
     handler._event = event
     handler._match = match
-    local res = handler(event,match) 
-    return res
+    return handler(event,match)
   end)
 end
 
@@ -685,7 +692,8 @@ Event.scheduler{type='schedule'}
 function Event:scheduler(event)
   if isEnabled(event.event.id) then
     post(event.event,0,true) 
-    DEBUG('post',"post %s at %s",event.event,timeStr(event.event.time)) 
+    local tstr,t = timeStr(event.event.time)
+    DEBUG('post',"post %s at %s-%s",event.event,os.date("%d/%m",t),tstr) 
   end
   post(event,event.event.time)
 end
@@ -726,6 +734,7 @@ do
     end,
     __call = function(t,event)
       Event[ID](event)
+      -- return ??
     end
   }
 )
@@ -918,3 +927,60 @@ exports.post = function(ev)  end
 
 fibaro._APP = fibaro._APP or {}
 fibaro._APP.trigger = exports
+
+------- lib/RsrcLib.lua ----------
+local Event = Event_std
+
+local globs = {}
+local gprops = {
+  value = function(t,k) return fibaro.getGlobalVariable(t._gd.name) end
+}
+local GLOBMT = {
+  __index = function(t,k)
+    if gprops[k] then return gprops[k](t,k)
+    else return t._gd[k] end
+  end,
+  __newindex = function (t, k, v)
+    if k=='watch' then
+      Event.id='_'
+      Event{type='global-variable',name=t._gd.name}
+      function Event:handler(event)
+        v(self,event.value,event.old,t)
+      end
+    else t._gd[k]=v end
+  end,
+  __tostring = function(t) return t._gd.name end
+}
+function GLOB(name)
+  if globs[name] then return globs[name] end
+  local gd = { name = name }
+  local g = setmetatable({_gd = gd},GLOBMT)
+  globs[name] = g
+  return g
+end
+
+local devs = {}
+local DEVMT = {
+  __index = function(t,k)
+    return t._dd.rsrc[k] or t._dd.rsrc.properties[k]
+  end,
+  __newindex = function (t, k, v)
+    local p = k:match('watch_(%w+)')
+    if p then
+      Event.id='_'
+      Event{type='device',id=t._dd.id,property=p}
+      function Event:handler(event)
+        v(self,event,t)
+      end
+    else t._dd[k]=v end
+  end,
+  __tostring = function(t) return t._dd.name end
+}
+function DEV(id)
+  if devs[id] then return devs[id] end
+  local dd = { id = id, rsrc = api.get("/devices/"..id) }
+  assert(dd.rsrc,"No such device:"..tostring(id))
+  local d = setmetatable({_dd = dd},DEVMT)
+  devs[id] = d
+  return d
+end

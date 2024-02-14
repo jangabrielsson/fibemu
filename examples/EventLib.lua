@@ -42,17 +42,22 @@ local function append(a,...)
   end
 return r end
 
-local function color(col,c) return fmt('<font color="%s">%s</font>',col or 'white',c) end
+local function color(col,str) return fmt('<font color="%s">%s</font>',col,str) end
 local function timeStr(time) 
   if type(time) == 'string' then time = toTime(time) end
   if time < 35*24*3600 then time=time+os.time() end
-  return os.date("%H:%M:%S",time)
+  return os.date("%H:%M:%S",time),time
 end
 
 local function DEBUG(tag,...) 
   if fibaro.debugFlags[tag] then fibaro.trace(__TAG,color('skyblue',fmt(...))) end 
 end
-local function color(col,str) return fmt('<font color="%s">%s</font>',col,str) end
+
+table.map = map
+table.copy = copy
+table.equal = equal
+table.append = append
+fibaro.color = color
 
 ---------------- Lua Table to String ---------------
 local function encTsort(a,b) return a[1] < b[1] end
@@ -335,13 +340,16 @@ local managedEvent = {}
 function managedEvent.timer(k,event)
   event = addEventMT(copy(event))
   event.id = k
-  DEBUG('post',"post %s at %s",event,timeStr(event.time))
   local t = toTime(event.time)
   if event.aligned and type(event.time) == 'string' and event.time:sub(1,2) == '+/' then
     local t0 = toTime(event.time:sub(3))
     t = ((t-t0) // t0 + 1)*t0
   end
   --if event.aligned then print("ALIGN",os.date("%c",t)) end
+  if fibaro.debugFlags.post then
+    local tstr,t = timeStr(t)
+    DEBUG('post',"post %s at %s-%s",event,os.date("%d/%m",t),tstr) 
+  end
   post({type='schedule',event=event,_sh=true},t)
   return event
 end
@@ -502,7 +510,7 @@ function trueFor(self,time,cond)
       self._trueForMatch = self._match
       return false
     else
-      self._trueForTime  = time
+      self._trueForTime  = toTime(time)
       self._trueForEvent = self._event
       self._trueForMatch = self._match
       local function success()
@@ -683,7 +691,8 @@ Event.scheduler{type='schedule'}
 function Event:scheduler(event)
   if isEnabled(event.event.id) then
     post(event.event,0,true) 
-    DEBUG('post',"post %s at %s",event.event,timeStr(event.event.time)) 
+    local tstr,t = timeStr(event.event.time)
+    DEBUG('post',"post %s at %s-%s",event.event,os.date("%d/%m",t),tstr) 
   end
   post(event,event.event.time)
 end
