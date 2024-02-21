@@ -6,7 +6,9 @@
           <div v-for="(row, x) in ui" :key="x" class="row p-1">
             <div v-for="item in row" :key="item.id" class="col mb-1 d-grid">
               <button v-if="item.type == 'button'" type="button" class="btn btn-secondary"
-                @click.prevent="buttonPresssed(item.button)">
+                @mousedown.prevent="buttonPresssed(item.button)"
+                @mouseup.prevent="buttonReleased(item.button)"
+                >
                 <span v-html="uiMap[item.id].text"></span>
               </button>
               <div v-else-if="item.type == 'slider'">
@@ -87,9 +89,17 @@ export default {
     };
   },
   methods: {
+    // press. lastPressed=now; start <timer>
+    // release. cancel Timer if lastPressed < 750 <onReleased> else <onLongPressReleased>
+    // <timer> >= 750 <onLongPressDown>
+    buttonReleased(id) {
+      console.log(`Button '${id}' released`);
+      fetch(this.$store.state.backend + `/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onReleased&elementName=${id}`);
+    },
     buttonPresssed(id) {
       console.log(`Button '${id}' pressed`);
-      fetch(this.$store.state.backend + `/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onReleased&elementName=${id}`);
+      this.uiMap[id].lastPressed = new Date().getTime();
+      //fetch(this.$store.state.backend + `/api/plugins/callUIEvent?deviceID=${this.id}&eventType=onPressed&elementName=${id}`);
     },
     sliderReleased(id, value) {
       // console.log(`Slider '${id}' changed to ${value}`);

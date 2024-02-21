@@ -10,9 +10,7 @@ local EMU_GLOBAL = "FIBEMU"
 
 doload("json.lua")
 doload("net.lua")
-print("Loading")
 doload("class.lua")
-print("Loaded")
 
 pconfig = json.decode(pconfig)
 
@@ -40,6 +38,19 @@ if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
 else
     print("Not waiting for debugger")
 end
+
+local p = package
+package.path = package.path .. ";" .. luapath .. "?.lua"
+local js = require("json2")
+function json.encode(val,...)
+    local res = {pcall(js.encode,val)}
+    if res[1] then return select(2,table.unpack(res))
+    else 
+      local info = os.debug.getinfo(2)
+      error(string.format("json.encode, %s, called from %s line:%s",res[2],info.source,info.currentline))
+    end
+  end
+json.util = js.util
 
 local hc3fspath = ""
 local tmpdir = os.getenv("TMP") or os.getenv("TEMP") or os.getenv("TMPDIR") or ""
@@ -321,7 +332,7 @@ local function createEnvironment(id)
     -- env.fibaro.pyhooks = pyhooks
     if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['DARKTEXT'] end
 
-    for _, l in ipairs({ "json.lua", "class.lua", "fibaro.lua", "net.lua", "quickApp.lua", "fibemu.lua", "scene.lua" }) do
+    for _, l in ipairs({"class.lua", "fibaro.lua", "net.lua", "quickApp.lua", "fibemu.lua", "scene.lua" }) do
         local fn = luapath .. l
         if qa.debug.libraryfiles then
             QA.syslog(qa.tag, "Loading library " .. fn)

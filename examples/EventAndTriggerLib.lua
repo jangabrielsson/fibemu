@@ -10,7 +10,7 @@ Email: jan@gabrielsson.com
  Everyone is permitted to copy and distribute verbatim copies
  of this license document, but changing it is not allowed.
 --]]
-local _version = "0.5"
+local _version = "0.51"
 local _author = "jan@gabrielsson.com"
 local _trigger = {}
 local _builtin = {}
