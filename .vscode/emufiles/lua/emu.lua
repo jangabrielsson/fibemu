@@ -39,7 +39,6 @@ else
     print("Not waiting for debugger")
 end
 
-local p = package
 package.path = package.path .. ";" .. luapath .. "?.lua"
 local js = require("json2")
 function json.encode(val,...)
@@ -164,10 +163,10 @@ end
 ------- Greeting -----------------------------
 QA.syslog('boot', "Fibemu v%s", config.version)
 if not config.nogreet then
-    QA.syslog('boot', "Web UI : %s", config.webURL.."frontend")
-    QA.syslog('boot', "old Web UI : %s", config.webURL)
-    QA.syslog('boot', "API Doc: %s", config.apiDocURL)
-    QA.syslog('boot', "API EP : %s", config.apiURL)
+    QA.syslog('boot', '<font color="yellow">Web UI     : %s</font>', config.webURL.."frontend")
+    QA.syslog('boot', '<font color="yellow">old Web UI : %s</font>', config.webURL)
+    QA.syslog('boot', '<font color="yellow">API Doc    : %s</font>', config.apiDocURL)
+    QA.syslog('boot', '<font color="yellow">API EP     : %s</font>', config.apiURL)
 end
 ----------------------------------------------
 
