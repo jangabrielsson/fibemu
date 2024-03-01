@@ -520,7 +520,7 @@ local function loadFiles(id)
     end
     local imcont = { "_IMAGES=_IMAGES or {};\n" }
     for _, im in ipairs(qa.images or {}) do
-        local file = io.open(im.fname, "r")
+        local file = io.open(im.fname, "rb")
         assert(file, "Image not found:" .. im.name, im.fname)
         local img = file:read("*all")
         local w, h = getSize(img)

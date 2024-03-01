@@ -93,9 +93,8 @@ end
 
 function SVG:render()
   local buff = prBuff()
-  --buff:pr([[<img alt="SVG" src="data:image/svg+xml;utf8,<svg width='%s' height='%s' xmlns='http://www.w3.org/2000/svg'>]],self.width,self.height)
   buff:add2('<img alt="SVG" src="data:image/svg+xml;utf8,')
-  buff:pr('<svg width="%s" height="%s" xmlns="http://www.w3.org/2000/svg">',self.width,self.height)
+  buff:pr('<svg width="%s" height="%s" xmlns="http://www.w3.org/2000/svg" xmlns:bx="https://boxy-svg.com">',self.width,self.height)
   -- buff:add([[
   --   <defs>
   --   <filter id="rounded-corners" x="-5%" width="110%" y="0%" height="100%">
@@ -127,7 +126,7 @@ function SVG:add(elm)
 end
 function SVG:draw()
   local im = self:render()
-  print(im)
+  --print(im)
   self.qa:updateView(self.label,'text',im)
 end
 
@@ -201,9 +200,11 @@ function Group:__init(params)
 end
 function Group:add(elm) self.elements[#self.elements+1]=elm return elm end
 function Group:render(buff)
-  buff:pr('<g transform="%s">',self.transform or '')
+  -- if self.transform then
+  --   buff:pr('<g transform="%s">',self.transform)
+  -- else buff:add2('<g>') end
   for _,e in ipairs(self.elements) do e:render(buff) end
-  buff:pr('</g>')
+  --buff:pr('</g>')
 end
 
 local TextAttr = {'x','y','filter','fill','style','visibility'}
