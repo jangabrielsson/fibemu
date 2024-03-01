@@ -18,6 +18,21 @@ local function base64encode(data)
     end) .. ({ '', '==', '=' })[#data % 3 + 1])
 end
 
+local function base64decode(data)
+	local result, chars, bytes, stringFormat, stringChar, stringSub = "", {}, {["A"] = 0, ["B"] = 1, ["C"] = 2, ["D"] = 3, ["E"] = 4, ["F"] = 5, ["G"] = 6, ["H"] = 7, ["I"] = 8, ["J"] = 9, ["K"] = 10, ["L"] = 11, ["M"] = 12, ["N"] = 13, ["O"] = 14, ["P"] = 15, ["Q"] = 16, ["R"] = 17, ["S"] = 18, ["T"] = 19, ["U"] = 20, ["V"] = 21, ["W"] = 22, ["X"] = 23, ["Y"] = 24, ["Z"] = 25, ["a"] = 26, ["b"] = 27, ["c"] = 28, ["d"] = 29, ["e"] = 30, ["f"] = 31, ["g"] = 32, ["h"] = 33, ["i"] = 34, ["j"] = 35, ["k"] = 36, ["l"] = 37, ["m"] = 38, ["n"] = 39, ["o"] = 40, ["p"] = 41, ["q"] = 42, ["r"] = 43, ["s"] = 44, ["t"] = 45, ["u"] = 46, ["v"] = 47, ["w"] = 48, ["x"] = 49, ["y"] = 50, ["z"] = 51, ["0"] = 52, ["1"] = 53, ["2"] = 54, ["3"] = 55, ["4"] = 56, ["5"] = 57, ["6"] = 58, ["7"] = 59, ["8"] = 60, ["9"] = 61, ["-"] = 62, ["_"] = 63, ["="] = nil}, string.format, string.char, string.sub
+	for i = 0, #data - 1, 4 do
+		for j = 1, 4 do
+			chars[j] = bytes[stringSub(data, i + j, i + j) or "="]
+		end
+		result =
+			result ..
+			stringChar(((chars[1] << 2) % 256 | (chars[2] >> 4))) ..
+			(chars[3] and stringChar(((chars[2] << 4) % 256 | (chars[3] >> 2))) or "") ..
+			(chars[4] and stringChar(((chars[3] << 6) % 256 | chars[4])) or "")
+	end
+	return result
+end
+
 local function getSize(b)
     local buf = {}
     for i = 1, 8 do buf[i] = b:byte(16 + i) end
@@ -503,7 +518,7 @@ local function loadFiles(id)
             qf.qa = function() lldebugger.call(qa, true) end
         end
     end
-    local imcont = { "_IMAGES={};\n" }
+    local imcont = { "_IMAGES=_IMAGES or {};\n" }
     for _, im in ipairs(qa.images or {}) do
         local file = io.open(im.fname, "r")
         assert(file, "Image not found:" .. im.name, im.fname)

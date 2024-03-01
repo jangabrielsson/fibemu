@@ -63,7 +63,12 @@ local function callHC3(method, path, data, hc3)
             ["Content-Type"] = "application/json; charset=utf-8",
         }
     }
-    local status, res, headers = fibemu.pyhooks.http(method, url, options, data and json.encode(data) or nil, lcl)
+    if url:match("/quickApp/") then -- Issue with empty arrays...
+        data = data and json.encode2(data) or nil
+    else
+        data = data and json.encode(data) or nil
+    end
+    local status, res, headers = fibemu.pyhooks.http(method, url, options, data or nil, lcl)
     if status >= 303 then
         return nil, status, res, headers
         --error(fmt("HTTP error %d: %s", status, res))

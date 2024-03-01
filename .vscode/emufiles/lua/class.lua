@@ -8,7 +8,7 @@ local function setupProps(cl,t,k,v)
   local props = {}
   function cl.__index(t,k)
     if props[k] then return props[k].get(t)
-    else return rawget(cl,k) end
+    else return cl[k] end -- rawget(cl,k)
   end
   function cl.__newindex(t,k,v)
     if type(v)=='table' and v.__PROP then

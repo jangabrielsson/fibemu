@@ -41,6 +41,7 @@ def callCB(fibemu, cb, *args):
 def httpCall(method, url, options, data, local):
     ''' http called from lua, async-wait if we call our own api (local, Fast API) '''
     headers = options['headers']
+    headers = dict(headers)
     timeout = options['timeout'] if options['timeout'] else 60
     req = None
     if not local:
@@ -51,6 +52,7 @@ def httpCall(method, url, options, data, local):
     if data:
         if headers and 'Content-Type' in headers and 'utf-8' in headers['Content-Type']:
             data = data.encode('utf-8')
+            #pass
     try:
         match method:
             case 'GET':

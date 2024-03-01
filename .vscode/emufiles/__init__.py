@@ -47,13 +47,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     path = os.path
-    configPaths = ["config.json",path.join(path.dirname(args.file),"config.json")]
+    configPaths = ["config.json",args.file and path.join(path.dirname(args.file) or "","config.json")]
     for c in configPaths:
         if path.exists(c):
             with open(c) as f:
                 config_d = json.load(f)
                 for key, value in config_d.items():
                     config[key] = value
+                print(f"Loaded config from {c}",file=sys.stderr)
+                ##print(config_d,file=sys.stderr)
             break
     
 

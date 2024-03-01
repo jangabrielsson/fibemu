@@ -153,7 +153,7 @@ end
 function tool.upload(file, rsrc, name, path)
     if name == '.' then name = file end
     local flib = fibemu.libs.files
-
+    printf("Uploading QA %s", name)
     local fqa,err = pcall(flib.file2FQA,name)
     if not fqa then
         printerrf("Error parsing %s: %s", name, err)

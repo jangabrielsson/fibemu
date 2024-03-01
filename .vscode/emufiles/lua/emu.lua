@@ -41,6 +41,7 @@ end
 
 package.path = package.path .. ";" .. luapath .. "?.lua"
 local js = require("json2")
+json.encode2 = json.encode
 function json.encode(val,...)
     local res = {pcall(js.encode,val)}
     if res[1] then return select(2,table.unpack(res))

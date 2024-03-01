@@ -146,8 +146,8 @@
         "-extra",
         "${file}",
         "qa", 
-        "download_unpack", 
-        "1260",
+        "upload", 
+        "${file}",
         "dev"
       ],
     },

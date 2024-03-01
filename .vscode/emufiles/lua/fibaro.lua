@@ -100,7 +100,7 @@ function fibaro.alert(type, id, notification)
     id = type == "push" and mapUsersToDevices(id) or id
     for _, idn in ipairs(id) do
         __assert_type(idn, "number")
-        fibaro.call(id, action, notification, "false")
+        fibaro.call(idn, action, notification, "false")
     end
 end
 
