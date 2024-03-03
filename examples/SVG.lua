@@ -85,6 +85,7 @@ SVG.getImageSize = function(image)
   image = base64decode(image)
   return getSize(image)
 end
+SVG.charMap = charMap
 
 function SVG:symbol(name,svg)
   assert(type(svg)=='string',"SVG symbol must be a string")
@@ -176,7 +177,7 @@ function Circle:__init(params)
   self.header = '<circle '
 end
 
-local SymbolAttr = {'href','x','y','r','fill','style','visibility','onclick'}
+local SymbolAttr = {'href','x','y','r','fill','style','transform','visibility','onclick'}
 class 'Symbol'(BaseElement)
 function Symbol:__init(params)
   BaseElement.__init(self,params,SymbolAttr)

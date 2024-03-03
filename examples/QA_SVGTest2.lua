@@ -2,7 +2,6 @@
 --%%u={label="label1", text='SVG paceholder'}
 
 --%%file=examples/SVG.lua,svg;
-
 local fmt = string.format
 local dataDefs,dataData,dataOrg
 
@@ -12,16 +11,34 @@ function QuickApp:onInit()
 end
 
 function QuickApp:createClock()
+  -- self:updateView("label0","text",
+  --   fmt([[<img alt="SVG" src="data:image/svg+xml;utf8,%s"/>]],
+  --   fmt([[<svg xmlns="http://www.w3.org/2000/svg" xmlns:bx="https://boxy-svg.com">%s</svg>]],
+  --   dataDefs:gsub("232%.362","232.300")):gsub(".",SVG.charMap))
+  -- )
   local im = SVG(self,'label1',400,400)
   im.raster = false
-  im.defs = dataDefs
-  --im:add(Element('<use x="0", y="0" href="#Number"/>'))
-  im:add(Element('<use href="#Number" transform="scale(0.2)translate(-50,-100)"/>'))
-  im:add(Element('<use href="#Number" transform="scale(0.2)translate(110,-100)"/>'))
-  im:add(Element('<use href="#Number" transform="scale(0.2)translate(270,-100)"/>'))
-  im:add(Element('<use href="#Number" transform="scale(0.2)translate(430,-100)"/>'))
-  im:add(Element('<use href="#Number" transform="scale(0.2)translate(590,-100)"/>'))
+  im.defs = dataDefs:gsub("232%.362","232.300")
+  im:add(Rectangle{x=0,y=0,width=160,height=59,fill="url(#gradient-4)"})
+  local h1 = im:add(Symbol{href="#Number1", transform="scale(0.2)translate(-50,-100)"})
+  local h2 = im:add(Symbol{href="#Number2", transform="scale(0.2)translate(110,-100)"})
+  im:add(Symbol{href="#Number:", transform="scale(0.2)translate(270,-100)"})
+  local m1 = im:add(Symbol{href="#Number4", transform="scale(0.2)translate(430,-100)"})
+  local m2 = im:add(Symbol{href="#Number5", transform="scale(0.2)translate(590,-100)"})
   self.image = im
+
+  local t = 3600*8+60*30+11
+  setInterval(function()
+    t = (t+60) % (3600*24)
+    local h = t // 3600
+    local m = (t % 3600) // 60
+    h1.href=fmt('#Number%s',h//10)
+    h2.href=fmt('#Number%s',h%10)
+    m1.href=fmt('#Number%s',m//10)
+    m2.href=fmt('#Number%s',m%10)
+    print(h//10,h%10,m//10,m%10)
+    self:drawMap()
+  end,3000)
 end
 
 function QuickApp:drawMap()
@@ -216,9 +233,79 @@ dataDefs = [[
     <stop offset="0" style="stop-color: rgb(84.706% 84.706% 84.706%)"></stop>
     <stop offset="1" style="stop-color: rgb(91, 89, 89);"></stop>
   </radialGradient>
-  <g id="Number">
+  <g id="Number0">
+  <path d="M 72.038 153.249 L 187.932 153.249 C 193.455 153.249 197.932 157.726 197.932 163.249 L 197.932 239.868 L 182.763 239.868 L 182.763 255.539 L 197.932 255.539 L 197.932 336.75 C 197.932 342.273 193.455 346.75 187.932 346.75 L 72.038 346.75 C 66.515 346.75 62.038 342.273 62.038 336.75 L 62.038 255.084 L 77.288 255.084 L 77.288 239.413 L 62.038 239.413 L 62.038 163.249 C 62.038 157.726 66.515 153.249 72.038 153.249 Z" style="fill-rule: nonzero; filter: url(#drop-shadow-filter-0); paint-order: stroke; fill: url(#gradient-0); stroke-width: 5px; stroke: url(#gradient-3);"></path>
+  <text style="fill: url(#gradient-5); font-family: &quot;Readex Pro&quot;; font-size: 6.9px; filter: none;" transform="matrix(35.989521, 0, 0, 31.635418, -611.175476, -7023.276367)" x="18.834" y="232.362">0</text>
+  <rect x="75.969" y="245.718" width="108.335" height="2.968" style="stroke: rgb(80, 80, 80); fill: url(#gradient-4);"></rect>
+  <rect x="184.899" y="241.219" width="13.891" height="13.287" style="fill: url(#gradient-1); stroke: rgb(73, 69, 69); transform-origin: 192.313px 247.813px;"></rect>
+  <rect x="61.201" y="240.711" width="13.891" height="13.287" style="fill: url(#gradient-2); stroke: rgb(68, 68, 68); transform-box: fill-box; transform-origin: 53.56115% 50%;"></rect>
+  </g>
+  <g id="Number1">
   <path d="M 72.038 153.249 L 187.932 153.249 C 193.455 153.249 197.932 157.726 197.932 163.249 L 197.932 239.868 L 182.763 239.868 L 182.763 255.539 L 197.932 255.539 L 197.932 336.75 C 197.932 342.273 193.455 346.75 187.932 346.75 L 72.038 346.75 C 66.515 346.75 62.038 342.273 62.038 336.75 L 62.038 255.084 L 77.288 255.084 L 77.288 239.413 L 62.038 239.413 L 62.038 163.249 C 62.038 157.726 66.515 153.249 72.038 153.249 Z" style="fill-rule: nonzero; filter: url(#drop-shadow-filter-0); paint-order: stroke; fill: url(#gradient-0); stroke-width: 5px; stroke: url(#gradient-3);"></path>
   <text style="fill: url(#gradient-5); font-family: &quot;Readex Pro&quot;; font-size: 6.9px; filter: none;" transform="matrix(35.989521, 0, 0, 31.635418, -611.175476, -7023.276367)" x="18.834" y="232.362">1</text>
+  <rect x="75.969" y="245.718" width="108.335" height="2.968" style="stroke: rgb(80, 80, 80); fill: url(#gradient-4);"></rect>
+  <rect x="184.899" y="241.219" width="13.891" height="13.287" style="fill: url(#gradient-1); stroke: rgb(73, 69, 69); transform-origin: 192.313px 247.813px;"></rect>
+  <rect x="61.201" y="240.711" width="13.891" height="13.287" style="fill: url(#gradient-2); stroke: rgb(68, 68, 68); transform-box: fill-box; transform-origin: 53.56115% 50%;"></rect>
+  </g>
+  <g id="Number2">
+  <path d="M 72.038 153.249 L 187.932 153.249 C 193.455 153.249 197.932 157.726 197.932 163.249 L 197.932 239.868 L 182.763 239.868 L 182.763 255.539 L 197.932 255.539 L 197.932 336.75 C 197.932 342.273 193.455 346.75 187.932 346.75 L 72.038 346.75 C 66.515 346.75 62.038 342.273 62.038 336.75 L 62.038 255.084 L 77.288 255.084 L 77.288 239.413 L 62.038 239.413 L 62.038 163.249 C 62.038 157.726 66.515 153.249 72.038 153.249 Z" style="fill-rule: nonzero; filter: url(#drop-shadow-filter-0); paint-order: stroke; fill: url(#gradient-0); stroke-width: 5px; stroke: url(#gradient-3);"></path>
+  <text style="fill: url(#gradient-5); font-family: &quot;Readex Pro&quot;; font-size: 6.9px; filter: none;" transform="matrix(35.989521, 0, 0, 31.635418, -611.175476, -7023.276367)" x="18.834" y="232.362">2</text>
+  <rect x="75.969" y="245.718" width="108.335" height="2.968" style="stroke: rgb(80, 80, 80); fill: url(#gradient-4);"></rect>
+  <rect x="184.899" y="241.219" width="13.891" height="13.287" style="fill: url(#gradient-1); stroke: rgb(73, 69, 69); transform-origin: 192.313px 247.813px;"></rect>
+  <rect x="61.201" y="240.711" width="13.891" height="13.287" style="fill: url(#gradient-2); stroke: rgb(68, 68, 68); transform-box: fill-box; transform-origin: 53.56115% 50%;"></rect>
+  </g>
+  <g id="Number3">
+  <path d="M 72.038 153.249 L 187.932 153.249 C 193.455 153.249 197.932 157.726 197.932 163.249 L 197.932 239.868 L 182.763 239.868 L 182.763 255.539 L 197.932 255.539 L 197.932 336.75 C 197.932 342.273 193.455 346.75 187.932 346.75 L 72.038 346.75 C 66.515 346.75 62.038 342.273 62.038 336.75 L 62.038 255.084 L 77.288 255.084 L 77.288 239.413 L 62.038 239.413 L 62.038 163.249 C 62.038 157.726 66.515 153.249 72.038 153.249 Z" style="fill-rule: nonzero; filter: url(#drop-shadow-filter-0); paint-order: stroke; fill: url(#gradient-0); stroke-width: 5px; stroke: url(#gradient-3);"></path>
+  <text style="fill: url(#gradient-5); font-family: &quot;Readex Pro&quot;; font-size: 6.9px; filter: none;" transform="matrix(35.989521, 0, 0, 31.635418, -611.175476, -7023.276367)" x="18.834" y="232.362">3</text>
+  <rect x="75.969" y="245.718" width="108.335" height="2.968" style="stroke: rgb(80, 80, 80); fill: url(#gradient-4);"></rect>
+  <rect x="184.899" y="241.219" width="13.891" height="13.287" style="fill: url(#gradient-1); stroke: rgb(73, 69, 69); transform-origin: 192.313px 247.813px;"></rect>
+  <rect x="61.201" y="240.711" width="13.891" height="13.287" style="fill: url(#gradient-2); stroke: rgb(68, 68, 68); transform-box: fill-box; transform-origin: 53.56115% 50%;"></rect>
+  </g>
+  <g id="Number4">
+  <path d="M 72.038 153.249 L 187.932 153.249 C 193.455 153.249 197.932 157.726 197.932 163.249 L 197.932 239.868 L 182.763 239.868 L 182.763 255.539 L 197.932 255.539 L 197.932 336.75 C 197.932 342.273 193.455 346.75 187.932 346.75 L 72.038 346.75 C 66.515 346.75 62.038 342.273 62.038 336.75 L 62.038 255.084 L 77.288 255.084 L 77.288 239.413 L 62.038 239.413 L 62.038 163.249 C 62.038 157.726 66.515 153.249 72.038 153.249 Z" style="fill-rule: nonzero; filter: url(#drop-shadow-filter-0); paint-order: stroke; fill: url(#gradient-0); stroke-width: 5px; stroke: url(#gradient-3);"></path>
+  <text style="fill: url(#gradient-5); font-family: &quot;Readex Pro&quot;; font-size: 6.9px; filter: none;" transform="matrix(35.989521, 0, 0, 31.635418, -611.175476, -7023.276367)" x="18.834" y="232.362">4</text>
+  <rect x="75.969" y="245.718" width="108.335" height="2.968" style="stroke: rgb(80, 80, 80); fill: url(#gradient-4);"></rect>
+  <rect x="184.899" y="241.219" width="13.891" height="13.287" style="fill: url(#gradient-1); stroke: rgb(73, 69, 69); transform-origin: 192.313px 247.813px;"></rect>
+  <rect x="61.201" y="240.711" width="13.891" height="13.287" style="fill: url(#gradient-2); stroke: rgb(68, 68, 68); transform-box: fill-box; transform-origin: 53.56115% 50%;"></rect>
+  </g>
+  <g id="Number5">
+  <path d="M 72.038 153.249 L 187.932 153.249 C 193.455 153.249 197.932 157.726 197.932 163.249 L 197.932 239.868 L 182.763 239.868 L 182.763 255.539 L 197.932 255.539 L 197.932 336.75 C 197.932 342.273 193.455 346.75 187.932 346.75 L 72.038 346.75 C 66.515 346.75 62.038 342.273 62.038 336.75 L 62.038 255.084 L 77.288 255.084 L 77.288 239.413 L 62.038 239.413 L 62.038 163.249 C 62.038 157.726 66.515 153.249 72.038 153.249 Z" style="fill-rule: nonzero; filter: url(#drop-shadow-filter-0); paint-order: stroke; fill: url(#gradient-0); stroke-width: 5px; stroke: url(#gradient-3);"></path>
+  <text style="fill: url(#gradient-5); font-family: &quot;Readex Pro&quot;; font-size: 6.9px; filter: none;" transform="matrix(35.989521, 0, 0, 31.635418, -611.175476, -7023.276367)" x="18.834" y="232.362">5</text>
+  <rect x="75.969" y="245.718" width="108.335" height="2.968" style="stroke: rgb(80, 80, 80); fill: url(#gradient-4);"></rect>
+  <rect x="184.899" y="241.219" width="13.891" height="13.287" style="fill: url(#gradient-1); stroke: rgb(73, 69, 69); transform-origin: 192.313px 247.813px;"></rect>
+  <rect x="61.201" y="240.711" width="13.891" height="13.287" style="fill: url(#gradient-2); stroke: rgb(68, 68, 68); transform-box: fill-box; transform-origin: 53.56115% 50%;"></rect>
+  </g>
+  <g id="Number6">
+  <path d="M 72.038 153.249 L 187.932 153.249 C 193.455 153.249 197.932 157.726 197.932 163.249 L 197.932 239.868 L 182.763 239.868 L 182.763 255.539 L 197.932 255.539 L 197.932 336.75 C 197.932 342.273 193.455 346.75 187.932 346.75 L 72.038 346.75 C 66.515 346.75 62.038 342.273 62.038 336.75 L 62.038 255.084 L 77.288 255.084 L 77.288 239.413 L 62.038 239.413 L 62.038 163.249 C 62.038 157.726 66.515 153.249 72.038 153.249 Z" style="fill-rule: nonzero; filter: url(#drop-shadow-filter-0); paint-order: stroke; fill: url(#gradient-0); stroke-width: 5px; stroke: url(#gradient-3);"></path>
+  <text style="fill: url(#gradient-5); font-family: &quot;Readex Pro&quot;; font-size: 6.9px; filter: none;" transform="matrix(35.989521, 0, 0, 31.635418, -611.175476, -7023.276367)" x="18.834" y="232.362">6</text>
+  <rect x="75.969" y="245.718" width="108.335" height="2.968" style="stroke: rgb(80, 80, 80); fill: url(#gradient-4);"></rect>
+  <rect x="184.899" y="241.219" width="13.891" height="13.287" style="fill: url(#gradient-1); stroke: rgb(73, 69, 69); transform-origin: 192.313px 247.813px;"></rect>
+  <rect x="61.201" y="240.711" width="13.891" height="13.287" style="fill: url(#gradient-2); stroke: rgb(68, 68, 68); transform-box: fill-box; transform-origin: 53.56115% 50%;"></rect>
+  </g>
+  <g id="Number7">
+  <path d="M 72.038 153.249 L 187.932 153.249 C 193.455 153.249 197.932 157.726 197.932 163.249 L 197.932 239.868 L 182.763 239.868 L 182.763 255.539 L 197.932 255.539 L 197.932 336.75 C 197.932 342.273 193.455 346.75 187.932 346.75 L 72.038 346.75 C 66.515 346.75 62.038 342.273 62.038 336.75 L 62.038 255.084 L 77.288 255.084 L 77.288 239.413 L 62.038 239.413 L 62.038 163.249 C 62.038 157.726 66.515 153.249 72.038 153.249 Z" style="fill-rule: nonzero; filter: url(#drop-shadow-filter-0); paint-order: stroke; fill: url(#gradient-0); stroke-width: 5px; stroke: url(#gradient-3);"></path>
+  <text style="fill: url(#gradient-5); font-family: &quot;Readex Pro&quot;; font-size: 6.9px; filter: none;" transform="matrix(35.989521, 0, 0, 31.635418, -611.175476, -7023.276367)" x="18.834" y="232.362">7</text>
+  <rect x="75.969" y="245.718" width="108.335" height="2.968" style="stroke: rgb(80, 80, 80); fill: url(#gradient-4);"></rect>
+  <rect x="184.899" y="241.219" width="13.891" height="13.287" style="fill: url(#gradient-1); stroke: rgb(73, 69, 69); transform-origin: 192.313px 247.813px;"></rect>
+  <rect x="61.201" y="240.711" width="13.891" height="13.287" style="fill: url(#gradient-2); stroke: rgb(68, 68, 68); transform-box: fill-box; transform-origin: 53.56115% 50%;"></rect>
+  </g>
+  <g id="Number8">
+  <path d="M 72.038 153.249 L 187.932 153.249 C 193.455 153.249 197.932 157.726 197.932 163.249 L 197.932 239.868 L 182.763 239.868 L 182.763 255.539 L 197.932 255.539 L 197.932 336.75 C 197.932 342.273 193.455 346.75 187.932 346.75 L 72.038 346.75 C 66.515 346.75 62.038 342.273 62.038 336.75 L 62.038 255.084 L 77.288 255.084 L 77.288 239.413 L 62.038 239.413 L 62.038 163.249 C 62.038 157.726 66.515 153.249 72.038 153.249 Z" style="fill-rule: nonzero; filter: url(#drop-shadow-filter-0); paint-order: stroke; fill: url(#gradient-0); stroke-width: 5px; stroke: url(#gradient-3);"></path>
+  <text style="fill: url(#gradient-5); font-family: &quot;Readex Pro&quot;; font-size: 6.9px; filter: none;" transform="matrix(35.989521, 0, 0, 31.635418, -611.175476, -7023.276367)" x="18.834" y="232.362">8</text>
+  <rect x="75.969" y="245.718" width="108.335" height="2.968" style="stroke: rgb(80, 80, 80); fill: url(#gradient-4);"></rect>
+  <rect x="184.899" y="241.219" width="13.891" height="13.287" style="fill: url(#gradient-1); stroke: rgb(73, 69, 69); transform-origin: 192.313px 247.813px;"></rect>
+  <rect x="61.201" y="240.711" width="13.891" height="13.287" style="fill: url(#gradient-2); stroke: rgb(68, 68, 68); transform-box: fill-box; transform-origin: 53.56115% 50%;"></rect>
+  </g>
+  <g id="Number9">
+  <path d="M 72.038 153.249 L 187.932 153.249 C 193.455 153.249 197.932 157.726 197.932 163.249 L 197.932 239.868 L 182.763 239.868 L 182.763 255.539 L 197.932 255.539 L 197.932 336.75 C 197.932 342.273 193.455 346.75 187.932 346.75 L 72.038 346.75 C 66.515 346.75 62.038 342.273 62.038 336.75 L 62.038 255.084 L 77.288 255.084 L 77.288 239.413 L 62.038 239.413 L 62.038 163.249 C 62.038 157.726 66.515 153.249 72.038 153.249 Z" style="fill-rule: nonzero; filter: url(#drop-shadow-filter-0); paint-order: stroke; fill: url(#gradient-0); stroke-width: 5px; stroke: url(#gradient-3);"></path>
+  <text style="fill: url(#gradient-5); font-family: &quot;Readex Pro&quot;; font-size: 6.9px; filter: none;" transform="matrix(35.989521, 0, 0, 31.635418, -611.175476, -7023.276367)" x="18.834" y="232.362">9</text>
+  <rect x="75.969" y="245.718" width="108.335" height="2.968" style="stroke: rgb(80, 80, 80); fill: url(#gradient-4);"></rect>
+  <rect x="184.899" y="241.219" width="13.891" height="13.287" style="fill: url(#gradient-1); stroke: rgb(73, 69, 69); transform-origin: 192.313px 247.813px;"></rect>
+  <rect x="61.201" y="240.711" width="13.891" height="13.287" style="fill: url(#gradient-2); stroke: rgb(68, 68, 68); transform-box: fill-box; transform-origin: 53.56115% 50%;"></rect>
+  </g>
+  <g id="Number:">
+  <path d="M 72.038 153.249 L 187.932 153.249 C 193.455 153.249 197.932 157.726 197.932 163.249 L 197.932 239.868 L 182.763 239.868 L 182.763 255.539 L 197.932 255.539 L 197.932 336.75 C 197.932 342.273 193.455 346.75 187.932 346.75 L 72.038 346.75 C 66.515 346.75 62.038 342.273 62.038 336.75 L 62.038 255.084 L 77.288 255.084 L 77.288 239.413 L 62.038 239.413 L 62.038 163.249 C 62.038 157.726 66.515 153.249 72.038 153.249 Z" style="fill-rule: nonzero; filter: url(#drop-shadow-filter-0); paint-order: stroke; fill: url(#gradient-0); stroke-width: 5px; stroke: url(#gradient-3);"></path>
+  <text style="fill: url(#gradient-5); font-family: &quot;Readex Pro&quot;; font-size: 6.9px; filter: none;" transform="matrix(35.989521, 0, 0, 31.635418, -611.175476, -7023.276367)" x="19.834" y="231.362">:</text>
   <rect x="75.969" y="245.718" width="108.335" height="2.968" style="stroke: rgb(80, 80, 80); fill: url(#gradient-4);"></rect>
   <rect x="184.899" y="241.219" width="13.891" height="13.287" style="fill: url(#gradient-1); stroke: rgb(73, 69, 69); transform-origin: 192.313px 247.813px;"></rect>
   <rect x="61.201" y="240.711" width="13.891" height="13.287" style="fill: url(#gradient-2); stroke: rgb(68, 68, 68); transform-box: fill-box; transform-origin: 53.56115% 50%;"></rect>
