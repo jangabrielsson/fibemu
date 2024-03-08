@@ -18,6 +18,23 @@ local function base64encode(data)
     end) .. ({ '', '==', '=' })[#data % 3 + 1])
 end
 
+local charMap = {
+    ['\"']="%22",
+    ['!']="%21",
+    ['#']="%23",
+    ['$']="%24",
+    ['%']="%25",
+    ['&']="%26",
+    ['\'']="%27",
+    [',']="%2C",
+    -- ['<']="%3C",
+    -- ['>']="%3E",
+    ['=']="%3D",
+    ['?']="%3F",
+    ['@']="%40",
+    ['\n']=""
+  }
+
 local function base64decode(data)
 	local result, chars, bytes, stringFormat, stringChar, stringSub = "", {}, {["A"] = 0, ["B"] = 1, ["C"] = 2, ["D"] = 3, ["E"] = 4, ["F"] = 5, ["G"] = 6, ["H"] = 7, ["I"] = 8, ["J"] = 9, ["K"] = 10, ["L"] = 11, ["M"] = 12, ["N"] = 13, ["O"] = 14, ["P"] = 15, ["Q"] = 16, ["R"] = 17, ["S"] = 18, ["T"] = 19, ["U"] = 20, ["V"] = 21, ["W"] = 22, ["X"] = 23, ["Y"] = 24, ["Z"] = 25, ["a"] = 26, ["b"] = 27, ["c"] = 28, ["d"] = 29, ["e"] = 30, ["f"] = 31, ["g"] = 32, ["h"] = 33, ["i"] = 34, ["j"] = 35, ["k"] = 36, ["l"] = 37, ["m"] = 38, ["n"] = 39, ["o"] = 40, ["p"] = 41, ["q"] = 42, ["r"] = 43, ["s"] = 44, ["t"] = 45, ["u"] = 46, ["v"] = 47, ["w"] = 48, ["x"] = 49, ["y"] = 50, ["z"] = 51, ["0"] = 52, ["1"] = 53, ["2"] = 54, ["3"] = 55, ["4"] = 56, ["5"] = 57, ["6"] = 58, ["7"] = 59, ["8"] = 60, ["9"] = 61, ["-"] = 62, ["_"] = 63, ["="] = nil}, string.format, string.char, string.sub
 	for i = 0, #data - 1, 4 do
@@ -521,12 +538,21 @@ local function loadFiles(id)
     local imcont = { "_IMAGES=_IMAGES or {};\n" }
     for _, im in ipairs(qa.images or {}) do
         local file = io.open(im.fname, "rb")
+        local typ = im.fname:match("%.(%w+)$")
+        typ = typ and typ:lower() or "png"
         assert(file, "Image not found:" .. im.name, im.fname)
         local img = file:read("*all")
-        local w, h = getSize(img)
+        local w, h = 0,0
+        if typ == 'png' then w,h = getSize(img) end
+        local data
+        if typ == "svg" then
+            data = "data:image/svg+xml;utf8," .. img:gsub(".",charMap)
+        else
+            data = "data:image/png;base64," .. base64encode(img)
+        end
         imcont[#imcont + 1] = string.format([[
-            _IMAGES['%s']={data='%s',w=%s,h=%s}
-            ]], im.name, "data:image/png;base64," .. base64encode(img), w, h)
+            _IMAGES['%s']={data='%s',type='%s',w=%s,h=%s}
+            ]], im.name, data, typ, w or 0, h or 0)
         file:close()
     end
     if #imcont > 1 then

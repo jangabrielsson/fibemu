@@ -249,3 +249,44 @@ end
 function Element:render(buff)
   buff:add(self.str)
 end
+
+----------------
+
+class 'TaggedImage'
+function TaggedImage:__init(image,values)
+  local vals = {}
+  for k,v in pairs(values) do vals[k] = v vals[k]=nil end
+  setmetatable(values,{
+    __index=function(t,k) return vals[k] end,
+    __newindex=function(t,k,v) vals[k] = tostring(v):gsub(".",SVG.charMap) end
+  })
+  local parts,tags,n = {},{},0
+  image:gsub("width%%3D%%22(%d+)%%22",function(w)
+    values._width = tonumber(w)
+    return "{{_width}}" 
+  end,1)
+  image:gsub("height%%3D%%22(%d+)%%22",function(h)
+    values._height = tonumber(h)
+    return "{{_height}}" 
+  end,1)
+
+  image:gsub("(.-){{(.-)}}", function(p,t) 
+    parts[#parts+1] = p
+    tags[#parts] = t
+    n = n+#p+#t+4
+  end)
+  parts[#parts+1] = image:sub(n+1)
+  self.parts = parts
+  self.tags = tags
+  self.values = values
+end 
+
+function TaggedImage:render()
+  local m = {}
+  local tags,values = self.tags,self.values
+  for i,p in ipairs(self.parts) do
+    m[#m+1] = p
+    m[#m+1] = tags[i] and values[tags[i]] or nil
+  end
+  return table.concat(m)
+end
