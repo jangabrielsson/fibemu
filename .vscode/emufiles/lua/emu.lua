@@ -371,20 +371,25 @@ end
 
 local function checkRsrcFlag(typ, id, flags)
     local p = flags[typ]
+    if p == true then return true end -- all resources
     local r = resources.getResource(typ, id)
-    if r and r._local then return true end
-    if p == nil then return false end
-    if p == true then return true end
-    if #p.patterns > 0 then
+    if p and #p.patterns > 0 then
         local id2 = tostring(id)
         for _, v in ipairs(p.patterns) do
             if id2:match(v) then return true end
         end
     end
-    if flags[typ].ids[id] then return true end
+    if flags and flags[typ] and flags[typ].ids[id] then return true end
+
+    if not r then return nil end -- unknown resource (is local)
+    if r and r._local==true then return false end -- local resource
+    if p == nil and r then return false end -- local resource
 end
 
-QA.isLocal = function(typ, id) return not checkRsrcFlag(typ, id, remotes) end
+QA.isLocal = function(typ, id) 
+    local s = checkRsrcFlag(typ, id, remotes) 
+    if s == nil then return s else return not s end
+end
 QA.isRemote = function(typ, id) return checkRsrcFlag(typ, id, remotes) end
 
 local function runner(fc, id)
@@ -635,11 +640,12 @@ function Events.onAction(event)
         arg_id = target_id
         target_id = DIR[arg_id].dev.parentId
     end
-    if not DIR[id] then        if QA.isRemote("devices", id) then -- If remote, forward, call HC3
+    if not DIR[id] then        
+        if QA.isRemote("devices", id) then -- If remote, forward, call HC3
             api.post("/devices/" .. id .. "/action/" .. event.actionName, { args = args }, "hc3")
         else
-            if QA.isLocal("devices", target_id) then
-                QA.syslogwarn("onAction", "No action, QA declared local, ID:%s", target_id)
+            if QA.isLocal("devices", target_id) == true then
+                QA.syslogwarn("onAction", "No action, Remote QA cached local, ID:%s", target_id)
             else
                 QA.syslogwarn("onAction", "Unknown QA, ID:%s", id)
             end
