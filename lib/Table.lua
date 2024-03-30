@@ -25,6 +25,7 @@ local function membermap(list) local r = {}; for _,e in ipairs(list) do r[e]=tru
 local function keys(list) local r = {}; for k,_ in pairs(list) do r[#r+1]=k end; return r end
 local function values(list) local r = {}; for _,v in pairs(list) do r[#r+1]=v end; return r end
 local function union(l1,l2) local r = membermap(l1); for _,e in ipairs(l2) do if not r[e] then r[e]=true end end; return keys(r) end
+local function keyUnion(l1,l2) local r = copyShallow(l1); for k,v in pairs(l2) do r[k]=v end; return r end
 local function intersection(l1,l2) local l,r = membermap(l1),{}; for _,e in ipairs(l2) do if r[e] then r[#r+1]=e end end; return r end
 local function mapk(f,l) local r={}; for k,v in pairs(l) do r[k]=f(v) end; return r end
 local function mapkv(f,l) local r={}; for k,v in pairs(l) do k,v=f(k,v) if k then r[k]=v end end; return r end
@@ -95,6 +96,7 @@ local exports = {
   keys = keys,
   values = values,
   union = union,
+  keyUnion = keyUnion,
   intersection = intersection,
   mapk = mapk,
   mapkv = mapkv,

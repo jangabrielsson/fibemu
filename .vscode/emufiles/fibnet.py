@@ -14,6 +14,7 @@ import websocket
 import paho.mqtt.client as mqtt
 import fibapi
 
+requests.packages.urllib3.disable_warnings()
 
 def requests_retry_session(
     retries=3,
@@ -43,6 +44,7 @@ def httpCall(method, url, options, data, local):
     headers = options['headers']
     headers = dict(headers)
     timeout = options['timeout'] if options['timeout'] else 60
+    verify = options['checkCertificate'] if options['checkCertificate']==False else True
     req = None
     if not local:
         req = requests_retry_session()
@@ -56,13 +58,13 @@ def httpCall(method, url, options, data, local):
     try:
         match method:
             case 'GET':
-                res = req.get(url, headers=headers, timeout=timeout)
+                res = req.get(url, headers=headers, timeout=timeout, verify=verify)
             case 'PUT':
-                res = req.put(url, headers=headers, data=data, timeout=timeout)
+                res = req.put(url, headers=headers, data=data, timeout=timeout, verify=verify)
             case 'POST':
-                res = req.post(url, data=data, headers=headers, timeout=timeout)
+                res = req.post(url, data=data, headers=headers, timeout=timeout, verify=verify)
             case 'DELETE':
-                res = req.delete(url, headers=headers, data=data, timeout=timeout)
+                res = req.delete(url, headers=headers, data=data, timeout=timeout, verify=verify)
 
         res = asyncio.run(res) if local else res
         if res.text.startswith("<!DOCTYPE html>"):

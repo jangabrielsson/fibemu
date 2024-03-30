@@ -109,6 +109,7 @@ function net.HTTPClient(opts)
                 headers = options.headers or {},
                 timeout = options.timeout and options.timeout/1000 or timeout and timeout/1000 or nil,
                 callback = callback,
+                checkCertificate = options.checkCertificate,
                 id = plugin.mainDeviceId or -1
             }
             return fibemu.pyhooks.httpAsync(options.method or "GET", url, opts, data, false)

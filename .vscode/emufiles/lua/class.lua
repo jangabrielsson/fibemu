@@ -33,7 +33,6 @@ function class(name)
   local pname = fmt("class %s",name)
   cl.__USERDATA = true
   function cl2.__tostring() return pname end
-  function cl.__tostring(obj) return fmt("[obj:%s:%s]",name,obj.___index) end
   function cl2.__call(_,...)
     index = index + 1
     local obj = setmetatable({___index=index},cl)
@@ -44,6 +43,13 @@ function class(name)
   _G[name] = setmetatable({ __org = cl },cl2)
   return function(parent)
     setmetatable(cl,parent.__org)
+    if parent.__org.__tostring then -- inherent parent tostring
+      cl.__tostring = parent.__org.__tostring
+    else
+      function cl.__tostring(obj)
+        return fmt("[obj:%s:%s]",name,obj.___index) 
+      end
+    end
   end
 end
 

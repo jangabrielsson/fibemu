@@ -615,6 +615,7 @@ Event = setmetatable({},{
       _handler[k]=createHandler(k,f)
     end,
     __call = function(t,k,event,f)
+      if k == '_' then k = anonEventName..anonEvent; anonEvent = anonEvent + 1 end
       t[k](event)
       _handler[k]=createHandler(k,f)
       -- return ??

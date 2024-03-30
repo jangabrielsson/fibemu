@@ -845,6 +845,12 @@ async def get_Notification_Center(response: Response):
     return list(items.values()) if code < 300 else None
 
 ''' profiles methods '''
+@app.get("/api/profiles/{id}", tags=["Profiles methods"])
+async def get_Profile(id:int, response: Response):
+    var,code = fibenv.get('fe').luaCall("getResource","profiles")
+    response.status_code = code
+    return var.get('profiles')[id] if code < 300 else None
+
 @app.get("/api/profiles", tags=["Profiles methods"])
 async def get_Profiles(response: Response):
     var,code = fibenv.get('fe').luaCall("getResource","profiles")

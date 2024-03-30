@@ -203,7 +203,7 @@ function fibaro.getDevicesID(filter)
     end
     out('/?')
     for c, d in pairs(filter) do
-        if c == 'properties' and d ~= nil and type(d) == 'table' then
+        if c == 'properties' and type(d) == 'table' then
             for a, b in pairs(d) do
                 if b == "nil" then
                     out('property=' .. tostring(a))
@@ -211,7 +211,7 @@ function fibaro.getDevicesID(filter)
                     out('property=[' .. tostring(a) .. ',' .. tostring(b) .. ']')
                 end
             end
-        elseif c == 'interfaces' and d ~= nil and type(d) == 'table' then
+        elseif c == 'interfaces' and type(d) == 'table' then
             for _, b in pairs(d) do
                 out('interface=' .. tostring(b))
             end
