@@ -1,7 +1,7 @@
 fibaro.debugFlags = fibaro.debugFlags or {}
 local HUE
 
-local _version = 0.51
+local _version = 0.52
 local serial = "UPD896661234567893"
 HUEv2Engine = HUEv2Engine or {}
 local HUE = HUEv2Engine
@@ -329,7 +329,7 @@ function defClasses()
       self.dev:publishAll()
     end
     function RoomZoneQA:setScene(event)
-      self:setVariable("scene",event.values[1])
+      self:setVariable("scene",event)
     end
     function RoomZoneQA:turnOn()
       self:updateProperty("value", 100)

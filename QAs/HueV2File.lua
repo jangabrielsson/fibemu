@@ -793,7 +793,13 @@ local function main()
           ["Accept"] = "application/json",
         }
       },
-      success = function(res) post({type=event,result=json.decode(res.data)}) end,
+      success = function(res) 
+        if res.status < 300 then
+          post({type=event,result=json.decode(res.data)}) 
+        else
+          post({type=event,error=res.status}) 
+        end
+      end,
       error = function(err) post({type=event,error=err})  end,
     })
   end
@@ -920,7 +926,7 @@ local function main()
     function HUEv2Engine:getResources() return resources.resources end
     function HUEv2Engine:getResourceIds() return resources.id2resource end
     function HUEv2Engine:getResource(id) return resources.id2resource[id] end
-    function HUEv2Engine:getResourceType(typ) return resources.resources[typ] end
+    function HUEv2Engine:getResourceType(typ) return resources.resources[typ] or {} end
     function HUEv2Engine:_resolve(id) return resolve(id) end
     function HUEv2Engine:getSceneByName(name,roomzone)
       local scenes = self:getResourceType('scene')
@@ -1089,12 +1095,12 @@ local function main()
     main() 
     _initEngine(ip,key,cb)
   end
-  
+
 ------- QAs/HueV2App.lua ----------
 fibaro.debugFlags = fibaro.debugFlags or {}
 local HUE
 
-local _version = 0.51
+local _version = 0.52
 local serial = "UPD896661234567893"
 HUEv2Engine = HUEv2Engine or {}
 local HUE = HUEv2Engine
@@ -1422,7 +1428,7 @@ function defClasses()
       self.dev:publishAll()
     end
     function RoomZoneQA:setScene(event)
-      self:setVariable("scene",event.values[1])
+      self:setVariable("scene",event)
     end
     function RoomZoneQA:turnOn()
       self:updateProperty("value", 100)
