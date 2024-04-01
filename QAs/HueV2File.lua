@@ -914,7 +914,7 @@ local function main()
         r._dirty = true
       end
       for _,r in ipairs(ev.result.data or {}) do
-        print(r.type)
+        --print(r.type)
         r._dirty=nil
         resources.add(r.id,r)
       end
