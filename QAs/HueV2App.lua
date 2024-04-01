@@ -181,6 +181,16 @@ function defClasses()
       self:print("battery %s",value.battery_level)
       self:updateProperty("batteryLevel",value.battery_level)
     end)
+    if self.properties.userDescription == nil or self.properties.userDescription == "" then
+      local fmt = string.format
+      local d = fmt("%s\n%s",self.dev.type,self.dev.id)
+      print(d)
+      if self.dev.product_data then
+        local pd = self.dev.product_data
+        d = d..fmt("\n%s\n%s",pd.product_name or "",pd.model_id or "")
+      end
+      self:updateProperty("userDescription",d)
+    end
   end
   function HueClass:print(fmt,...)
     local TAG = __TAG; __TAG = self.pname
