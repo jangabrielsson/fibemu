@@ -44,9 +44,9 @@ function QuickApp:onInit()
   HUE = HUEv2Engine
   function self.initChildDevices() end
   local updated = self:getVariable("update")
-  self:setVariable("update","no")
   if updated=="yes" then
     self:debug("Updating HueV2App")
+    self:setVariable("update","_")
     update()
   elseif HUE then init() 
   else self:error("Missing HUE library, set QV update=yes") end
@@ -72,6 +72,7 @@ function update()
     local stat,err = api.put("/quickApp/"..quickApp.id.."/files",{
       {name="HueV2", isMain=false, isOpen=false, content=data1},
     })
+    quickApp:setVariable("update",os.date("%Y-%m-%d %H:%M:%S"))
     setTimeout(init,0)
   end)
 end
