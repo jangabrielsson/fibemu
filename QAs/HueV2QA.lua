@@ -69,10 +69,10 @@ function update()
     })
   end
   getFile(file1,function(data1)
+    quickApp:setVariable("update",os.date("%Y-%m-%d %H:%M:%S"))
     local stat,err = api.put("/quickApp/"..quickApp.id.."/files",{
       {name="HueV2", isMain=false, isOpen=false, content=data1},
     })
-    quickApp:setVariable("update",os.date("%Y-%m-%d %H:%M:%S"))
     setTimeout(init,0)
   end)
 end

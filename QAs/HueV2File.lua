@@ -914,6 +914,7 @@ local function main()
         r._dirty = true
       end
       for _,r in ipairs(ev.result.data or {}) do
+        print(r.type)
         r._dirty=nil
         resources.add(r.id,r)
       end
@@ -1103,7 +1104,7 @@ local function main()
 fibaro.debugFlags = fibaro.debugFlags or {}
 local HUE
 
-local _version = 0.52
+local _version = 0.53
 local serial = "UPD896661234567893"
 HUEv2Engine = HUEv2Engine or {}
 local HUE = HUEv2Engine
@@ -1391,7 +1392,6 @@ function defClasses()
       child.interfaces = child.interfaces or {}
       table.insert(child.interfaces,"zwaveCentralScene")
     end
-    function Button.annotate() end
 
     class 'DoorSensor'(HueClass)
     DoorSensor.htype = "com.fibaro.doorSensor"
