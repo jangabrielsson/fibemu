@@ -126,7 +126,10 @@ local function main()
     return self
   end
   
-  local function resolve(rr) return rr and resources.get(rr.rid) or {} end
+  local function resolve(rr)
+    return rr and resources.get(rr.rid) or 
+    { subscribe=function() end, publishMySubs=function() end, publishAll=function() end } 
+  end
   
   local function classs(name,parent)
     local p = class(name)
@@ -1076,7 +1079,7 @@ local function main()
       local rs = sortResources(HUEv2Engine:getResourceIds())
       for _,r in ipairs(rs) do if not r.owner then printResource(r,pb,0) end end
       pb:add("------------------------\n")
-      print(pb:tostring())
+      print(pb:tostring():gsub("\n","</br>"):gsub("%s","&nbsp;"))
     end
     
     function _initEngine(ip,key,cb)
@@ -1137,7 +1140,7 @@ function HUEv2Engine:app()
     local uid = getVar(c.id,"ChildID")
     if uid then childDevices[uid]=true end
   end
-  print(json.encode(childDevices))
+  --print(json.encode(childDevices))
   local ddevices = {}
   for id,dev in pairs(HUE:getResourceType('device')) do
     dev = HUE:getResource(id)
@@ -1261,12 +1264,14 @@ end
 
 function defClasses()
   print("Defining QA classes")
+
   class 'HueClass'(QwikAppChild)
   function HueClass:__init(dev)
     QwikAppChild.__init(self,dev)
     self.uid = self._uid:match(".-:(.*)")
     self.dev = HUE:getResource(self.uid)
     self.pname = "CHILD"..self.id
+    local props = self.dev:getProps()
     self.dev:subscribe("status",function(key,value,b)
       self:print("status %s",value)
       if value ~= 'connected' then
@@ -1415,18 +1420,47 @@ function defClasses()
     RoomZoneQA.htype = "com.fibaro.multilevelSwitch"
     function RoomZoneQA:__init(device)
       HueClass.__init(self,device)
+
+      -- Check room/zone dead status
+      local statuses = {}
+      for _,c in pairs(self.dev.children or {}) do
+        c = HUE:_resolve(c)
+        if c.type ~= 'device' then
+          c = HUE:_resolve(c.owner)
+        end
+        local props = c:getProps()
+        if props.status then
+          statuses[c.id] = true
+          c = HUE:getResource(c.id)
+          c:subscribe("status",function(key,value,b)
+            statuses[b.id] = value == 'connected'
+            local stat = true
+            for _,s in pairs(statuses) do stat=stat and s end
+            self:updateProperty("dead",not stat)
+            self:print("status %s",stat)
+          end)
+          local c0 = c
+          setTimeout(function() 
+            c0:publishAll() 
+          end,0)
+        end
+      end
+
       self.dev:subscribe("on",function(key,value,b)
         self:print("on %s",value)
         local d = ROUND(b._props.dimming.get(b.rsrc))
         self:updateProperty("state",true)
         self:updateProperty("value",d)
       end)
+
       self.dev:subscribe("dimming",function(key,value,b)
         self:print("dimming %s",value)
         self:updateProperty("value",ROUND(value))
       end)
+
       self.dev:publishAll()
     end
+
     function RoomZoneQA:setScene(event)
       self:setVariable("scene",event)
     end

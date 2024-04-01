@@ -125,7 +125,10 @@ local function main()
     return self
   end
   
-  local function resolve(rr) return rr and resources.get(rr.rid) or {} end
+  local function resolve(rr)
+    return rr and resources.get(rr.rid) or 
+    { subscribe=function() end, publishMySubs=function() end, publishAll=function() end } 
+  end
   
   local function classs(name,parent)
     local p = class(name)
@@ -1075,7 +1078,7 @@ local function main()
       local rs = sortResources(HUEv2Engine:getResourceIds())
       for _,r in ipairs(rs) do if not r.owner then printResource(r,pb,0) end end
       pb:add("------------------------\n")
-      print(pb:tostring())
+      print(pb:tostring():gsub("\n","</br>"):gsub("%s","&nbsp;"))
     end
     
     function _initEngine(ip,key,cb)
