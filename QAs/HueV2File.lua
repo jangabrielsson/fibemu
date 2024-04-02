@@ -1101,10 +1101,11 @@ local function main()
   end
 
 ------- QAs/HueV2App.lua ----------
+------- QAs/HueV2App.lua ----------
 fibaro.debugFlags = fibaro.debugFlags or {}
 local HUE
 
-local _version = 0.54
+local _version = 0.55
 local serial = "UPD896661234567893"
 HUEv2Engine = HUEv2Engine or {}
 local HUE = HUEv2Engine
@@ -1117,9 +1118,9 @@ local function keys(t) local r = {} for k,v in pairs(t) do r[#r+1]=k end return 
 local function values(t) local r = {} for k,v in pairs(t) do r[#r+1]=v end return r end
 local argsMap = {}
 local function getVar(id,key)
-    local res, stat = api.get("/plugins/" .. id .. "/variables/" .. key)
-    if stat ~= 200 then return nil end
-    return res.value
+  local res, stat = api.get("/plugins/" .. id .. "/variables/" .. key)
+  if stat ~= 200 then return nil end
+  return res.value
 end
 
 local devProps = { 
@@ -1201,7 +1202,7 @@ function HUEv2Engine:app()
     end
     return "{"..p:tostring().."}"
   end
-
+  
   if regenerate then
     print("Regenerating map file")
     local b = fibaro.printBuffer()
@@ -1265,7 +1266,7 @@ end
 
 function defClasses()
   print("Defining QA classes")
-
+  
   class 'HueClass'(QwikAppChild)
   function HueClass:__init(dev)
     QwikAppChild.__init(self,dev)
@@ -1328,11 +1329,11 @@ function defClasses()
     self:updateProperty("state",true)
   end
   function BinarySwitch:turnOff()
-      self:updateProperty("value",false)
-      self:updateProperty("state",false)
+    self:updateProperty("value",false)
+    self:updateProperty("state",false)
   end
   function BinarySwitch.annotate() end
-
+  
   class 'LuxSensor'(HueClass)
   LuxSensor.htype = "com.fibaro.lightSensor"
   function LuxSensor:__init(device)
@@ -1345,7 +1346,7 @@ function defClasses()
     self.dev:publishAll()
   end
   function LuxSensor.annotate() end
-
+  
   class 'MotionSensor'(HueClass)
   MotionSensor.htype = "com.fibaro.motionSensor"
   function MotionSensor:__init(device)
@@ -1357,7 +1358,7 @@ function defClasses()
     self.dev:publishAll()
   end
   function MotionSensor.annotate() end  
-
+  
   local btnMap = {initial_press="Pressed",['repeat']="HeldDown",short_release="Released",long_release="Released"}
     class 'Button'(HueClass)
     Button.htype = 'com.fibaro.remoteController'
@@ -1365,17 +1366,38 @@ function defClasses()
       HueClass.__init(self,device)
       local deviceId,ignore = self.id,false
       local btnSelf = self
+      local buttons = {}
       self.dev:subscribe("button",function(key,value,b)
         local _modifier,key = b:button_state()
+        b._props.button.set(b.rsrc,"_")
         local modifier = btnMap[_modifier] or _modifier
-        btnSelf:print("button:%s %s %s",key,modifier,_modifier)
-        local data = {
-          type =  "centralSceneEvent",
-          source = deviceId,
-          data = { keyAttribute = modifier, keyId = key }
-        }
-        if not ignore then api.post("/plugins/publishEvent", data) end
-        btnSelf:updateProperty("log",string.format("Key:%s,Attr:%s",key,modifier))
+        local function action(r)
+          btnSelf:print("button:%s %s %s",key,modifier,_modifier)
+          local data = {
+            type =  "centralSceneEvent",
+            source = deviceId,
+            data = { keyAttribute = modifier, keyId = key }
+          }
+          if not ignore then api.post("/plugins/publishEvent", data) end
+          btnSelf:updateProperty("log",string.format("Key:%s,Attr:%s",key,modifier))
+          if r and not ignore then 
+            btnSelf:print("button:%s %s",key,"Released")
+            data.data.keyAttribute = "Released"
+            api.post("/plugins/publishEvent", data) 
+            btnSelf:updateProperty("log",string.format("Key:%s,Attr:%s",key,"Released"))
+          end
+        end
+        if modifier == 'Pressed' then
+          local bd = buttons[key] or {click=0}; buttons[key] = bd
+          if bd.ref then clearTimeout(bd.ref) end
+          bd.click = bd.click + 1
+          bd.ref = setTimeout(function()
+            buttons[key] = nil
+            if bd.click > 1 then modifier = modifier..bd.click end
+            action(true)
+          end,1500)
+        elseif modifier == 'Released' then
+        else action() end
       end)
       ignore = true
       self.dev:publishAll()
@@ -1384,15 +1406,15 @@ function defClasses()
     function Button.annotate(child)
       child.properties = child.properties or {}
       child.properties.centralSceneSupport = {   
-        { keyAttributes = {"Pressed","Released","HeldDown"},keyId = 1 },
-        { keyAttributes = {"Pressed","Released","HeldDown"},keyId = 2 },
-        { keyAttributes = {"Pressed","Released","HeldDown"},keyId = 3 },
-        { keyAttributes = {"Pressed","Released","HeldDown"},keyId = 4 },
+        { keyAttributes = {"Pressed","Released","HeldDown","Pressed2","Pressed3"},keyId = 1 },
+        { keyAttributes = {"Pressed","Released","HeldDown","Pressed2","Pressed3"},keyId = 2 },
+        { keyAttributes = {"Pressed","Released","HeldDown","Pressed2","Pressed3"},keyId = 3 },
+        { keyAttributes = {"Pressed","Released","HeldDown","Pressed2","Pressed3"},keyId = 4 },
       }
       child.interfaces = child.interfaces or {}
       table.insert(child.interfaces,"zwaveCentralScene")
     end
-
+    
     class 'DoorSensor'(HueClass)
     DoorSensor.htype = "com.fibaro.doorSensor"
     function DoorSensor:__init(device)
@@ -1405,7 +1427,7 @@ function defClasses()
       self.dev:publishAll()
     end
     function DoorSensor.annotate() end
-
+    
     class 'MultilevelSensor'(HueClass)
     MultilevelSensor.htype = "com.fibaro.multilevelSensor"
     function MultilevelSensor:__init(device)
@@ -1424,13 +1446,16 @@ function defClasses()
       end)
       self.dev:publishAll()
     end
-    function MultilevelSensor.annotate() end
-
+    function MultilevelSensor.annotate(rsrc) 
+    end
+    
     class 'RoomZoneQA'(HueClass)
     RoomZoneQA.htype = "com.fibaro.multilevelSwitch"
     function RoomZoneQA:__init(device)
       HueClass.__init(self,device)
-
+      self.args = argsMap[self._uid].args or {}
+      self.args.dimdelay = self.args.dimdelay or 8000
+      
       -- Check room/zone dead status
       local statuses = {}
       for _,c in pairs(self.dev.children or {}) do
@@ -1455,22 +1480,22 @@ function defClasses()
           end,0)
         end
       end
-
+      
       self.dev:subscribe("on",function(key,value,b)
         self:print("on %s",value)
         local d = ROUND(b._props.dimming.get(b.rsrc))
         self:updateProperty("state",true)
         self:updateProperty("value",d)
       end)
-
+      
       self.dev:subscribe("dimming",function(key,value,b)
         self:print("dimming %s",value)
         self:updateProperty("value",ROUND(value))
       end)
-
+      
       self.dev:publishAll()
     end
-
+    
     function RoomZoneQA:setScene(event)
       self:setVariable("scene",event)
     end
@@ -1478,10 +1503,9 @@ function defClasses()
       self:updateProperty("value", 100)
       self:updateProperty("state", true)
       local sceneName = self:getVar("scene")
-      print("S:"..sceneName)
       local scene = HUE:getSceneByName(sceneName,self.dev.name)
       if not scene then
-        self:print("Scene",sceneName,"not found")
+        self:print("Scene %s not found")
         self.dev:targetCmd({on = {on=true}})
       else
         self:print("Turn on Scene %s",scene.name)
@@ -1501,6 +1525,23 @@ function defClasses()
       self:updateProperty("value", value)
       self.dev:targetCmd({dimming = {brightness=value}})
     end
+    function RoomZoneQA:startLevelIncrease()
+      self:print("startLevelIncrease")
+      local val = self.properties.value
+      val = ROUND((100-val)/100.0*self.args.dimdelay)
+      self:print("LI %s %s",self.properties.value,val)
+      self.dev:targetCmd({dimming = {brightness=100}, dynamics ={duration=val}})
+    end
+    function RoomZoneQA:startLevelDecrease()
+      self:print("startLevelDecrease")
+      local val = self.properties.value
+      val = ROUND((val-0)/100.0*self.args.dimdelay)
+      self:print("LD %s %s",self.properties.value,val)
+      self.dev:targetCmd({dimming = {brightness=0}, dynamics ={duration=val}})
+    end
+    function RoomZoneQA:stopLevelChange()
+      self.dev:targetCmd({dimming_delta = {action='stop'}})
+    end
     function RoomZoneQA:getVar(name)
       local qvs = __fibaro_get_device_property(self.id,"quickAppVariables").value
       for _,var in ipairs(qvs or {}) do
@@ -1508,70 +1549,73 @@ function defClasses()
       end
       return ""
     end
-    function RoomZoneQA.annotate() end
+    function RoomZoneQA.annotate(rsrc) 
+      rsrc.interfaces = rsrc.interfaces or {}
+      table.insert(rsrc.interfaces,"levelChange")
+    end
     
   end
-
------------ Child class
-do
-  local childID = 'ChildID'
-  local classID = 'ClassName'
-  local defChildren
-
-  local children = {}
-  local undefinedChildren = {}
-  local createChild = QuickApp.createChildDevice
-  class 'QwikAppChild'(QuickAppChild)
-
-  local fmt = string.format 
-
-  local function setupUIhandler(self)
-     if not self.UIHandler then
+  
+  ----------- Child class
+  do
+    local childID = 'ChildID'
+    local classID = 'ClassName'
+    local defChildren
+    
+    local children = {}
+    local undefinedChildren = {}
+    local createChild = QuickApp.createChildDevice
+    class 'QwikAppChild'(QuickAppChild)
+    
+    local fmt = string.format 
+    
+    local function setupUIhandler(self)
+      if not self.UIHandler then
         function self:UIHandler(event)
-            local obj = self
-            if self.id ~= event.deviceId then obj = (self.childDevices or {})[event.deviceId] end
-            if not obj then return end
-            local elm,etyp = event.elementName, event.eventType
-            local cb = obj.uiCallbacks or {}
-            if obj[elm] then return obj:callAction(elm, event) end
-            if cb[elm] and cb[elm][etyp] and obj[cb[elm][etyp]] then return obj:callAction(cb[elm][etyp], event) end
-            if obj[elm.."Clicked"] then return obj:callAction(elm.."Clicked", event) end
-            self:warning("UI callback for element:", elm, " not found-")
+          local obj = self
+          if self.id ~= event.deviceId then obj = (self.childDevices or {})[event.deviceId] end
+          if not obj then return end
+          local elm,etyp = event.elementName, event.eventType
+          local cb = obj.uiCallbacks or {}
+          if obj[elm] then return obj:callAction(elm, event) end
+          if cb[elm] and cb[elm][etyp] and obj[cb[elm][etyp]] then return obj:callAction(cb[elm][etyp], event) end
+          if obj[elm.."Clicked"] then return obj:callAction(elm.."Clicked", event) end
+          self:warning("UI callback for element:", elm, " not found-")
         end
-     end
-  end
-
-  local UID = nil
-  function QwikAppChild:__init(device) 
-    QuickAppChild.__init(self, device)
-    self:debug(fmt("Instantiating ID:%s '%s'",device.id,device.name))
-    local uid = UID or self:internalStorageGet(childID) or ""
-    self._uid = uid
-    if defChildren[uid] then
-      children[uid]=self               -- Keep table with all children indexed by uid. uid is unique.
-    else                               -- If uid not in our children table, we will remove this child
-      undefinedChildren[#undefinedChildren+1]=self.id 
+      end
     end
-    self._sid = tonumber(uid:match("(%d+)$"))
-  end
-
-  function QuickApp:createChildDevice(uid,props,interfaces,className)
-    __assert_type(uid,'string')
-    __assert_type(className,'string')
-    props.initialProperties = props.initialProperties or {}
-    props.initialInterfaces = interfaces
-    --self:debug("Creating device ",props.name)
-    UID = uid
-    local c = createChild(self,props,_G[className])
-    UID = nil
-    if not c then return end
-    c:internalStorageSet(childID,uid,true)
-    c:internalStorageSet(classID,className,true)
-  end
-
-  function QuickApp:loadExistingChildren(chs)
-    __assert_type(chs,'table')
-    local stat,err = pcall(function()
+    
+    local UID = nil
+    function QwikAppChild:__init(device) 
+      QuickAppChild.__init(self, device)
+      self:debug(fmt("Instantiating ID:%s '%s'",device.id,device.name))
+      local uid = UID or self:internalStorageGet(childID) or ""
+      self._uid = uid
+      if defChildren[uid] then
+        children[uid]=self               -- Keep table with all children indexed by uid. uid is unique.
+      else                               -- If uid not in our children table, we will remove this child
+        undefinedChildren[#undefinedChildren+1]=self.id 
+      end
+      self._sid = tonumber(uid:match("(%d+)$"))
+    end
+    
+    function QuickApp:createChildDevice(uid,props,interfaces,className)
+      __assert_type(uid,'string')
+      __assert_type(className,'string')
+      props.initialProperties = props.initialProperties or {}
+      props.initialInterfaces = interfaces
+      --self:debug("Creating device ",props.name)
+      UID = uid
+      local c = createChild(self,props,_G[className])
+      UID = nil
+      if not c then return end
+      c:internalStorageSet(childID,uid,true)
+      c:internalStorageSet(classID,className,true)
+    end
+    
+    function QuickApp:loadExistingChildren(chs)
+      __assert_type(chs,'table')
+      local stat,err = pcall(function()
         defChildren = chs
         self.children = children
         function self.initChildDevices() end
@@ -1585,11 +1629,11 @@ do
           childObject.parent = self
         end
       end)
-    if not stat then self:error("loadExistingChildren:"..err) end
-  end
-
-  function QuickApp:createMissingChildren()
-    local stat,err = pcall(function()
+      if not stat then self:error("loadExistingChildren:"..err) end
+    end
+    
+    function QuickApp:createMissingChildren()
+      local stat,err = pcall(function()
         local chs,k = {},0
         for uid,data in pairs(defChildren) do
           local m = uid:sub(1,1)=='i' and 100 or 0
@@ -1608,19 +1652,19 @@ do
           end
         end 
       end)
-    if not stat then self:error("createMissingChildren:"..err) end
-  end
-
-  function QuickApp:removeUndefinedChildren()
-    for _,deviceId in ipairs(undefinedChildren) do -- Remove children not in children table
-      self:removeChildDevice(deviceId)
+      if not stat then self:error("createMissingChildren:"..err) end
+    end
+    
+    function QuickApp:removeUndefinedChildren()
+      for _,deviceId in ipairs(undefinedChildren) do -- Remove children not in children table
+        self:removeChildDevice(deviceId)
+      end
+    end
+    
+    function QuickApp:initChildren(children)
+      setupUIhandler(self)
+      self:loadExistingChildren(children)
+      self:createMissingChildren()
+      self:removeUndefinedChildren()
     end
   end
-
-  function QuickApp:initChildren(children)
-    setupUIhandler(self)
-    self:loadExistingChildren(children)
-    self:createMissingChildren()
-    self:removeUndefinedChildren()
-  end
-end

@@ -9,6 +9,7 @@
 --%%file=QAs/HueV2File.lua,HueV2;
 --%%debug=refresh:false
 --%%remote=globalVariables:HueScenes
+--%%remote=devices:*
 --%%fullLua=true
 --%%u={label='info', text=''}
 --%%u={button='restart', text='Restart', onReleased='restart'}
