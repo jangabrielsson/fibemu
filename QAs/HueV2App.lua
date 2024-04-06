@@ -2,7 +2,7 @@
 fibaro.debugFlags = fibaro.debugFlags or {}
 local HUE
 
-local _version = 0.56
+local _version = 0.57
 local serial = "UPD896661234567893"
 HUEv2Engine = HUEv2Engine or {}
 local HUE = HUEv2Engine
@@ -513,6 +513,7 @@ function defClasses()
     
     function QuickApp:loadExistingChildren(chs)
       __assert_type(chs,'table')
+      local rerr = false
       local stat,err = pcall(function()
         defChildren = chs
         self.children = children
@@ -522,12 +523,20 @@ function defClasses()
           local uid = getVar(child.id,childID)
           local className = getVar(child.id,classID)
           print(child.id,uid,className)
-          local childObject = _G[className] and _G[className](child) or QuickAppChild(child)
-          self.childDevices[child.id]=childObject
-          childObject.parent = self
+          local childObject = nil
+          local stat,err = pcall(function()
+            childObject = _G[className] and _G[className](child) or QuickAppChild(child)
+            self.childDevices[child.id]=childObject
+            childObject.parent = self
+          end)
+          if not stat then 
+            self:error("loadExistingChildren:"..err) 
+            rerr=true
+          end
         end
       end)
-      if not stat then self:error("loadExistingChildren:"..err) end
+      if not stat then rerr=true self:error("loadExistingChildren:"..err) end
+      return rerr
     end
     
     function QuickApp:createMissingChildren()
@@ -561,7 +570,7 @@ function defClasses()
     
     function QuickApp:initChildren(children)
       setupUIhandler(self)
-      self:loadExistingChildren(children)
+      if self:loadExistingChildren(children) then return end
       self:createMissingChildren()
       self:removeUndefinedChildren()
     end
