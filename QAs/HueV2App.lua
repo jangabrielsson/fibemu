@@ -2,7 +2,7 @@
 fibaro.debugFlags = fibaro.debugFlags or {}
 local HUE
 
-local _version = 0.55
+local _version = 0.56
 local serial = "UPD896661234567893"
 HUEv2Engine = HUEv2Engine or {}
 local HUE = HUEv2Engine
@@ -333,6 +333,7 @@ function defClasses()
       self.args.div = self.args.div or 1
       self.value = 0
       self.dev:subscribe("relative_rotary",function(key,v,b)
+        if not v then return end
         local steps = math.max(ROUND(v.rotation.steps / self.args.div),1)
         local dir = (1 - (v.rotation.direction=='clock_wise' and 0 or 2))
         self.value = self.value + steps*dir
