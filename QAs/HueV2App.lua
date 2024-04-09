@@ -148,7 +148,7 @@ function HUEv2Engine:app()
       local dev = HUE:getResource(data.id)
       children[id] = {
         name = dev.name,
-        type =_G[data.class].htype,
+        type = data.type or _G[data.class].htype,
         className = data.class,
         interfaces = dev:getProps()['power_state'] and {'battery'} or nil,
       }
