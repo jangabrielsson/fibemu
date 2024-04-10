@@ -127,7 +127,7 @@ local function main()
   
   local function resolve(rr)
     return rr and resources.get(rr.rid) or 
-    { subscribe=function() end, publishMySubs=function() end, publishAll=function() end } 
+    { subscribe=function(_,_,_) end, publishMySubs=function() end, publishAll=function() end } 
   end
   
   local function classs(name,parent)
@@ -248,7 +248,7 @@ local function main()
       end
     end
   end
-  
+
   function hueResource:subscribe(key,fun)
     if self.services then
       for _,s in ipairs(self.services or {}) do resolve(s):subscribe(key,fun) end

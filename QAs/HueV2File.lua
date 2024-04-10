@@ -128,7 +128,7 @@ local function main()
   
   local function resolve(rr)
     return rr and resources.get(rr.rid) or 
-    { subscribe=function() end, publishMySubs=function() end, publishAll=function() end } 
+    { subscribe=function(_,_,_) end, publishMySubs=function() end, publishAll=function() end } 
   end
   
   local function classs(name,parent)
@@ -249,7 +249,7 @@ local function main()
       end
     end
   end
-  
+
   function hueResource:subscribe(key,fun)
     if self.services then
       for _,s in ipairs(self.services or {}) do resolve(s):subscribe(key,fun) end
@@ -1101,11 +1101,12 @@ local function main()
   end
 
 ------- QAs/HueV2App.lua ----------
+---@diagnostic disable: undefined-global
 ------- QAs/HueV2App.lua ----------
 fibaro.debugFlags = fibaro.debugFlags or {}
 local HUE
 
-local _version = 0.57
+local _version = 0.58
 local serial = "UPD896661234567893"
 HUEv2Engine = HUEv2Engine or {}
 local HUE = HUEv2Engine
@@ -1225,8 +1226,10 @@ function HUEv2Engine:app()
     if fibaro.fibemu then
       local data = b:tostring()
       local f = io.open("QAs/HueV2Map.lua","w")
-      f:write(data)
-      f:close()
+      if f then
+        f:write(data)
+        f:close()
+      end
       data = "return function() "..data.." return HUEDevices end"
       HUEDevices = load(data)()()
     else
@@ -1251,7 +1254,7 @@ function HUEv2Engine:app()
       local dev = HUE:getResource(data.id)
       children[id] = {
         name = dev.name,
-        type =_G[data.class].htype,
+        type = data.type or _G[data.class].htype,
         className = data.class,
         interfaces = dev:getProps()['power_state'] and {'battery'} or nil,
       }
@@ -1500,13 +1503,14 @@ function defClasses()
     function RoomZoneQA:setScene(event)
       self:setVariable("scene",event)
     end
-    function RoomZoneQA:turnOn()
+    function RoomZoneQA:turnOn(sceneArg)
       self:updateProperty("value", 100)
       self:updateProperty("state", true)
-      local sceneName = self:getVar("scene")
+      local sceneName = type(sceneArg)=='string' and sceneArg or self:getVar("scene")
+
       local scene = HUE:getSceneByName(sceneName,self.dev.name)
+      if sceneName and not scene then self:print("Scene %s not found",sceneName) end
       if not scene then
-        self:print("Scene %s not found")
         self.dev:targetCmd({on = {on=true}})
       else
         self:print("Turn on Scene %s",scene.name)
@@ -1530,14 +1534,14 @@ function defClasses()
       self:print("startLevelIncrease")
       local val = self.properties.value
       val = ROUND((100-val)/100.0*self.args.dimdelay)
-      self:print("LI %s %s",self.properties.value,val)
+      --self:print("LI %s %s",self.properties.value,val)
       self.dev:targetCmd({dimming = {brightness=100}, dynamics ={duration=val}})
     end
     function RoomZoneQA:startLevelDecrease()
       self:print("startLevelDecrease")
       local val = self.properties.value
       val = ROUND((val-0)/100.0*self.args.dimdelay)
-      self:print("LD %s %s",self.properties.value,val)
+      --self:print("LD %s %s",self.properties.value,val)
       self.dev:targetCmd({dimming = {brightness=0}, dynamics ={duration=val}})
     end
     function RoomZoneQA:stopLevelChange()
@@ -1548,7 +1552,7 @@ function defClasses()
       for _,var in ipairs(qvs or {}) do
         if var.name==name then return var.value end
       end
-      return ""
+      return nil
     end
     function RoomZoneQA.annotate(rsrc) 
       rsrc.interfaces = rsrc.interfaces or {}
