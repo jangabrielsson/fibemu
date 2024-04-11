@@ -1,5 +1,5 @@
-import uvicorn
 import sys
+import uvicorn
 import re
 import os, socket
 import argparse
@@ -13,8 +13,9 @@ app = fibapi.app
 # main startup
 if __name__ == "__main__":
     global config
+    print(f"Python version {sys.version}",file=sys.stderr)
+    print(f"Platform is {sys.platform}",file=sys.stderr)
     version = "0.42"
-
     parser = argparse.ArgumentParser(
                     prog='fibemu',
                     description='QA/HC3 emulator for HC3',
@@ -96,7 +97,6 @@ if __name__ == "__main__":
         completed = subprocess.run(["powershell", "-Command", cmd], capture_output=False)
         return completed
 
-    print(f"Platform is {sys.platform}",file=sys.stderr)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         stat = s.connect_ex(('localhost', config['wport']))
         print(f"Web server port {config['wport']} status {stat}",file=sys.stderr)

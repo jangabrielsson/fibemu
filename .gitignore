@@ -9,4 +9,5 @@ config.json
 **/.DS_Store
 ~$*
 /venv
+/.venv
 .fdir.txt
