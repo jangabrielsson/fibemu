@@ -1,5 +1,5 @@
 fastapi==0.100.0
-lupa==2.0
+lupa==2.1
 paho_mqtt==1.6.1
 pydantic==1.10.9
 Requests==2.31.0
