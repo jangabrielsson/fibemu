@@ -6,6 +6,7 @@
 -- <file> qa upload test/foo.fqa
 -- <file> qa upload <file> test/foo.fqa
 local fibemu = fibaro.fibemu
+local io = fibemu.libs.io
 local file = fibemu.config.extra[1]
 local rsrc = fibemu.config.extra[2]
 local cmd = fibemu.config.extra[3]

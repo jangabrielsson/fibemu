@@ -4,9 +4,14 @@
   "version": "2.0.0",
   "tasks": [
       {
+        "label": "echo42",
+        "type": "shell",
+        "command": "echo ${env:FIBPYTHON}"
+      },
+      {
           "label": "QA, download fqa",
           "type": "shell",
-          "command": "python3", 
+          "command": "${config:fibpython}", 
           "args": [
             "${workspaceFolder}/.vscode/emufiles/__init__.py",
             "-nw",
@@ -25,7 +30,7 @@
       {
         "label": "QA, download and unpack",
         "type": "shell",
-        "command": "python3", 
+        "command": "${config:fibpython}", 
         "args": [
           "${workspaceFolder}/.vscode/emufiles/__init__.py",
           "-nw",
@@ -44,7 +49,7 @@
       {
         "label": "QA, upload",
         "type": "shell",
-        "command": "python3", 
+        "command": "${config:fibpython}", 
         "args": [
           "${workspaceFolder}/.vscode/emufiles/__init__.py",
           "-nw",
@@ -62,7 +67,7 @@
       {
         "label": "QA, update",
         "type": "shell",
-        "command": "python3", 
+        "command": "${config:fibpython}", 
         "args": [
           "${workspaceFolder}/.vscode/emufiles/__init__.py",
           "-nw",

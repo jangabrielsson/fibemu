@@ -137,6 +137,7 @@ local libs = {
     util = util,
     binser = doload("binser.lua"),
     ui = doload("ui.lua"),
+    io = io,
 }
 QA.libs = libs
 
