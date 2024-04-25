@@ -2,6 +2,7 @@
 *.pyc
 /.vscode/emufiles/__pycache__
 /.vscode/emufiles/frontend/node_modules
+/.vscode/settings.json
 config.json
 /test
 /dev
