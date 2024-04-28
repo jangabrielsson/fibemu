@@ -310,6 +310,16 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         f=function(d,e) return true end,
         l=function(d,e) return fmt("%s",e.type) end
     },
+    --{"createdMillis":1714161600078,"data":{"newTariff":"CREUSES","oldTariff":"PLEINES"},"type":"ActiveTariffChangedEvent","created":1714161600}
+    ActiveTariffChangedEvent = {
+        f=function(d,e) return true end,
+        l=function(d,e) return fmt("%s %s",e.type,tostring(d.newTariff)) end
+    },
+    -- {"data":{"id":2},"createdMillis":1713945688850,"type":"UserModifiedEvent","created":1713945688,"objects":[{"objectId":2,"objectType":"user"}],"sourceType":"system"}
+    UserModifiedEvent = {
+        f=function(d,e) return true end,
+        l=function(d,e) return fmt("%s %s",e.type,tostring(d.id)) end
+    },
 }
 
 function r.init(conf, libs)
