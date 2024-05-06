@@ -22,7 +22,7 @@ fibaro,QuickApp = fibaro or {},QuickApp or {}
 _MODULES = _MODULES or {} -- Global
 _MODULES.base={ author = "jan@gabrielsson.com", version = '0.4', depends={}, 
   init = function()
-    fibaro.FIBARO_EXTRA = "v0.964"
+    fibaro.FIBARO_EXTRA = "v0.966"
     fibaro.debugFlags  = fibaro.debugFlags or { modules=false }
     fibaro.utils = {}
     _MODULES.base._inited=true
@@ -633,11 +633,13 @@ _MODULES.cron={ author = "jan@gabrielsson.com", version = '0.4', depends={'base'
           local nxt = (os.time() // 60 + 1)*60
           local function loop()
             local stat,res
-            for _,args in pairs(jobs) do
---            setTimeout(function() -- what is better?
-              if args.test() then stat,res = pcall(args.fun,table.unpack(args.args)) else stat=true end
-              if not stat then fibaro.error(__TAG,res) end
---              end,0)
+            for _,job in pairs(jobs) do
+              if job.test() then
+                for ref,entry in pairs(job.handlers) do
+                  stat,res = pcall(entry.fun,table.unpack(entry.args))
+                  if not stat then fibaro.error(__TAG,ref,res) end
+                end
+              end
             end
             nxt = nxt + 60
             timer['%TIMER%']=setTimeout(loop,1000*(nxt-os.time()))
@@ -647,13 +649,22 @@ _MODULES.cron={ author = "jan@gabrielsson.com", version = '0.4', depends={'base'
         return timer
       end
 
+      local NJOBS = 1
       function fibaro.cron(str,fun,...)
-        jobs[str]={fun=fun,args={...},test=dateTest(str)}
-        return cronLoop()
+        jobs[str] = jobs[str] or {test=dateTest(str),handlers={}}
+        local entry = {fun=fun,args={...}}
+        local ref = string.format("[cron:%d:%s]",NJOBS,str); NJOBS = NJOBS+1
+        jobs[str].handlers[ref] = entry
+        cronLoop()
+        return ref
       end
-      function fibaro.removeCronJob(str)
-        jobs[str]=nil
+      function fibaro.removeCronJob(ref)
+        for str,job in pairs(jobs) do
+          if job.handlers[ref] then job.handlers[ref]=nil end
+          if not next(job.handlers) then jobs[str]=nil end
+        end
       end
+      function fibaro.cronLoop() return cronLoop() end
     end
 
     function fibaro.cron2(str,fun,...) 
@@ -2359,6 +2370,7 @@ _MODULES.event={ author = "jan@gabrielsson.com", version = '0.4', depends={'base
     end
 
     function fibaro.removeEvent(pattern,fun)
+      if fun==nil then return fibaro.removeEvent2(pattern) end
       local hashKey = toHash[pattern.type] and toHash[pattern.type](pattern) or pattern.type
       local rules,i,j= handlers[hashKey] or {},1,1
       while j <= #rules do
@@ -2369,6 +2381,18 @@ _MODULES.event={ author = "jan@gabrielsson.com", version = '0.4', depends={'base
           else i=i+i end
         end
         if #rs==0 then table.remove(rules,j) else j=j+1 end
+      end
+    end
+
+    function fibaro.removeEvent2(rule)
+      for k,rules in pairs(handlers) do
+        for i,r0 in ipairs(rules) do
+          for j,r in ipairs(r0) do
+            if r == rule then table.remove(r0,i) end
+          end
+          if #r0==0 then table.remove(rules,i) end
+        end
+        if #rules==0 then handlers[k]=nil end
       end
     end
 
