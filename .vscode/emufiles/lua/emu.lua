@@ -92,6 +92,10 @@ QA.dofile = dofile
 QA.load = load
 os.orgtime = os.time
 os.orgdate = os.date
+QA.passThrough = {}
+for _,k in ipairs(config.passThrough or {}) do
+    QA.passThrough[k] = true
+end
 local orgtime, orgdate = os.time, os.date
 local timeOffset = 0
 function os.time(a) return a == nil and math.floor(orgtime() + timeOffset + 0.5) or orgtime(a) end
@@ -698,7 +702,7 @@ end
 
 function Events.updateView(ev) -- Used to update our own ui struct for Web UI usage
     local qa = DIR[ev.deviceId]
-    local id = ev.deviceID
+    local id = ev.deviceID or ev.deviceId
     if qa then
         local map = qa.uiMap
         if map[ev.componentName] then

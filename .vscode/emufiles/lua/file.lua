@@ -225,7 +225,9 @@ local function installQA(fname, conf)
 
     function chandler.noStock(var, val, vars) vars.noStock = eval(val) end
     function chandler.fullLua(var, val, vars) vars.fullLua = eval(val) end
-
+    function chandler.passThrough(var, val, vars)
+        QA.passThrough[val] = true
+    end
     function chandler.debug(var, val, vars) --%%debug=flag1:val1,flag2:val2
         local dbs = {}
         vars.debug._init = true
@@ -258,6 +260,11 @@ local function installQA(fname, conf)
         end
     end
 
+    local mergePath = ""
+    function chandler.mergePath(var, val, vars)
+        mergePath = val
+    end
+
     function chandler.merge(var, val, vars) --%%merge=fname1,fname2,...,oufile;
         val = val:match("(.*);") or val
         local files = val:split(",")
@@ -267,7 +274,7 @@ local function installQA(fname, conf)
         end
         local code = {}
         for i=1,#files-1 do
-            local f = io.open(files[i], "r")
+            local f = io.open(mergePath..files[i], "r")
             if not f then
                 QA.syslogerr("install", "(merge) File not found - %s", files[i])
                 return
