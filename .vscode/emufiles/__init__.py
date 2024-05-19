@@ -16,8 +16,9 @@ if __name__ == "__main__":
     print(f"Python version {sys.version}",file=sys.stderr)
     print(f"Platform is {sys.platform}",file=sys.stderr)
     hostname=socket.gethostname() or ''
+    print(f"Host name {hostname}",file=sys.stderr)
     hostIP = socket.gethostbyname(hostname)
-    print(f"Host {hostname}/{hostIP}",file=sys.stderr)
+    print(f"Host ip {hostIP}",file=sys.stderr)
     version = "0.42"
     parser = argparse.ArgumentParser(
                     prog='fibemu',
