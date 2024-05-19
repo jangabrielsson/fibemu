@@ -15,6 +15,9 @@ if __name__ == "__main__":
     global config
     print(f"Python version {sys.version}",file=sys.stderr)
     print(f"Platform is {sys.platform}",file=sys.stderr)
+    hostname=socket.gethostname() or ''
+    hostIP = socket.gethostbyname(hostname)
+    print(f"Host {hostname}/{hostIP}",file=sys.stderr)
     version = "0.42"
     parser = argparse.ArgumentParser(
                     prog='fibemu',
@@ -80,10 +83,8 @@ if __name__ == "__main__":
     config['argv'] = sys.argv
     config['extra'] = args.extra
     config['nogreet'] = args.nogreet
-    hostname=socket.gethostname()
-    config['hostIP'] = socket.gethostbyname(hostname)
-    config['hostName']= socket.gethostname()   
-
+    config['hostIP'] = hostIP
+    config['hostName']= hostname  
 
     config['apiURL'] =  f"http://localhost:{config['wport']}/api"
     config['apiDocURL'] =  f"http://localhost:{config['wport']}/docs"
