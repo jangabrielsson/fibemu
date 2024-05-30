@@ -1,4 +1,5 @@
 --%%debug=refresh:true
+--%%fullLua=true
 
 local filesToKeep = 3
 local remote = 'hc3'
@@ -15,7 +16,7 @@ local format = string.format
 
 local destDir = './dev/backup/'
 local QAs = api.get("/devices?interface=quickApp",remote)
-QAs = {QAs}
+--QAs = {QAs}
 
 local listDir = fibemu.pyhooks.listDir
 
