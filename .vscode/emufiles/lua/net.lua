@@ -287,11 +287,12 @@ end
 
 net.WebSocketClientTls = net.WebSocketClient -- only differ on URL?
 
-local mqtt = {
+mqtt = {
     interval = 1000,
     Client = {},
     QoS = { EXACTLY_ONCE = 1 }
 }
+
 mqtt.MSGT = {
     CONNECT = 1,
     CONNACK = 2,
@@ -321,6 +322,9 @@ function mqtt.Client.connect(uri, options)
     local args = {}
     args.uri = uri
     args.uri = string.gsub(uri, "mqtt://", "")
+    local host, port = string.match(args.uri, "([^:]+):?(%d*)")
+    args.host = host
+    args.port = tonumber(port) or 1883
     args.username = options.username
     args.password = options.password
     args.clean = options.cleanSession
@@ -338,24 +342,25 @@ function mqtt.Client.connect(uri, options)
         }
     end
 
-    local _client = net._mqttClient(args)
-    local client = { _client = _client, _callbacks = {} }
+    local client,chandlers
+    local function cb(event, ...)
+        local args = {...}
+        local f = chandlers[event]
+        if f then f(table.unpack(args)) end
+    end
+    local _client = fibaro.fibemu.pyhooks.createMQTTClient(createCB(cb))
+    client = { _client = _client, _callbacks = {} }
     function client:addEventListener(message, handler)
         self._callbacks[message] = handler
     end
 
     function client:subscribe(topic, options)
-        options = options or {}
-        local args = {}
-        args.topic = topic
-        args.qos = options.qos or 0
-        args.callback = options.callback
-        return self._client:subscribe(args)
+        return self._client:subscribe(topic, options)
     end
 
     function client:unsubscribe(topics, options)
         if type(topics) == 'string' then
-            return self._client:unsubscribe({ topic = topics })
+            return self._client:unsubscribe(topics)
         else
             local res
             for _, t in ipairs(topics) do res = self:unsubscribe(t) end
@@ -364,14 +369,7 @@ function mqtt.Client.connect(uri, options)
     end
 
     function client:publish(topic, payload, options)
-        options = options or {}
-        local args = {}
-        args.topic = topic
-        args.payload = payload
-        args.qos = options.qos or 0
-        args.retain = options.retain or false
-        args.callback = options.callback
-        return self._client:publish(args)
+        return self._client:publish(topic,payload)
     end
 
     function client:disconnect(options)
@@ -382,57 +380,57 @@ function mqtt.Client.connect(uri, options)
     end
 
     --function client:acknowledge() end
-    local function DEBUG(a, b, c) end
+    local function DEBUG(a, b, c) print(a,b,c) end
     local function encode(t) return t and json.encode(t) or "nil" end
     local function safeJson(t) return t and json.encode(t) or "nil" end
 
-    _client:on {
+    chandlers = {
         --{"type":2,"sp":false,"rc":0}
-        connect = function(connack)
-            DEBUG("mqtt", "trace", "MQTT connect:" .. encode(connack))
-            if client._handlers['connected'] then
-                client._handlers['connected']({ sessionPresent = connack.sp, returnCode = connack.rc })
+        on_connect = function(flags,rc)
+            DEBUG("mqtt", "trace", "MQTT connect:" .. encode(rc))
+            if client._callbacks['connected'] then
+                client._callbacks['connected']({ sessionPresent = flags, returnCode = rc })
             end
         end,
-        subscribe = function(event)
+        on_subscribe = function(event)
             DEBUG("mqtt", "trace", "MQTT subscribe:" .. encode(event))
-            if client._handlers['subscribed'] then client._handlers['subscribed'](safeJson(event)) end
+            if client._callbacks['subscribed'] then client._callbacks['subscribed'](safeJson(event)) end
         end,
-        unsubscribe = function(event)
+        on_unsubscribe = function(event)
             DEBUG("mqtt", "trace", "MQTT unsubscribe:" .. encode(event))
-            if client._handlers['unsubscribed'] then client._handlers['unsubscribed'](safeJson(event)) end
+            if client._callbacks['unsubscribed'] then client._callbacks['unsubscribed'](safeJson(event)) end
         end,
-        message = function(msg)
+        on_message = function(msg, ff)
             DEBUG("mqtt", "trace", "MQTT message:" .. encode(msg))
             local msgt = mqtt.MSGMAP[msg.type]
-            if msgt and client._handlers[msgt] then
-                client._handlers[msgt](msg)
-            elseif client._handlers['message'] then
-                client._handlers['message'](msg)
+            if msgt and client._callbacks[msgt] then
+                client._callbacks[msgt](msg)
+            elseif client._callbacks['message'] then
+                client._callbacks['message'](msg)
             end
         end,
-        acknowledge = function(event)
+        on_acknowledge = function(event)
             DEBUG("mqtt", "trace", "MQTT acknowledge:" .. encode(event))
-            if client._handlers['acknowledge'] then client._handlers['acknowledge']() end
+            if client._callbacks['acknowledge'] then client._callbacks['acknowledge']() end
         end,
-        error = function(err)
+        on_error = function(err)
             DEBUG("mqtt", "error", "MQTT error:" .. err)
-            if client._handlers['error'] then client._handlers['error'](err) end
+            if client._callbacks['error'] then client._callbacks['error'](err) end
         end,
-        close = function(event)
+        on_close = function(event)
             DEBUG("mqtt", "trace", "MQTT close:" .. encode(event))
             event = safeJson(event)
-            if client._handlers['closed'] then client._handlers['closed'](safeJson(event)) end
+            if client._callbacks['closed'] then client._callbacks['closed'](safeJson(event)) end
         end,
-        auth = function(event)
+        on_auth = function(event)
             DEBUG("mqtt", "trace", "MQTT auth:" .. encode(event))
-            if client._handlers['auth'] then client._handlers['auth'](safeJson(event)) end
+            if client._callbacks['auth'] then client._callbacks['auth'](safeJson(event)) end
         end,
     }
 
     local pstr = "MQTT object: " .. tostring(client):match("%s(.*)")
     setmetatable(client, { __tostring = function(_) return pstr end })
-
+    client._client:connect(args.host,args.port,60)
     return client
 end
 -----------------------------------------------------------------------------

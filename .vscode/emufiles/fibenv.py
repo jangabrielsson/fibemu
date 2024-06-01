@@ -178,6 +178,7 @@ class FibaroEnvironment:
                 'createTCPSocket':lambda: fibnet.LuaTCPSocket(self),
                 'createUDPSocket':lambda: fibnet.LuaUDPSocket(self),
                 'createWebSocket':lambda url,headers,cb: fibnet.LuaWebSocket(self,url,headers,cb),
+                'createMQTTClient':lambda cb: fibnet.LuaMQTTClient(self,cb),
                 'listDir':lambda d: json.dumps(os.listdir(d)),
                 'getcwd':os.getcwd,
                 'expandPath':os.path.realpath,

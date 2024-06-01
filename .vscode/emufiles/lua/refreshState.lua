@@ -320,6 +320,9 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         f=function(d,e) return true end,
         l=function(d,e) return fmt("%s %s",e.type,tostring(d.id)) end
     },
+
+    --Unknown event type: 	{"data":{"scheduleId":4,"sequenceId":4},"created":1717128000,"type":"SprinklerSequenceStartedEvent","createdMillis":1717128000600}
+    --Unknown event type: 	{"data":{"scheduleId":4,"sequenceId":4},"created":1717128900,"type":"SprinklerSequenceFinishedEvent","createdMillis":1717128900602}
 }
 
 function r.init(conf, libs)

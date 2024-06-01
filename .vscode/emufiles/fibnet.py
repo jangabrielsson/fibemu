@@ -11,6 +11,7 @@ import errno
 import os, json
 import sys
 import websocket
+import logging
 import paho.mqtt.client as mqtt
 import fibapi
 
@@ -36,7 +37,9 @@ def requests_retry_session(
     return session
 
 def callCB(fibemu, cb, *args):
-    fibemu.postEvent({"type": "luaCallback", "args": list(args)}, extra=cb)
+    largs = list(args)
+    ##print(f"CALLBACK: {largs}", file=sys.stderr)
+    fibemu.postEvent({"type": "luaCallback", "args": largs}, extra=cb)
 
 
 def httpCall(method, url, options, data, local):
@@ -312,12 +315,13 @@ class LuaWebSocket:
         return self.closed
 
 
-class LuaMQTT:
+class LuaMQTTClient:
     def __init__(self, fibemu, cb):
         self.fibemu = fibemu
         self.cb = cb
-        client = mqtt.Client()
-        client.on_connect = lambda client, userdata, flags, rc: self.on_connect(
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        client.enable_logger()
+        client.on_connect = lambda client, userdata, flags, rc, props: self.on_connect(
             client, userdata, flags, rc)
         client.on_message = lambda client, userdata, msg: self.on_message(
             client, userdata, msg)
@@ -332,21 +336,33 @@ class LuaMQTT:
 
 # The callback for when the client receives a CONNACK response from the server.
     def on_connect(self, client, userdata, flags, rc):
-        callCB(self.fibemu, self.cb, "on_connect", userdata, flags, rc)
+        print(f"Connected with result code {rc}", file=sys.stderr)
+        callCB(self.fibemu, self.cb, "on_connect", flags.session_present, rc.value)
 
     def on_message(self, client, userdata, msg):
-        callCB(self.fibemu, self.cb, "on_message", userdata, msg)
+        topic = msg.topic
+        resp = { 
+            "topic": msg.topic, 
+            "payload": msg.payload.decode('utf-8'),
+            "qos": msg.qos,
+            "retain": msg.retain,
+            "dup": msg.dup
+        }
+        callCB(self.fibemu, self.cb, "on_message", resp)
 
     def on(self, cbs):
         self.callbacks = cbs
 
     # client.subscribe("$SYS/#")
     def subscribe(self, topic, options):
-        return self.client.subscribe(topic)
+        try:
+            self.client.subscribe(topic)
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
 
     # client.unsubscribe("$SYS/#")
     def unsubscribe(self, topic):
         return self.client.subscribe(topic)
 
-    def publish(self, topic):
-        return self.client.subscribe(topic)
+    def publish(self, topic, message):
+        return self.client.publish(topic, message)

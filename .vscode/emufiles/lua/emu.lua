@@ -82,6 +82,7 @@ QA.DIR = DIR
 local debugFlags = QA.debug
 debugFlags.color = true
 debugFlags.refresh = true
+QA.lldebugger = lldebugger
 QA.pyhooks = pyhooks
 QA.cwd = pyhooks.getcwd()
 QA.debugFlags = debugFlags
