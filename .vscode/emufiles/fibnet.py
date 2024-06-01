@@ -316,10 +316,18 @@ class LuaWebSocket:
 
 
 class LuaMQTTClient:
-    def __init__(self, fibemu, cb):
+    def __init__(self, fibemu, opts, cb):
         self.fibemu = fibemu
         self.cb = cb
-        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        opts = json.loads(opts)
+        self.opts = opts
+        client = mqtt.Client(
+            callback_api_version = mqtt.CallbackAPIVersion.VERSION2, 
+            client_id = opts.get('clientId',None),
+            clean_session = opts.get('cleanSession', None),
+        )
+        client.port = opts.get('port',1883)
+        client.username_pw_set(opts.get('username',None), opts.get('password',None))
         client.enable_logger()
         client.on_connect = lambda client, userdata, flags, rc, props: self.on_connect(
             client, userdata, flags, rc)

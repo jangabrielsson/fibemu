@@ -322,16 +322,16 @@ function mqtt.Client.connect(uri, options)
     local args = {}
     args.uri = uri
     args.uri = string.gsub(uri, "mqtt://", "")
-    local host, port = string.match(args.uri, "([^:]+):?(%d*)")
-    args.host = host
-    args.port = tonumber(port) or 1883
+    --local host, port = string.match(args.uri, "([^:]+):?(%d*)")
+    args.host = args.uri
+    args.port = tonumber(options.port) or 1883
     args.username = options.username
     args.password = options.password
-    args.clean = options.cleanSession
-    if args.clean == nil then args.clean = true end
-    args.will = options.lastWill
+    args.cleansession = options.cleanSession
+    if args.cleanSession == nil then args.cleanSession = true end
+    args.lastWill = options.lastWill
     args.keep_alive = options.keepAlivePeriod
-    args.id = options.clientId
+    args.clientId = options.clientId
 
     --cafile="...", certificate="...", key="..." (default false)
     if options.clientCertificate then -- Not in place...
@@ -348,7 +348,8 @@ function mqtt.Client.connect(uri, options)
         local f = chandlers[event]
         if f then f(table.unpack(args)) end
     end
-    local _client = fibaro.fibemu.pyhooks.createMQTTClient(createCB(cb))
+    local args2 = json.encode(args)
+    local _client = fibaro.fibemu.pyhooks.createMQTTClient(args2,createCB(cb))
     client = { _client = _client, _callbacks = {} }
     function client:addEventListener(message, handler)
         self._callbacks[message] = handler
