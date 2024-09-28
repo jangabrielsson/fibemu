@@ -1106,7 +1106,7 @@ local function main()
 fibaro.debugFlags = fibaro.debugFlags or {}
 local HUE
 
-local _version = 0.58
+local _version = 0.59
 local serial = "UPD896661234567893"
 HUEv2Engine = HUEv2Engine or {}
 local HUE = HUEv2Engine

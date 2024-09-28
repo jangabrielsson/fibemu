@@ -17,6 +17,7 @@ Email: jan@gabrielsson.com
 -- luacheck: globals ignore utils hc3_emulator urlencode sceneId table string _MODULES
 ---@diagnostic disable: cast-local-type, undefined-field, need-check-nil
 fibaro,QuickApp = fibaro or {},QuickApp or {}
+--%%fullLua=true
 
 -------------------- Base ----------------------------------------------
 _MODULES = _MODULES or {} -- Global
@@ -150,10 +151,10 @@ _MODULES.error={ author = "jan@gabrielsson.com", version = '0.4', depends={'base
         t = {_ref=oldSetTimout(nf,...)}
         return t
       end,setTimeout
-      clearTimeout,oldClearTimout=clearTimeout,function(ref)
+      clearTimeout,oldClearTimout=function(ref)
         if type(ref)=='table' then ref = ref._ref end
         oldClearTimout(ref)
-      end
+      end,clearTimeout
     elseif not hc3_emulator then -- Patch short-sighthed setTimeout...
       local function timer2str(t)
         return format("[Timer:%d%s %s]",t.n,t.log or "",os.date('%T %D',t.expires or 0))
@@ -2680,8 +2681,9 @@ _MODULES.pubsub={ author = "jan@gabrielsson.com", version = '0.4', depends={'bas
 if debug then                           -- Embedded call...
   local file = debug.getinfo(1)         -- Find out what file we are
   if file and file.source then
-    file = file.source:sub(2)
-    local c = io.open(file,"r"):read("*all")
+    file = file.source --:sub(2)
+    local c = io.open(file,"r")
+    c = c:read("*all")
     local path = file:match("(.*/)")
     c:gsub("%-%-%-%-%-+ ([%w]+[ ]?%w*) %-%-%-%-*\n(.-\n)%-%-%-%-",function(s,c)
         local name = c:match("MODULES%.(%w+)=")

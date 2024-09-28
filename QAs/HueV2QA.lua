@@ -14,6 +14,7 @@
 --%%u={label='info', text=''}
 --%%u={button='restart', text='Restart', onReleased='restart'}
 --%%u={button='dump', text='Dump resources', onReleased='dumpResources'}
+--%%passThrough=/alarms/v1/partitions/[%d]*/?actions/[tryAa]+rm
 
 fibaro.debugFlags = fibaro.debugFlags or {}
 local HUE,update

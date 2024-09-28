@@ -54,7 +54,10 @@ do -- fastEncode
   function encT.string(str,out) out[#out+1]='"' out[#out+1]=str out[#out+1]='"' end
   function encT.boolean(b,out) out[#out+1]=b and "true" or "false" end
   function encT.table(t,out,f)
-    local mt = getmetatable(t) if mt and (not f) and mt.__tostring then return mt.__tostring(t) end
+    local mt = getmetatable(t) if mt and (not f) and mt.__tostring then 
+      out[#out+1] = mt.__tostring(t) 
+      return
+    end
     if next(t)==nil then out[#out+1]= "{}" return -- Empty table
     elseif t[1]==nil then -- key value table
       local r = {}; for k,v in pairs(t) do r[#r+1]={k,v} end table.sort(r,sortF)
@@ -77,6 +80,67 @@ do -- fastEncode
     encT[type(o)](o,out,f)
     return table.concat(out)
   end
+end
+
+do -- Used for print device table structs - sortorder for device structs
+  local sortKeys = {
+    'id','name','roomID','type','baseType','enabled','visible','isPlugin','parentId','viewXml','configXml',
+    'interfaces','properties','view', 'actions','created','modified','sortOrder'
+  }
+  local sortOrder,format={},string.format
+  for i,s in ipairs(sortKeys) do sortOrder[s]="\n"..string.char(i+64).." "..s end
+  local function keyCompare(a,b)
+    local av,bv = sortOrder[a] or a, sortOrder[b] or b
+    return av < bv
+  end
+
+  local function prettyJsonStruct(t0)
+    local res = {}
+    local function isArray(t) return type(t)=='table' and t[1] end
+    local function isEmpty(t) return type(t)=='table' and next(t)==nil end
+    local function printf(tab,fmt,...) res[#res+1] = string.rep(' ',tab)..format(fmt,...) end
+    local function pretty(tab,t,key)
+      if type(t)=='table' then
+        local mt = getmetatable(t)
+        if mt and mt.__tostring then
+          printf(0,mt.__tostring(t))
+          return
+        end
+        if isEmpty(t) then printf(0,"[]") return end
+        if isArray(t) then
+          printf(key and tab or 0,"[\n")
+          for i,k in ipairs(t) do
+            local _ = pretty(tab+1,k,true)
+            if i ~= #t then printf(0,',') end
+            printf(tab+1,'\n')
+          end
+          printf(tab,"]")
+          return true
+        end
+        local r = {}
+        for k,_ in pairs(t) do r[#r+1]=k end
+        table.sort(r,keyCompare)
+        printf(key and tab or 0,"{\n")
+        for i,k in ipairs(r) do
+          printf(tab+1,'"%s":',k)
+          local _ =  pretty(tab+1,t[k])
+          if i ~= #r then printf(0,',') end
+          printf(tab+1,'\n')
+        end
+        printf(tab,"}")
+        return true
+      elseif type(t)=='number' then
+        printf(key and tab or 0,"%s",t)
+      elseif type(t)=='boolean' then
+        printf(key and tab or 0,"%s",t and 'true' or 'false')
+      elseif type(t)=='string' then
+        printf(key and tab or 0,'"%s"',t:gsub('(%")','\\"'))
+      end
+    end
+    pretty(0,t0,true)
+    return table.concat(res,"")
+  end
+  json.encodeFormated = prettyJsonStruct
 end
 
 local exports = {

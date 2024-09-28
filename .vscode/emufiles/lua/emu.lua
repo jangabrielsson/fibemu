@@ -112,10 +112,8 @@ function os.setTime(str) -- str = "mm/dd/yyyy-hh:mm:ss"
     t.hour, t.min, t.sec = tn(hour, t.hour), tn(min, t.min), tn(sec, 0)
     local t1 = os.time(t)
     local t2 = os.date("*t", t1)
-    if t.isdst ~= t2.isdst then
-        t.isdst = t2.isdst
-        t1 = os.time(t)
-    end
+    t.isdst = t2.isdst
+    t1 = os.time(t)
     timeOffset = t1 - os.orgtime()
 end
 
@@ -258,6 +256,7 @@ local function createEnvironment(id)
     env._G = env
     env._ENV = env
     env.type = luaType
+    env._type = type
 
     env.__setTimeout = setTimer
     env.__clearTimeout = clearTimer

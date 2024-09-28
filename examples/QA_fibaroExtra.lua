@@ -56,3 +56,9 @@ function QuickApp:onInit()
         self:removeChildDevice(child.id)
     end, 4000)
 end
+
+function QuickApp:onInit()
+    fibaro.cron("sunrise 0 * * * *", function()
+        self:debug("Sunrise")
+    end)
+end
