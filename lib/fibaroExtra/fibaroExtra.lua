@@ -3,7 +3,7 @@ fibaro._MODULES = fibaro._MODULES or {} -- Global
 local _MODULES = fibaro._MODULES
 _MODULES.base={ author = "jan@gabrielsson.com", version = '0.4', depends={}, 
   init = function()
-    fibaro.FIBARO_EXTRA = "v0.966"
+    fibaro.FIBARO_EXTRA = "v0.967"
     fibaro.debugFlags  = fibaro.debugFlags or { modules=false }
     fibaro.utils = {}
     _MODULES.base._inited=true
