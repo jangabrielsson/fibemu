@@ -1,21 +1,16 @@
-FROM python:3.12.3-slim-bookworm
-
-LABEL maintainer="info@joepverhaeg.nl"
-LABEL version="0.2"
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    bash \
-    openssh-client \
-    lua5.4 \
-    git \
-    gcc \
-    build-essential && \
-    apt-get clean
-
-RUN git clone https://github.com/jangabrielsson/fibemu.git /fibemu-temp && \
-    pip install -r /fibemu-temp/requirements.txt && \
-    rm -fr /fibemu-temp
-
-WORKDIR /workspaces/fibemu
-
-CMD ["/bin/ash"]
+{
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "tomblind.local-lua-debugger-vscode",
+                "sumneko.lua"
+            ]
+        }
+    },
+    "forwardPorts": [
+        5004
+    ]
+}
