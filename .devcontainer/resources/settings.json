@@ -1,0 +1,59 @@
+{
+    "json.validate.enable": false, // disable json validation, problem currently
+    "Lua.diagnostics.globals": [
+        "QuickApp",
+        "fibaro",
+        "api",
+        "net",
+        "json",
+        "___id",
+        "setTimeout",
+        "clearTimeout",
+        "setInterval",
+        "clearInterval",
+        "QuickAppChild",
+        "QuickAppBase",
+        "plugin",
+        "class",
+        "__fibaroSleep",
+        "__fibaro_get_global_variable",
+        "__fibaro_get_device",
+        "__fibaro_get_devices",
+        "__fibaro_get_room",
+        "__fibaro_get_scene",
+        "__fibaro_get_device_property",
+        "__fibaro_get_breached_partitions",
+        "__fibaro_add_debug_message",
+        "quickApp",
+        "__TAG",
+        "__assert_type",
+        "__fibaro_get_partition",
+        "hub",
+        "__print",
+        "__setTimeout",
+        "__clearTimeout",
+        "__fibaroUseAsyncHandler",
+        "QuickerAppChild",
+        "MyChild",
+        "UDPServer",
+        "QwikAppChild",
+        "sourceTrigger",
+        "RefreshStateSubscriber",
+        "_sceneId"
+    ],
+    "Lua.diagnostics.disable": [
+        "duplicate-set-field",
+        "param-type-mismatch"
+    ],
+    "Lua.editor.defaultFormatter": "JohnnyMorganz.stylua",
+    "Lua.workspace.library": [
+        "/workspaces/fibemu/.vscode/emufiles/lspaddon/library"
+    ],
+    "Lua.hint.enable": true,
+    "Lua.workspace.checkThirdParty": true,
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.autopep8"
+    },
+    "fibpython": "/usr/local/bin/python",
+    "python.formatting.provider": "none"
+}

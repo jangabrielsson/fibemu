@@ -1,0 +1,16 @@
+{
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "tomblind.local-lua-debugger-vscode",
+                "sumneko.lua"
+            ]
+        }
+    },
+    "forwardPorts": [
+        5004
+    ]
+}
