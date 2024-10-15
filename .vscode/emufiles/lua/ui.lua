@@ -9,11 +9,11 @@ end
 
 local ELMS = {
   button = function(d,w)
-    return {name=d.name,style={weight=d.weight or w or "0.50"},text=d.text,type="button"}
+    return {name=d.name,visible=true,style={weight=d.weight or w or "0.50"},text=d.text,type="button"}
   end,
   select = function(d,w)
     if d.options then map(function(e) e.type='option' end,d.options) end
-    return {name=d.name,style={weight=d.weight or w or "0.50"},text=d.text,type="select", selectionType='single',
+    return {name=d.name,style={weight=d.weight or w or "0.50"},text=d.text,type="select", visible=true, selectionType='single',
       options = d.options or {{value="1", type="option", text="option1"}, {value = "2", type="option", text="option2"}},
       values = d.values or { "option1" }
     }
@@ -36,10 +36,10 @@ local ELMS = {
     return {name=d.name, type="option", value=d.value or "Hupp"}
   end,
   slider = function(d,w)
-    return {name=d.name,step=tostring(d.step or 1),value=tostring(d.value or 0),max=tostring(d.max or 100),min=tostring(d.min or 0),style={weight=d.weight or w or "1.2"},text=d.text,type="slider"}
+    return {name=d.name,visible=true,step=tostring(d.step or 1),value=tostring(d.value or 0),max=tostring(d.max or 100),min=tostring(d.min or 0),style={weight=d.weight or w or "1.2"},text=d.text,type="slider"}
   end,
   label = function(d,w)
-    return {name=d.name,style={weight=d.weight or w or "1.2"},text=d.text,type="label"}
+    return {name=d.name,visible=true,style={weight=d.weight or w or "1.2"},text=d.text,type="label"}
   end,
   space = function(_,w)
     return {style={weight=w or "0.50"},type="space"}
