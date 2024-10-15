@@ -5,7 +5,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Fibenv QA file (remote, HC3 access)",    // For debugging QA lua file
+      "name": "Python Debugger: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Fibenv QA file (remote, HC3 access)", // For debugging QA lua file
       "type": "lua-local",
       "request": "launch",
       "program": {
@@ -21,10 +28,13 @@
       //"scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
       //"scriptFiles": ["*.lua", "**/*.lua"],
       "stepUnmappedLines": false,
-      "ignorePatterns": ["emufiles","lldebugger"] // Add to skip the emufiles and focus on QA
+      "ignorePatterns": [
+        "emufiles",
+        "lldebugger"
+      ] // Add to skip the emufiles and focus on QA
     },
     {
-      "name": "Fibenv QA file (local, no HC3 access)",    // For debugging QA lua file
+      "name": "Fibenv QA file (local, no HC3 access)", // For debugging QA lua file
       "type": "lua-local",
       "request": "launch",
       "program": {
@@ -42,10 +52,13 @@
       //"scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
       //"scriptFiles": ["*.lua", "**/*.lua"],
       "stepUnmappedLines": false,
-      "ignorePatterns": ["emufiles","lldebugger"] // Add to not step into emufiles and only focus on QA code
+      "ignorePatterns": [
+        "emufiles",
+        "lldebugger"
+      ] // Add to not step into emufiles and only focus on QA code
     },
     {
-      "name": "Fibenv QA file emu files (remote, HC3 access)",    // For debugging QA lua file
+      "name": "Fibenv QA file emu files (remote, HC3 access)", // For debugging QA lua file
       "type": "lua-local",
       "request": "launch",
       "program": {
@@ -58,14 +71,21 @@
         "-f",
         "${relativeFile}" //"${file}"
       ],
-      "scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
-      "scriptFiles": ["*.lua", "**/*.lua"],
+      "scriptRoots": [
+        "${workspaceFolder}"
+      ], // Required for debugger to find scripts
+      "scriptFiles": [
+        "*.lua",
+        "**/*.lua"
+      ],
       "stepUnmappedLines": false,
       //"ignorePatterns": ["^emufiles","lldebugger"] // Add to skip the emufiles and focus on QA
-      "ignorePatterns": ["lldebugger"]
+      "ignorePatterns": [
+        "lldebugger"
+      ]
     },
     {
-      "name": "Fibenv QA file emu files (local, no HC3 access)",    // For debugging QA lua file
+      "name": "Fibenv QA file emu files (local, no HC3 access)", // For debugging QA lua file
       "type": "lua-local",
       "request": "launch",
       "program": {
@@ -80,11 +100,18 @@
         "-f",
         "${relativeFile}" //"${file}"
       ],
-      "scriptRoots": ["${workspaceFolder}"], // Required for debugger to find scripts
-      "scriptFiles": ["*.lua", "**/*.lua"],
+      "scriptRoots": [
+        "${workspaceFolder}"
+      ], // Required for debugger to find scripts
+      "scriptFiles": [
+        "*.lua",
+        "**/*.lua"
+      ],
       "stepUnmappedLines": false,
       //"ignorePatterns": ["^emufiles","lldebugger"] // Add to not step into emufiles and only focus on QA code
-      "ignorePatterns": ["lldebugger"]
+      "ignorePatterns": [
+        "lldebugger"
+      ]
     },
     {
       "name": "Python: __init__.py (debug, remote)", // For debugging the python wrapper
@@ -97,9 +124,9 @@
       ],
       "console": "integratedTerminal",
       "justMyCode": true,
-        "env": {
-          //  "GEVENT_SUPPORT": "True"
-        }
+      "env": {
+        //  "GEVENT_SUPPORT": "True"
+      }
     },
     {
       "name": "Python: __init__.py (debug, local)", // For debugging the python wrapper
@@ -113,9 +140,9 @@
       ],
       "console": "integratedTerminal",
       "justMyCode": true,
-        "env": {
-          //  "GEVENT_SUPPORT": "True"
-        }
+      "env": {
+        //  "GEVENT_SUPPORT": "True"
+      }
     },
     {
       "name": "Debug Lua file", // For debugging the lua file
@@ -126,10 +153,12 @@
         "file": "${file}"
       },
       "breakInCoroutines": true,
-      "ignorePatterns": ["^copas"]
+      "ignorePatterns": [
+        "^copas"
+      ]
     },
     {
-      "name": "Debug task",    // For debugging QA lua file
+      "name": "Debug task", // For debugging QA lua file
       "type": "lua-local",
       "request": "launch",
       "program": {
@@ -145,8 +174,8 @@
         "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
         "-extra",
         "${file}",
-        "qa", 
-        "upload", 
+        "qa",
+        "upload",
         "${file}",
         "dev"
       ],

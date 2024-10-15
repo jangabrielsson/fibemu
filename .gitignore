@@ -3,6 +3,7 @@
 /.vscode/emufiles/__pycache__
 /.vscode/emufiles/frontend/node_modules
 /.vscode/settings.json
+/.vscode/keybinding.json
 config.json
 /test
 /dev
@@ -12,3 +13,5 @@ config.json
 /venv
 /.venv
 .fdir.txt
+QA.proj
+keys.keys

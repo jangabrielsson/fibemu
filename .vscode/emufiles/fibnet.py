@@ -64,6 +64,8 @@ def httpCall(method, url, options, data, local):
                 res = req.get(url, headers=headers, timeout=timeout, verify=verify)
             case 'PUT':
                 res = req.put(url, headers=headers, data=data, timeout=timeout, verify=verify)
+            case 'PATCH':
+                res = req.patch(url, headers=headers, data=data, timeout=timeout, verify=verify)
             case 'POST':
                 res = req.post(url, data=data, headers=headers, timeout=timeout, verify=verify)
             case 'DELETE':

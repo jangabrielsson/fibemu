@@ -1,0 +1,12 @@
+[
+  {
+    "key": "cmd+U",
+    "command": "workbench.action.tasks.runTask",
+    "args": "QA, update ."
+  },
+  {
+      "key": "cmd+u",
+      "command": "workbench.action.tasks.runTask",
+      "args": "QA, updateFile"
+  }
+]

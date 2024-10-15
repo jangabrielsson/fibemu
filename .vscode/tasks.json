@@ -65,7 +65,7 @@
         ]
       },
       {
-        "label": "QA, update",
+        "label": "QA, update QA",
         "type": "shell",
         "command": "${config:fibpython}", 
         "args": [
@@ -80,6 +80,41 @@
           "qa", 
           "update", 
           "${input:QA_name}"
+        ]
+      },
+      {
+        "label": "QA, create project",
+        "type": "shell",
+        "command": "${config:fibpython}", 
+        "args": [
+          "${workspaceFolder}/.vscode/emufiles/__init__.py",
+          "-nw",
+          "-l",
+          "-ng",
+          "-i",
+          "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
+          "-extra",
+          "${relativeFile}",
+          "qa", 
+          "createProject", 
+          "${input:QA_name}"
+        ]
+      },
+      {
+        "label": "QA, update file",
+        "type": "shell",
+        "command": "${config:fibpython}", 
+        "args": [
+          "${workspaceFolder}/.vscode/emufiles/__init__.py",
+          "-nw",
+          "-l",
+          "-ng",
+          "-i",
+          "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
+          "-extra",
+          "${relativeFile}",
+          "qa", 
+          "updateFile"
         ]
       }
     ],

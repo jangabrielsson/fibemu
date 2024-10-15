@@ -14,8 +14,9 @@ function r.init(conf, libs)
             local data = f:read("*a")
             local stat,res = pcall(json.decode,data)
             if stat then
-                local id,data = next(res)
-                rsrcs.keys[tonumber(id)] = data
+                for id,keys in pairs(res) do
+                    rsrcs.keys[tonumber(id)] = keys
+                end
                 --QA.syslog("resource","loaded keys: %s",res)
             else
                 --QA.syslog("resource","failed to load keys: %s",res)
@@ -638,6 +639,7 @@ end
 
 --------- QA keys -------------
 rsrcs.keys = {}
+
 function r.getQAKey(id, name)
     rsrcs.keys[id] = rsrcs.keys[id] or {}
     return name and rsrcs.keys[id][name] or rsrcs.keys[id], 200
@@ -646,6 +648,7 @@ end
 function r.deleteQAKey(id, name)
     if rsrcs.keys[id] == nil then return end
     if name then rsrcs.keys[id][name] = nil else rsrcs.keys[id] = nil end
+    r.flushQAKeys(id)
     return nil, 200
 end
 
@@ -653,6 +656,7 @@ function r.createQAKey(id, name, value)
     rsrcs.keys[id] = rsrcs.keys[id] or {}
     if rsrcs.keys[id] ~= nil then return nil, 404 end
     rsrcs.keys[id][name] = value
+    r.flushQAKeys(id)
     return value, 200
 end
 
@@ -660,6 +664,7 @@ function r.setQAKey(id, name, value)
     rsrcs.keys[id] = rsrcs.keys[id] or {}
     if rsrcs.keys[id] == nil then return nil, 404 end
     rsrcs.keys[id][name] = value
+    r.flushQAKeys(id)
     return value, 200
 end
 
@@ -667,7 +672,8 @@ function r.flushQAKeys(id)
     if config.storage and rsrcs.keys[id] then 
         local f = io.open(config.storage, "w")
         if f then
-            local store = { [tostring(id)] = rsrcs.keys[id] }
+            local store = {}
+            for k,v in pairs(rsrcs.keys) do store[tostring(k)] = v end
             f:write(json.encode(store))
             f:close()
         end
