@@ -367,6 +367,7 @@ function util.debug(flags, tag, str, typ, eos)
       str:gsub("(</?font.->)", "") -- Remove color tags
   str = str:gsub("(&nbsp;)", " ")  -- remove html space
   str = str:gsub("</br>", "\n")  -- remove html space
+  str = str:gsub("<br>", "\n")  -- remove html space
   if flags.color then
     local txt_color = COLORMAP[(fibColors['TEXT'] or "black")]
     local typ_color = COLORMAP[(fibColors[typ] or "black")]

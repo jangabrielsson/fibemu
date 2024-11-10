@@ -250,6 +250,7 @@ local function createEnvironment(id)
 
     env.os = { 
         exit = os.exit, debug = debug, time = os.time, date = os.date, difftime = os.difftime, 
+        orgtime = orgtime,
         clock = os.clock, setTime = os.setTime, COLORMAP = os.COLORMAP,
         rawset = rawset, rawget = rawget, getenv = os.getenv, execute = os.execute, remove = os.remove,
     }
