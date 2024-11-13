@@ -1,9 +1,9 @@
-fastapi==0.110.0
-lupa==2.1
+fastapi==0.115.5
+lupa==2.2
 paho_mqtt==2.1.0
 pydantic==1.10.16
-Requests==2.31.0
+Requests==2.32.3
 requests_async==0.6.2
-uvicorn==0.29.0
-websocket_client==1.6.1
+uvicorn==0.32.0
+websocket_client==1.8.0
 jinja2==3.1.2
