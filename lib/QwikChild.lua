@@ -1,6 +1,6 @@
 do
   local VERSION = "1.0"
-  print("QwickAppChild library v"..VERSION)
+  print("QwikAppChild library v"..VERSION)
   local childID = 'ChildID'
   local classID = 'ClassName'
 
