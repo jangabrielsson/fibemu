@@ -362,6 +362,9 @@ function util.debug(flags, tag, str, typ, eos)
         if str:match(filter) then return end
     end
   end
+  if flags.debugTransform then
+    str = flags.debugTransform(str)
+  end
   typ = typ:upper()
   str = (flags.html or true) and html2color(str, nil, fibColors['TEXT']) or
       str:gsub("(</?font.->)", "") -- Remove color tags

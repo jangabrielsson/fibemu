@@ -72,7 +72,7 @@ local pyhooks = hooks
 local clock = pyhooks.clock
 local luaType = function(obj)
     local t = type(obj)
-    return t == 'table' and obj.__USERDATA and 'userdata' or t
+    return t == 'table' and rawget(obj,'__USERDATA') and 'userdata' or t
 end
 
 QA, DIR = { config = config, fun = {}, debug = {}, debugDoc = {}, FIBEMUVAR = EMU_GLOBAL }, {}

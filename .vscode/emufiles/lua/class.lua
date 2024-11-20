@@ -27,7 +27,7 @@ function class(name)
   cl2.__index = cl
   cl2.__newindex = cl
   function cl.__newindex(t,k,v)
-    if type(v)=='table' and v.__PROP and not props then props=setupProps(cl,t,k,v)
+    if type(v)=='table' and rawget(v,'__PROP') and not props then props=setupProps(cl,t,k,v)
     else rawset(t,k,v) end
   end
   local pname = fmt("class %s",name)
