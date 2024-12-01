@@ -28,6 +28,13 @@
                   {{ option.text }}
                 </option>
               </select>
+              <select v-if="item.type == 'multi'" :id="item.id" v-bind="multiple"
+              @change="selectChanged($event.target.id, $event.target.value)">
+                <option disabled selected="true" value="">Choose</option>
+                <option v-for="option in uiMap[item.id].options" :selected="uiMap[item.id].selectedItem===option.value" :key="option.value" :value="option.value">
+                  {{ option.text }}
+                </option>
+              </select>
               <button v-if="item.type == 'switch'" type="button" class="btn btn-secondary"
                 :style="{'background-color': uiMap[item.id].value === 'true' ? 'blue' : '', 'color': uiMap[item.id].value === 'true' ? 'white' : ''}"
                 @click.prevent="switchChanged(item.id, item.value)">
@@ -56,6 +63,9 @@
     <div v-else-if="type === 'com.fibaro.temperatureSensor'" class="col">
       <com-fibaro-temperatureSensor :id="id" :props="props"></com-fibaro-temperatureSensor>
     </div>
+    <div v-else-if="type === 'com.fibaro.hvacSystemAuto'" class="col">
+      <com-fibaro-hvacSystemAuto :id="id" :props="props"></com-fibaro-hvacSystemAuto>
+    </div>
   </div>
 </template>
 
@@ -66,6 +76,7 @@ import com_fibaro_multilevelSensor from "./devs/com_fibaro_multilevelSensor.vue"
 import com_fibaro_binarySensor from "./devs/com_fibaro_binarySensor.vue";
 import com_fibaro_temperatureSensor from "./devs/com_fibaro_temperatureSensor.vue";
 import com_fibaro_humiditySensor from "./devs/com_fibaro_humiditySensor.vue";
+import com_fibaro_hvacSystemAuto from "./devs/com_fibaro_hvacSystemAuto.vue";
 
 export default {
   components: {
@@ -74,7 +85,8 @@ export default {
     "com-fibaro-multilevelSensor": com_fibaro_multilevelSensor,
     "com-fibaro-binarySensor": com_fibaro_binarySensor,
     "com-fibaro-temperatureSensor": com_fibaro_temperatureSensor,
-    "com-fibaro-humiditySensor": com_fibaro_humiditySensor
+    "com-fibaro-humiditySensor": com_fibaro_humiditySensor,
+    "com-fibaro-hvacSystemAuto": com_fibaro_hvacSystemAuto
   },
   props: {
     id: Number,

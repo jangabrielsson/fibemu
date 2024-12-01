@@ -107,8 +107,8 @@ local function uiStruct2uiCallbacks(UI)
     function(e)
       if e.name then
         -- {callback="foo",name="foo",eventType="onReleased"}
-        local defu = (e.button or e.switch) and "Clicked" or e.slider and "Change" or e.select and "Toggle" or ""
-        local deff = (e.button or e.switch) and "onReleased" or e.slider and "onChanged" or e.select and "onToggled" or ""
+        local defu = (e.button or e.switch) and "Clicked" or e.slider and "Change" or (e.select or e.multi) and "Toggle" or ""
+        local deff = (e.button or e.switch) and "onReleased" or e.slider and "onChanged" or (e.select or e.multi) and "onToggled" or ""
         local cbt = e.name..defu
         if e.onReleased then
           cbt = e.onReleased
@@ -117,7 +117,7 @@ local function uiStruct2uiCallbacks(UI)
         elseif e.onToggled then
           cbt = e.onToggled
         end
-        if e.button or e.slider or e.switch or e.select then
+        if e.button or e.slider or e.switch or e.multi or e.select then
           cb[#cb+1]={callback=cbt,eventType=deff,name=e.name}
         end
       end

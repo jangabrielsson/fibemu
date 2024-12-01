@@ -877,6 +877,12 @@ async def get_Energy_Devices(response: Response):
     items,code = fibenv.get('fe').luaCall("getResource","energy/devices")
     response.status_code = code
     return list(items.values()) if code < 300 else None
+    
+@app.get("/api/energy/devices", tags=["Energy devices methods"])
+async def get_Energy_Devices(response: Response):
+    items,code = fibenv.get('fe').luaCall("getResource","energy/devices")
+    response.status_code = code
+    return list(items.values()) if code < 300 else None
 
 ''' panels/location methods '''
 @app.get("/api/panels/location", tags=["Panels location methods"])
