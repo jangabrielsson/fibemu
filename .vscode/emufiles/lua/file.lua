@@ -442,34 +442,39 @@ customUI = {
     },
     ['com.fibaro.hvacSystemAuto'] = {
         {
-            { label = 'lblthermostatMode', text = 'Thermostat Mode:' },
+            { label = 'lblthermostatMode', text = 'Thermostat Mode: Off' },
         },
-        {
-            select = 'thermostatMode',
-            text = 'Set mode:',
-            options = {
-                { text = 'Heat', value = 'Heat', type = 'option' },
-                { text = 'Cool', value = 'Cool', type = 'option' },
-                { text = 'Auto', value = 'Auto', type = 'option' },
-                { text = 'Off',  value = 'Off',  type = 'option' },
-                { text = 'Eco',  value = 'Eco',  type = 'option' }
-            },
-            values = 'auto',
-            selectedItem = 'Off',
-            onToggled = 'setMode',
-        },
+        -- {
+        --     select = 'thermostatMode',
+        --     text = 'Set mode:',
+        --     options = {
+        --         { text = 'Heat', value = 'Heat', type = 'option' },
+        --         { text = 'Cool', value = 'Cool', type = 'option' },
+        --         { text = 'Auto', value = 'Auto', type = 'option' },
+        --         { text = 'Off',  value = 'Off',  type = 'option' },
+        --         { text = 'Eco',  value = 'Eco',  type = 'option' }
+        --     },
+        --     values = 'auto',
+        --     selectedItem = 'Off',
+        --     onToggled = 'setMode',
+        -- },
         -- {
         --     { label = 'lblheatSP', text = 'Heat Setpoint: ' },
         --     { slider = 'heatSP',   onChanged = 'heatSPChanged', min = '40', max = '80', step = '1', value = '68' },
         -- },
         {
-            { label = 'lblcoolSP', text = 'Setpoint:', },
+            { label = 'lblSP', text = 'Setpoint:', },
             { slider = 'sliderSP',   onChanged = 'sliderSPChanged', min = '40', max = '80', step = '1', value = '72' },
         },
-        -- {
-        --     { button = 'btnReturn', text = "Return", onReleased = 'return' },
-        --     { button = 'btnSet',    text = 'Set',    onReleased = 'set' },
-        -- },
+        {
+            { button = 'btnAuto', text = "Auto", onReleased = 'thermoModeSet' },
+            { button = 'btnOff',  text = 'Off',  onReleased = 'thermoModeSet' },
+        },
+        {
+            { button = 'btnHeat', text = "Heat", onReleased = 'thermoModeSet' },
+            { button = 'btnCool',  text = 'Cool',  onReleased = 'thermoModeSet' },
+        },
+        { button = 'btnEco', text = "Eco", onReleased = 'thermoModeSet' },
     },
 }
 

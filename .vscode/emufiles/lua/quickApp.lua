@@ -390,8 +390,10 @@ end
 
 --- Fixes for UIevent of built in devices
 QuickApp._uiTranslate['com.fibaro.hvacSystemAuto'] = function(self,id,event)
-  if event.elementName == "thermostatMode" then
-    onAction(id,{deviceId=id,actionName='setThermostatMode',args={event.values[1]}})
+  local kmap = {btnAuto='Auto',btnHeat='Heat',btnCool='Cool',btnOff='Off',btnEco='Eco'}
+  if kmap[event.elementName]  then
+    onAction(id,{deviceId=id,actionName='setThermostatMode',args={kmap[event.elementName]}})
+    self:updateView('lblthermostatMode',"text","Thermostat Mode: "..kmap[event.elementName])
     return true
   elseif event.elementName == "sliderSP" then
     local mode = fibaro.getValue(id,'thermostatMode') mode = mode~="" and mode or "Off"
