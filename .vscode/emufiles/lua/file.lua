@@ -448,28 +448,28 @@ customUI = {
             select = 'thermostatMode',
             text = 'Set mode:',
             options = {
-                { text = 'Heat', value = 'heat', type = 'option' },
-                { text = 'Cool', value = 'cool', type = 'option' },
-                { text = 'Auto', value = 'auto', type = 'option' },
-                { text = 'Off',  value = 'off',  type = 'option' },
-                { text = 'Eco',  value = 'eco',  type = 'option' }
+                { text = 'Heat', value = 'Heat', type = 'option' },
+                { text = 'Cool', value = 'Cool', type = 'option' },
+                { text = 'Auto', value = 'Auto', type = 'option' },
+                { text = 'Off',  value = 'Off',  type = 'option' },
+                { text = 'Eco',  value = 'Eco',  type = 'option' }
             },
             values = 'auto',
             selectedItem = 'Off',
             onToggled = 'setMode',
         },
+        -- {
+        --     { label = 'lblheatSP', text = 'Heat Setpoint: ' },
+        --     { slider = 'heatSP',   onChanged = 'heatSPChanged', min = '40', max = '80', step = '1', value = '68' },
+        -- },
         {
-            { label = 'lblheatSP', text = 'Heat Setpoint: ' },
-            { slider = 'heatSP',   onChanged = 'heatSPChanged', min = '40', max = '80', step = '1', value = '68' },
+            { label = 'lblcoolSP', text = 'Setpoint:', },
+            { slider = 'sliderSP',   onChanged = 'sliderSPChanged', min = '40', max = '80', step = '1', value = '72' },
         },
-        {
-            { label = 'lblcoolSP', text = 'Cool Setpoint:', },
-            { slider = 'coolSP',   onChanged = 'coolSPChanged', min = '40', max = '80', step = '1', value = '72' },
-        },
-        {
-            { button = 'btnReturn', text = "Return", onReleased = 'return' },
-            { button = 'btnSet',    text = 'Set',    onReleased = 'set' },
-        },
+        -- {
+        --     { button = 'btnReturn', text = "Return", onReleased = 'return' },
+        --     { button = 'btnSet',    text = 'Set',    onReleased = 'set' },
+        -- },
     },
 }
 

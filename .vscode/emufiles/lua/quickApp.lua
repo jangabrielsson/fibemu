@@ -360,7 +360,13 @@ end
 
 local function tryboolean(str) if str=='true' then return true elseif str=='false' then return false else return str end end
 
+QuickApp._uiTranslate = {}
 function onUIEvent(id, event)
+  local QA0 = quickApp
+  if id ~= event.deviceId then QA0 = QA0.childDevices[event.deviceId] end
+  if QuickApp._uiTranslate[QA0.type] then
+      if QuickApp._uiTranslate[QA0.type](QA0,id,event) then return end
+  end
   if event.values and event.values[1] ~= nil then event.values[1] = tryboolean(event.values[1]) end
   (fibaro.fibemu and fibaro.fibemu._print or print)("UIEvent: ", json.encode(event))
   if quickApp.UIHandler then
@@ -379,6 +385,24 @@ function onUIEvent(id, event)
     QA:callAction(QA.uiCallbacks[event.elementName][event.eventType], event)
   else
     quickApp:warning(string.format("UI callback for element:%s not found.", event.elementName))
+  end
+end
+
+--- Fixes for UIevent of built in devices
+QuickApp._uiTranslate['com.fibaro.hvacSystemAuto'] = function(self,id,event)
+  if event.elementName == "thermostatMode" then
+    onAction(id,{deviceId=id,actionName='setThermostatMode',args={event.values[1]}})
+    return true
+  elseif event.elementName == "sliderSP" then
+    local mode = fibaro.getValue(id,'thermostatMode') mode = mode~="" and mode or "Off"
+    local val = tonumber(event.values[1])
+    if mode == "Heat" or mode == "Auto" then
+      onAction(id,{deviceId=id,actionName="setHeatingThermostatSetpoint",args={mode == "Auto" and val-1 or val}})
+    end
+    if mode == "Cool" or mode == "Auto" then
+      onAction(id,{deviceId=id,actionName="setCoolingThermostatSetpoint",args={mode == "Auto" and val+1 or val}})
+    end
+    return true
   end
 end
 
