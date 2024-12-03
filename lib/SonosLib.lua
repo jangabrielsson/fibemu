@@ -6,6 +6,8 @@
 --%%var=SECRET:config.Sonos_Secret
 --%%debug=refresh:false
 
+local version = "0.1"
+
 fibaro.debugFlags = fibaro.debugFlags or {}
 fibaro.debugFlags.test = true
 
@@ -155,6 +157,7 @@ end
 local responders = {}
 
 class 'Sonos'
+Sonos.VERSION = version
 function Sonos:__init(IP,API_KEY)
   __assert_type(IP,'string')
   __assert_type(API_KEY,'string')
@@ -162,6 +165,7 @@ function Sonos:__init(IP,API_KEY)
   self.API_KEY = API_KEY
   self.groups = {}
   self.players = {}
+  Sonos:DEBUGF('test',"SonosObject v%s",self.VERSION)
 end
 
 function Sonos:DEBUGF(tag,fmt,...) if fibaro.debugFlags[tag] then print(fmt:format(...)) end end
@@ -194,7 +198,7 @@ function Sonos:_listen(connectCB)
     self:DEBUGF('test',"Connected")
     if connectCB then connectCB() end
   end
-
+  
   local function handleDisconnected()
     self:DEBUGF('test',"Disconnected")
     self:warning("Disconnected - will restart in 5s")
@@ -205,7 +209,7 @@ function Sonos:_listen(connectCB)
   local function handleError(err)
     self:ERRORF("Error: %s", err)
   end
-
+  
   local eventHandler = {}
   function eventHandler.playbackStatus(header,obj)
     if self.groups[header.groupId] then self.groups[header.groupId]:_setStatus(obj) end
@@ -234,7 +238,7 @@ function Sonos:_listen(connectCB)
     self.playlists = obj.playlists
     self:_postEvent("PlaylistList",{id=self.householdId,n=#self.playlists})
   end
-
+  
   local function handleDataReceived(data)
     --print(data)
     data = json.decode(data)
@@ -249,13 +253,13 @@ function Sonos:_listen(connectCB)
     end
     if not cb then self:DEBUGF('test',"No responder %s",json.encode(data)) end
   end
-
+  
   self.sock = net.WebSocketClient({verify_ssl=false})
   self.sock:addEventListener("connected", handleConnected)
   self.sock:addEventListener("disconnected", handleDisconnected)
   self.sock:addEventListener("error", handleError)
   self.sock:addEventListener("dataReceived", handleDataReceived)
-
+  
   self:DEBUGF('test',"Connect: %s",url)
   self.sock:connect(url, headers)
 end
@@ -319,12 +323,12 @@ end
 ------------- Test code --------------------------------
 function QuickApp:onInit()
   self:debug("Sonos Websocket test")
-
+  
   local IP = self:getVariable("IP")
   local API_KEY = "123e4567-e89b-12d3-a456-426655440000"
-
+  
   local sonos = Sonos(IP,API_KEY)
-
+  
   sonos:init(function() -- Init Sonos player object
     print("Sonos object inited")
     for _,group in pairs(sonos.groups) do print(group) end -- Print groups
