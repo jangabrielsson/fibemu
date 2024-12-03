@@ -21,6 +21,12 @@ local function urlencode(str) -- very useful
   return str
 end
 
+local function __assert_type(value, typeOfValue)
+  if type(value) ~= typeOfValue then
+    error(fmt("Wrong parameter type, %s required. Provided param '%s' is type of %s",typeOfValue, tostring(value), type(value)),3)
+  end
+end
+
 ------------------- Group class ------------------------
 --- groups can :setVolume, :play, :pause, :skipToNextTrack, :skipToPreviousTrack
 class 'Group'
@@ -55,6 +61,7 @@ function Group:_setMetadata(data)
   self.sonos:_postEvent("MetadataStatus",{ id=self.id, track=self.currentTrack, artist=self.currentArtist })
 end
 function Group:setVolume(volume)
+  __assert_type(volume,'number')
   self.sonos:_send({ groupId=self.id, namespace="groupVolume", command="setVolume" },{ volume = volume })
 end
 function Group:play()
@@ -64,6 +71,7 @@ function Group:togglePlayPause()
   self.sonos:_send({ groupId=self.id, namespace="playback", command="togglePlayPause" })
 end
 function Group:playFavorite(favorite)
+  __assert_type(favorite,'string')
   local favoriteId = self.sonos:findFavorite(favorite)
   if not favoriteId then return self.sonos:ERRORF("Favorite not found: %s",favoriteName) end
   self.sonos:_send({
@@ -72,6 +80,7 @@ function Group:playFavorite(favorite)
 })
 end
 function Group:playPlaylist(playlist)
+  __assert_type(playlist,'string')
   local playlistId = self.sonos:findPlayList(playlist)
   if not playlistId then return self.sonos:ERRORF("Playlist not found: %s",playlist) end
   self.sonos:_send({ 
@@ -108,6 +117,7 @@ function Player:_setVolume(data)
   self.sonos:_postEvent("PlayerVolume",{ id=self.id, volume=self.volume, muted=self.muted })
 end
 function Player:setVolume(volume)
+  __assert_type(volume,'number')
   self.sonos:_send({
     playerId=self.id,
     namespace="playerVolume",
@@ -115,6 +125,7 @@ function Player:setVolume(volume)
   },{ volume = volume })
 end
 function Player:playClip(uri,volume)
+  __assert_type(uri,'string')
   self.sonos:_send({
     playerId=self.id,
     namespace="audioClip",
@@ -128,7 +139,7 @@ function Player:playClip(uri,volume)
 end
 
 function Player:playTTS(args)
-  args = args or {}
+  __assert_type(args,'table')
   args.lang = args.lang or "en"
   local uri = fmt("https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=%s&q=%s",args.lang,urlencode(args.text))
   self:playClip(uri,args.volume)
@@ -145,6 +156,8 @@ local responders = {}
 
 class 'Sonos'
 function Sonos:__init(IP,API_KEY)
+  __assert_type(IP,'string')
+  __assert_type(API_KEY,'string')
   self.IP = IP
   self.API_KEY = API_KEY
   self.groups = {}
@@ -164,8 +177,9 @@ __tostring = function(t)
 end
 }
 
-function Sonos:_postEvent(type,event)
-  event.type = type
+function Sonos:_postEvent(typ,event)
+  __assert_type(typ,'string')
+  event.type = typ
   if self.eventHandler then self:eventHandler(setmetatable(event,EVMT)) end
 end
 
@@ -295,7 +309,7 @@ function Sonos:init(cb)
         local header,data = data[1],data[2]
         for _,group in ipairs(data.groups) do self:_addGroup(group) end
         for _,player in ipairs(data.players) do self:_addPlayer(player) end
-        cb()
+        if cb then cb() end
       end)
     end)
   end)
@@ -326,7 +340,7 @@ function QuickApp:onInit()
       --group:setVolume(10)
       --player:setVolume(10)
       --group:playFavorite("Montecristo")
-      group:playPlaylist("Time Capsule2")
+      --group:playPlaylist("Time Capsule2")
     end,3000)
   end)
 end
