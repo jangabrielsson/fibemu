@@ -144,7 +144,8 @@ local libs = {
 }
 QA.libs = libs
 
-devices.init(config, luapath .. "devices.json", libs)
+
+devices.init(config, config.Devices_json or (luapath .. "devices.json"), libs)
 resources.init(config, libs)
 refreshStates.init(config, libs)
 files.init(config, libs)
