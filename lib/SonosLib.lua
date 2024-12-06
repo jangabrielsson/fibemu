@@ -65,7 +65,6 @@ function Sonos:__init(IP,cb,debugFlags)
     sock:addEventListener("dataReceived", function(data)
       data = json.decode(data)
       local header,obj = data[1],data[2]
-      if header.success==false then log("socket","Rec error: %s",json.encode(data)) end
       local tag = fmt("%s:%s",header.namespace,header.response or "")
       if cbs[tag] then log("socket","Rec: %s",tag) cbs[tag](header,obj) cbs[tag]=nil return end
       if eventMap[header.type] then
