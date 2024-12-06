@@ -1,6 +1,6 @@
 --[[
 Sonos code lib for the Fibaro Home Center 3
-Copyright (c) 2021 Jan Gabrielsson
+Copyright (c) 2024 Jan Gabrielsson
 Email: jan@gabrielsson.com
 GNU GENERAL PUBLIC LICENSE
 Version 3, 29 June 2007
@@ -195,41 +195,23 @@ end
 -- sonos:playersInGroup(playerName)        -- players in group that player belong to
 -- sonos:group(groupName,{playerNames,...})-- group players. TBD
 
-function Sonos:clip(playerName,url,volume)
+local function doCmd(self,rsrc,id,playerName,ns,cmd,args)
   local player = self._player[playerName]
-  player.coordinator:cmd(
-  {namespace="audioClip",playerId=player.id,command="loadAudioClip"},
-  {name="SW",appId="com.xyz.sw",streamUrl=url,volume=volume}
-)
+  local msg = {namespace=ns,command=cmd,[rsrc]=player[id]}
+  for k,v in pairs(args or {}) do msg[k]=v end
+  player.coordinator:cmd(msg)
 end
-function Sonos:say(playerName,text,volume,lang)
-  local url=string.format("https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=%s&q=%s",lang or "en",text:gsub("%s+","+"))
-  self:clip(playerName,url,volume)
-end
-function Sonos:play(playerName)
-  local player = self._player[playerName]
-  player.coordinator:cmd({namespace="playback",command="play",groupId=player.groupId})
-end
-function Sonos:pause(playerName)
-  local player = self._player[playerName]
-  player.coordinator:cmd({namespace="playback",command="pause",groupId=player.groupId})
-end
-function Sonos:skipToNextTrack(playerName)
-  local player = self._player[playerName]
-  player.coordinator:cmd({namespace="playback",command="skipToNextTrack",groupId=player.groupId})
-end
-function Sonos:skipToPreviousTrack(playerName)
-  local player = self._player[playerName]
-  player.coordinator:cmd({namespace="playback", command="skipToPreviousTrack",groupId=player.groupId})
-end
-function Sonos:volume(playerName,volume)
-  local player = self._player[playerName]
-  player.coordinator:cmd({namespace="groupVolume",command="setVolume",groupId=player.groupId,volume=volume})
-end
-function Sonos:togglePlayPause(playerName)
-  local player = self._player[playerName]
-  player.coordinator:cmd({namespace="playback", command="togglePlayPause",groupId=player.groupId})
-end
+local function doGroupCmd(self,playerName,ns,cmd,args) doCmd(self,'groupId','groupId',playerName,ns,cmd,args) end
+local function doPlayerCmd(self,playerName,ns,cmd,args) doCmd(self,'playerId','id',playerName,ns,cmd,args) end
+function Sonos:play(playerName) doGroupCmd(self,playerName,"playback","play") end
+function Sonos:pause(playerName) doGroupCmd(self,playerName,"playback","pause") end
+function Sonos:skipToNextTrack(playerName) doGroupCmd(self,playerName,"playback","skipToNextTrack") end
+function Sonos:skipToPreviousTrack(playerName) doGroupCmd(self,playerName,"playback","skipToPreviousTrack") end
+function Sonos:volume(playerName,volume) doGroupCmd(self,playerName,"groupVolume","setVolume",{volume=volume}) end
+function Sonos:relativeVolume(playerName,delta) doGroupCmd(playerName,"groupVolume","setVolume",{volumeDelta=delta}) end
+function Sonos:mute(playerName,state) doGroupCmd(self,playerName,"groupVolume","mute",{muted=state~=false}) end
+function Sonos:togglePlayPause(playerName) doGroupCmd(self,playerName,"playback","togglePlayPause") end
+
 local function find(list,val) for _,i in ipairs(list) do if i.name==val or i.id==val then return i.id end end end
 function Sonos:playFavorite(playerName,favorite)
   __assert_type(favorite,'string')
@@ -246,19 +228,32 @@ function Sonos:playPlaylist(playerName,playlist)
   local playlistId = find(self.playlists,playlist)
   if not playlistId then error("Playlist not found: "..playlist) end
   local player = self._player[playerName]
-  player.coordinator:cmd({
-    groupId=player.groupId, namespace="playlists", command="loadPlaylist"
-  },{
-    playlistId = playlistId, playOnCompletion=true
-  })
+  player.coordinator:cmd({groupId=player.groupId, namespace="playlists", command="loadPlaylist"},{playlistId = playlistId, playOnCompletion=true})
 end
-function Sonos:playerVolume(playerName,volume)
+function Sonos:playerVolume(playerName,volume) doPlayerCmd(self,playerName,"playerVolume","setVolume",{volume=volume}) end
+function Sonos:playerMute(playerName,state) doPlayerCmd(self,playerName,"playerVolume","setMute",{muted=state~=false}) end
+function Sonos:playerRelativeVolume(playerName,volume) doPlayerCmd(self,playerName,"playerVolume","setRelativeVolume",{volume=volume}) end
+function Sonos:clip(playerName,url,volume)
   local player = self._player[playerName]
-  player.coordinator:cmd({namespace="playerVolume",command="setVolume",playerId=player.id,volume=volume})
+  player.coordinator:cmd(
+  {namespace="audioClip",playerId=player.id,command="loadAudioClip"},{name="SW",appId="com.xyz.sw",streamUrl=url,volume=volume}
+)
+end
+function Sonos:say(playerName,text,volume,lang)
+  local url=string.format("https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=%s&q=%s",lang or "en",text:gsub("%s+","+"))
+  self:clip(playerName,url,volume)
 end
 function Sonos:playerGroup(playerName) return self._group[self._player[playerName].groupId].name end
 function Sonos:playersInGroup(groupName) return self._group[groupName].playersIds end
-function Sonos:group(groupName,playerNames) end --TBD
+function Sonos:createGroup(...)
+  local playerIds,p = {},nil
+  for _,playerName in ipairs({...}) do p=playerName table.insert(playerIds,self._player[playerName].id) end
+  doGroupCmd(self,p,"groups","createGroup",{playerIds=playerIds})
+end
+function Sonos:destroyGroup(groupName)
+  local group = self._group[groupName].name
+  doGroupCmd(self,group.playerIds[1],"groups","createGroup",{playerIds=group.playerIds})
+end
 
 -- Testing
 local function delay(args)
@@ -300,6 +295,6 @@ function QuickApp:onInit()
     -- sonos:playerVolume("TV Room",vol) -- set player volume
     local group = sonos:playerGroup("Kontor") -- get group that player belongs to
     local players = sonos:playersInGroup(sonos:playerGroup("Kontor")) -- get players in group
-    sonos:group("MyGroup",{"Kontor","TV Room"}) -- group players
+    --sonos:createGroup("MyGroup",{"Kontor","TV Room"}) -- group players
   end,{socket=true, noCmd7=true})
 end
