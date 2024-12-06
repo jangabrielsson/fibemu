@@ -17,6 +17,7 @@ class 'Sonos'
 function Sonos:__init(IP,cb,debugFlags)
   local colors = {'green','blue','yellow','red','orange','purple','pink','cyan','magenta','lime'}
   local coordinators,eventMap,n = {},{},0
+  local done = 0
   local SELF,fmt=self,string.format
   self.debug = debugFlags or {}
   local function debug(tag,f,...) if debugFlags[tag] then print("Sonos: "..fmt(f,...)) end end
@@ -47,7 +48,7 @@ function Sonos:__init(IP,cb,debugFlags)
       if connected then cont() else buffer[#buffer+1] = cont end
     end
     function self:cmd(data,opts,cb) self:send(data,opts,cb,debugFlags.noCmd) end
-    function self:subscribe(resource,id,namespace) self:send({[resource]=id,namespace=namespace,command="subscribe"}) end
+    function self:subscribe(resource,id,namespace,cb) self:send({[resource]=id,namespace=namespace,command="subscribe"},nil,cb) end
     function self:close() if connected then sock:close() log("socket","Close") connected=false coordinators[url]=nil end end
     sock:addEventListener("connected",function()
       connected = true log("socket","Connected")
@@ -64,9 +65,14 @@ function Sonos:__init(IP,cb,debugFlags)
     sock:addEventListener("dataReceived", function(data)
       data = json.decode(data)
       local header,obj = data[1],data[2]
+      if header.success==false then log("socket","Rec error: %s",json.encode(data)) end
       local tag = fmt("%s:%s",header.namespace,header.response or "")
       if cbs[tag] then log("socket","Rec: %s",tag) cbs[tag](header,obj) cbs[tag]=nil return end
-      if eventMap[header.type] then return eventMap[header.type](header,obj,color,self) end
+      if eventMap[header.type] then 
+        eventMap[header.type](header,obj,color,self)
+        if done==3 then done=4 setTimeout(function() cb(SELF) end,0) end -- every thing ready to call callback
+        return
+      end
       if header.success==false then log("socket","Rec error: %s",tag) end
     end)
     sock:addEventListener("error", function(err) fibaro.error(__TAG,"Sonos connection",error) log("socket","Error") end)
@@ -97,7 +103,7 @@ function Sonos:__init(IP,cb,debugFlags)
     player.volume = obj.volume post("playerVolume",player.id,{volume=obj.volume,muted=obj.muted},color)
   end
   function eventMap.metadataStatus(header,obj,color)
-    local g = SELF.groups[header.groupId] if not group then return end
+    local g = SELF.groups[header.groupId] if not g then return end
     g.currentTrack = obj.currentItem.track.name
     g.currentArtist = obj.currentItem.track.artist.name
     g.currentMetadata = obj
@@ -107,12 +113,14 @@ function Sonos:__init(IP,cb,debugFlags)
     if header.namespace == "favorites" then
       con:cmd({namespace="favorites",command="getFavorites",householdId=SELF.householdId},nil,function(header,obj)
         SELF.favorites = obj.items
-        post("favoritesUpdated","",{n=#SELF.favorites})
+        post("favoritesUpdated","",{n=#obj.items})
+        done=done+1
       end)
     elseif header.namespace == "playlists" then
       con:cmd({namespace="playlists",command="getPlaylists",householdId=SELF.householdId},nil,function(header,obj)
         SELF.playlists = obj.playlists
-        post("playlistsUpdated","",{n=#SELF.playlists})
+        post("playlistsUpdated","",{n=#obj.playlists})
+        done=done+1
       end)
     end
   end
@@ -141,14 +149,14 @@ function Sonos:__init(IP,cb,debugFlags)
     for url,c in pairs(coordinators) do
       if not newCoordinators[url] then c:close()
       elseif not c.isSubcribed then
-        c:subscribe('groupId',c.groupId,"playback:1")
-        c:subscribe('groupId',c.groupId,"groupVolume:1")
-        c:subscribe('groupId',c.groupId,"playbackMetadata:1")
+        c:subscribe('groupId',c.groupId,"playback")
+        c:subscribe('groupId',c.groupId,"groupVolume")
+        c:subscribe('groupId',c.groupId,"playbackMetadata")
         c.isSubscribed = true
       end
     end
-    post("groupsUpdated","",{groups=#self.groupNames,players=#self.playerNames}) 
-    if cb then cb(self) cb=nil end -- first callback to Sonos(IP,callback), second time we ignore it
+    post("groupsUpdated","",{groups=#self.groupNames,players=#self.playerNames})
+    done = done+1
   end
   
   self._player=setmetatable({},{__index=function(self,name) local p = SELF.players[name] assert(p,"Player not found:"..name) return p end})
@@ -157,9 +165,11 @@ function Sonos:__init(IP,cb,debugFlags)
   local connection = createCoordinator(fmt("wss://%s:1443/websocket/api",IP))
   connection:send({namespace="households",command="getHouseholds"},nil,function(header,data)
     self.householdId = header.householdId
-    connection:send({namespace="groups", command="subscribe", householdId = header.householdId})
-    connection:send({namespace="favorites", command="subscribe", householdId = header.householdId})
-    connection:send({namespace="playlists", command="subscribe", householdId = header.householdId})
+    connection:send({namespace="groups", command="subscribe", householdId = header.householdId},nil,function(header,obj)
+      connection:send({namespace="favorites", command="subscribe", householdId = header.householdId},nil,function (header,obj)
+        connection:send({namespace="playlists", command="subscribe", householdId = header.householdId})
+      end)
+    end)
   end)
 end
 
@@ -198,11 +208,11 @@ function Sonos:pause(playerName)
   local player = self._player[playerName]
   player.coordinator:cmd({namespace="playback",command="pause",groupId=player.groupId})
 end
-function Sonos:skipToNextTrack()
+function Sonos:skipToNextTrack(playerName)
   local player = self._player[playerName]
   player.coordinator:cmd({namespace="playback",command="skipToNextTrack",groupId=player.groupId})
 end
-function Sonos:skipToPreviousTrack()
+function Sonos:skipToPreviousTrack(playerName)
   local player = self._player[playerName]
   player.coordinator:cmd({namespace="playback", command="skipToPreviousTrack",groupId=player.groupId})
 end
@@ -210,25 +220,28 @@ function Sonos:volume(playerName,volume)
   local player = self._player[playerName]
   player.coordinator:cmd({namespace="groupVolume",command="setVolume",groupId=player.groupId,volume=volume})
 end
-function Sonos:togglePlayPause()
+function Sonos:togglePlayPause(playerName)
   local player = self._player[playerName]
   player.coordinator:cmd({namespace="playback", command="togglePlayPause",groupId=player.groupId})
 end
-function Sonos:playFavorite(favorite)
+local function find(list,val) for _,i in ipairs(list) do if i.name==val or i.id==val then return i.id end end end
+function Sonos:playFavorite(playerName,favorite)
   __assert_type(favorite,'string')
-  local favoriteId = self.sonos:findFavorite(favorite)
-  if not favoriteId then return self.sonos:ERRORF("Favorite not found: %s",favoriteName) end
-  self.sonos:_send({
-    groupId=self.id, namespace="favorites", command="loadFavorite" 
+  local favoriteId = find(self.favorites,favorite)
+  if not favoriteId then error("Favorite not found: "..favorite) end
+  local player = self._player[playerName]
+  player.coordinator:cmd({
+    groupId=player.groupId, namespace="favorites", command="loadFavorite" 
   },{ favoriteId = favoriteId, playOnCompletion=true 
 })
 end
-function Sonos:playPlaylist(playlist)
+function Sonos:playPlaylist(playerName,playlist)
   __assert_type(playlist,'string')
-  local playlistId = self.sonos:findPlayList(playlist)
-  if not playlistId then return self.sonos:ERRORF("Playlist not found: %s",playlist) end
-  self.sonos:_send({ 
-    groupId=self.id, namespace="playlists", command="loadPlaylist" 
+  local playlistId = find(self.playlists,playlist) 
+  if not playlistId then error("Playlist not found: "..playlist) end
+  local player = self._player[playerName]
+  player.coordinator:cmd({ 
+    groupId=player.groupId, namespace="playlists", command="loadPlaylist" 
   },{ 
     playlistId = playlistId, playOnCompletion=true 
   })
@@ -245,8 +258,8 @@ function Sonos:group(groupName,playerNames) end
 local function delay(args) 
   local t=0 
   for i=1,#args,4 do
-    local d,test,f,doc=args[i],args[i+1],args[i+2],args[i+3]
-    if test then t=t+d setTimeout(f,1000*t) end
+    local d,cond,f,doc=args[i],args[i+1],args[i+2],args[i+3]
+    if cond then t=t+d setTimeout(f,1000*t) end
   end
 end
 
@@ -262,6 +275,8 @@ function QuickApp:onInit()
     print("Groups:",sonos.groupNames)
     local playerA = sonos.playerNames[1]
     local playerB = sonos.playerNames[2]
+    local favorite1 = (sonos.favorites[1] or {}).name
+    local playlist1 = (sonos.playlists[1] or {}).name
     delay{
       1,playerA,function() sonos:say(playerA,"Hello world",25) end, "TTS clip to player",
       2,playerB,function() sonos:say(playerB,"Hello world again",25) end, "TTS clip to player",
@@ -270,6 +285,10 @@ function QuickApp:onInit()
       2,playerA,function() sonos:pause(playerA) end, "Pause group that player belongs to",
       2,playerB,function() sonos:play(playerB) end, "Play group that player belongs to",
       2,playerB,function() sonos:pause(playerB) end, "Pause group that player belongs to",
+      2,playerB and favorite1,function() sonos:playFavorite(playerB,favorite1) end, "Play favorite in group that player belongs to",
+      4,playerB,function() sonos:pause(playerB) end, "Pause group that player belongs to",
+      4,playerB and playlist1,function() sonos:playPlaylist(playerB,playlist1) end, "Play favorite in group that player belongs to",
+      4,playerB,function() sonos:pause(playerB) end, "Pause group that player belongs to",
     }
     -- sonos:volume("TV Room",vol) -- set volume to group that player belongs to
     -- sonos:playerVolume("TV Room",vol) -- set player volume
