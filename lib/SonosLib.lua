@@ -22,10 +22,16 @@ function Sonos:__init(IP,cb,debugFlags)
   self.debug = debugFlags or {}
   local function debug(tag,f,...) if debugFlags[tag] then print("Sonos: "..fmt(f,...)) end end
   local function LIST(t) return setmetatable(t,{__tostring=function() return table.concat(t,",") end}) end
+  local function keyedQueue()
+    local self = { map={} }
+    function self:push(key,val) self.map[key]=self.map[key] or {}; table.insert(self.map[key],val) end
+    function self:pop(key) if self.map[key] then return table.remove(self.map[key],1) end end
+    return self
+  end
 
   local function createCoordinator(url)
     if coordinators[url] then return coordinators[url] end
-    local connected,buffer,cbs = false,{},{}
+    local connected,buffer,cbs = false,{},keyedQueue()
     local self = {}
     coordinators[url] = self
     local color = colors[n%#colors+1] n=n+1
@@ -42,7 +48,7 @@ function Sonos:__init(IP,cb,debugFlags)
         local tag=fmt("%s:%s",data.namespace,data.command)
         log("socket","Send: %s",tag)
         if nop then return end
-        cbs[tag]=cb or function() end
+        cbs:push(tag,cb or function() end)
         sock:send(json.encode({data,opts or {}}))
       end
       if connected then cont() else buffer[#buffer+1] = cont end
@@ -66,7 +72,8 @@ function Sonos:__init(IP,cb,debugFlags)
       data = json.decode(data)
       local header,obj = data[1],data[2]
       local tag = fmt("%s:%s",header.namespace,header.response or "")
-      if cbs[tag] then log("socket","Rec: %s",tag) cbs[tag](header,obj) cbs[tag]=nil return end
+      local rcb = cbs:pop(tag)
+      if rcb then log("socket","Rec: %s",tag) return rcb(header,obj) end
       if eventMap[header.type] then
         eventMap[header.type](header,obj,color,self)
         if done==3 then done=4 setTimeout(function() cb(SELF) end,0) end -- every thing ready to call callback
