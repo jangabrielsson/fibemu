@@ -1,5 +1,5 @@
 --[[
-Dirigera connectivity for the Fibaro Home Center 3
+Sonos code lib for the Fibaro Home Center 3
 Copyright (c) 2021 Jan Gabrielsson
 Email: jan@gabrielsson.com
 GNU GENERAL PUBLIC LICENSE
