@@ -14,10 +14,9 @@ of this license document, but changing it is not allowed.
 --%%name=Sonos
 
 class 'Sonos'
-function Sonos:__init(IP,cb,debugFlags)
+function Sonos:__init(IP,initcb,debugFlags)
   local colors = {'green','blue','yellow','red','orange','purple','pink','cyan','magenta','lime'}
   local coordinators,eventMap,n = {},{},0
-  local done = 0
   local SELF,fmt=self,string.format
   self.debug = debugFlags or {}
   local function debug(tag,f,...) if debugFlags[tag] then print("Sonos: "..fmt(f,...)) end end
@@ -28,7 +27,8 @@ function Sonos:__init(IP,cb,debugFlags)
     function self:pop(key) if self.map[key] then return table.remove(self.map[key],1) end end
     return self
   end
-
+  local done = 0
+  local function initDone() done=done+1 if done==3 then initcb(SELF) end end
   local function createCoordinator(url)
     if coordinators[url] then return coordinators[url] end
     local connected,buffer,cbs = false,{},keyedQueue()
@@ -73,12 +73,8 @@ function Sonos:__init(IP,cb,debugFlags)
       local header,obj = data[1],data[2]
       local tag = fmt("%s:%s",header.namespace,header.response or "")
       local rcb = cbs:pop(tag)
-      if rcb then log("socket","Rec: %s",tag) return rcb(header,obj) end
-      if eventMap[header.type] then
-        eventMap[header.type](header,obj,color,self)
-        if done==3 then done=4 setTimeout(function() cb(SELF) end,0) end -- every thing ready to call callback
-        return
-      end
+      if rcb then log("socket","Rec: %s %s",tag,header.success) return rcb(header,obj) end
+      if eventMap[header.type] then return eventMap[header.type](header,obj,color,self) end
       if header.success==false then log("socket","Rec error: %s",tag) end
     end)
     sock:addEventListener("error", function(err) fibaro.error(__TAG,"Sonos connection",error) log("socket","Error") end)
@@ -120,13 +116,13 @@ function Sonos:__init(IP,cb,debugFlags)
       con:cmd({namespace="favorites",command="getFavorites",householdId=SELF.householdId},nil,function(header,obj)
         SELF.favorites = obj.items
         post("favoritesUpdated","",{n=#obj.items})
-        done=done+1
+        initDone()
       end)
     elseif header.namespace == "playlists" then
       con:cmd({namespace="playlists",command="getPlaylists",householdId=SELF.householdId},nil,function(header,obj)
         SELF.playlists = obj.playlists
         post("playlistsUpdated","",{n=#obj.playlists})
-        done=done+1
+        initDone()
       end)
     end
   end
@@ -162,7 +158,7 @@ function Sonos:__init(IP,cb,debugFlags)
       end
     end
     post("groupsUpdated","",{groups=#self.groupNames,players=#self.playerNames})
-    done = done+1
+    initDone()
   end
 
   self._player=setmetatable({},{__index=function(self,name) local p = SELF.players[name] assert(p,"Player not found:"..name) return p end})
@@ -247,12 +243,14 @@ function Sonos:playerGroup(playerName) return self._group[self._player[playerNam
 function Sonos:playersInGroup(groupName) return self._group[groupName].playersIds end
 function Sonos:createGroup(...)
   local playerIds,p = {},nil
-  for _,playerName in ipairs({...}) do p=playerName table.insert(playerIds,self._player[playerName].id) end
-  doGroupCmd(self,p,"groups","createGroup",{playerIds=playerIds})
+  for _,playerName in ipairs({...}) do p= playerName table.insert(playerIds,self._player[playerName].id) end
+  local player = self._player[p]
+  local msg = {namespace="groups",command="createGroup",householdId=self.householdId}
+  player.coordinator:cmd(msg,{playerIds=playerIds,musicContextGroupId=player.groupId})
 end
 function Sonos:destroyGroup(groupName)
-  local group = self._group[groupName].name
-  doGroupCmd(self,group.playerIds[1],"groups","createGroup",{playerIds=group.playerIds})
+  local group = self._group[groupName]
+  doGroupCmd(self,group.playerIds[1],"groups","modifyGroupMembers",{playerIdsToAdd={},playerIdsToRemove=group.playerIds})
 end
 
 -- Testing
@@ -279,17 +277,21 @@ function QuickApp:onInit()
     local favorite1 = (sonos.favorites[1] or {}).name
     local playlist1 = (sonos.playlists[1] or {}).name
     delay{
-      1,playerA,function() sonos:say(playerA,"Hello world",25) end, "TTS clip to player",
-      2,playerB,function() sonos:say(playerB,"Hello world again",25) end, "TTS clip to player",
-      2,playerA,function() sonos:clip(playerA,clip,25) end, "Audio clip to player with volume",
-      2,playerA,function() sonos:play(playerA) end, "Play group that player belongs to",
-      2,playerA,function() sonos:pause(playerA) end, "Pause group that player belongs to",
-      2,playerB,function() sonos:play(playerB) end, "Play group that player belongs to",
-      2,playerB,function() sonos:pause(playerB) end, "Pause group that player belongs to",
-      2,playerB and favorite1,function() sonos:playFavorite(playerB,favorite1) end, "Play favorite in group that player belongs to",
-      4,playerB,function() sonos:pause(playerB) end, "Pause group that player belongs to",
-      4,playerB and playlist1,function() sonos:playPlaylist(playerB,playlist1) end, "Play favorite in group that player belongs to",
-      4,playerB,function() sonos:pause(playerB) end, "Pause group that player belongs to",
+      -- 1,playerA,function() sonos:say(playerA,"Hello world",25) end, "TTS clip to player",
+      -- 2,playerB,function() sonos:say(playerB,"Hello world again",25) end, "TTS clip to player",
+      -- 2,playerA,function() sonos:clip(playerA,clip,25) end, "Audio clip to player with volume",
+      -- 2,playerA,function() sonos:play(playerA) end, "Play group that player belongs to",
+      -- 2,playerA,function() sonos:pause(playerA) end, "Pause group that player belongs to",
+      -- 2,playerB,function() sonos:play(playerB) end, "Play group that player belongs to",
+      -- 2,playerB,function() sonos:pause(playerB) end, "Pause group that player belongs to",
+      -- 2,playerB and favorite1,function() sonos:playFavorite(playerB,favorite1) end, "Play favorite in group that player belongs to",
+      -- 4,playerB,function() sonos:pause(playerB) end, "Pause group that player belongs to",
+      -- 4,playerB and playlist1,function() sonos:playPlaylist(playerB,playlist1) end, "Play favorite in group that player belongs to",
+      -- 4,playerB,function() sonos:pause(playerB) end, "Pause group that player belongs to",
+      -- 5,playerA and playerB,function() sonos:createGroup(playerB,playerA) end, "Create group with players",
+      -- 10,playerA,function() sonos:play(playerA) end, "Play both players in group",
+      4,playerA,function() sonos:destroyGroup(sonos:playerGroup(playerA)) end, "Destroy group player belongs to",
+      -- 4,playerA,function() sonos:play(playerA) end, "Player group that player belongs to",
     }
     -- sonos:volume("TV Room",vol) -- set volume to group that player belongs to
     -- sonos:playerVolume("TV Room",vol) -- set player volume
