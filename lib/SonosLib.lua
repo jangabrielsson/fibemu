@@ -44,11 +44,12 @@ function Sonos:__init(IP,initcb,debugFlags)
   local SELF,fmt=self,string.format
   print(fmt("SonosLib %s (c)jan@gabrielsson.com",Sonos.VERSION))
   self.debug = debugFlags or {}
+  local function IDF() return end
   local function LIST(t) return setmetatable(t,{__tostring=function() return table.concat(t,",") end}) end
   local function keyedQueue()
     local self = { map={} }
-    function self:push(key,val) self.map[key]=self.map[key] or {}; table.insert(self.map[key],val) end
-    function self:pop(key) if self.map[key] then return table.remove(self.map[key],1) end end
+    function self:push(key,val,logger) self.map[key]=self.map[key] or {}; table.insert(self.map[key],{val,logger}) end
+    function self:pop(key) if self.map[key] then local d = table.remove(self.map[key],1) if d then return table.unpack(d) end end end
     return self
   end
   local done,doneCB = 0,false
@@ -67,18 +68,20 @@ function Sonos:__init(IP,initcb,debugFlags)
         ["Sec-WebSocket-Protocol"] = "v1.api.smartspeaker.audio",
       })
     end
-    function self:send(data,opts,cb,nop)
+    function self:send(data,opts,cb,logHandler,nop)
+      local logger = logHandler or log
       local cont = function()
         local tag=fmt("%s:%s",data.namespace,data.command)
-        log("socket","Send: %s",tag)
+        logger("socket","Send: %s",tag)
         if nop then return end
-        cbs:push(tag,cb or function() end)
+        cbs:push(tag,cb or function() end,logger)
         sock:send(json.encode({data,opts or {}}))
       end
       if connected then cont() else buffer[#buffer+1] = cont end
     end
-    function self:cmd(data,opts,cb) cb = cb or SELF._cbhook; SELF._cbhook=nil self:send(data,opts,cb,debugFlags.noCmd) end
-    function self:subscribe(resource,id,namespace,cb) self:send({[resource]=id,namespace=namespace,command="subscribe"},nil,cb) end
+    function self:cmd(data,opts,cb,log) cb = cb or SELF._cbhook; SELF._cbhook=nil self:send(data,opts,cb,log,debugFlags.noCmd) end
+    local function subscribeLog(h) if h.success then log("socket","Subscribed to %s",h.namespace) else log("socket","Failed to subscribe to %s",h.namespace) end end
+    function self:subscribe(resource,id,namespace,cb) self:send({[resource]=id,namespace=namespace,command="subscribe"},nil,subscribeLog,IDF) end
     function self:householdSubscribe(id) 
       self:subscribe("householdId",id,"groups")
       self:subscribe("householdId",id,"favorites")
@@ -102,8 +105,8 @@ function Sonos:__init(IP,initcb,debugFlags)
       data = json.decode(data)
       local header,obj = data[1],data[2]
       local tag = fmt("%s:%s",header.namespace,header.response or "")
-      local rcb = cbs:pop(tag)
-      if rcb then log("socket","Rec: %s %s",tag,header.success) return rcb(header,obj) end
+      local rcb,logger = cbs:pop(tag)
+      if rcb then logger("socket","Rec: %s %s",tag,header.success) return rcb(header,obj) end
       if eventMap[header.type] then return eventMap[header.type](header,obj,color,self) end
       if header.success==false then log("socket","Rec error: %s",tag) end
     end)
