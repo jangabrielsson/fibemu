@@ -51,8 +51,8 @@ function Sonos:__init(IP,initcb,debugFlags)
     function self:pop(key) if self.map[key] then return table.remove(self.map[key],1) end end
     return self
   end
-  local done = 0
-  local function initDone() done=done+1 if done==3 then initcb(SELF) end end
+  local done,doneCB = 0,false
+  local function initDone(mask) done=done|mask if done==7 then if not doneCB then initcb(SELF) doneCB=true end end end
   local function createCoordinator(url)
     if coordinators[url] then return coordinators[url] end
     local connected,buffer,cbs = false,{},keyedQueue()
@@ -79,6 +79,12 @@ function Sonos:__init(IP,initcb,debugFlags)
     end
     function self:cmd(data,opts,cb) cb = cb or SELF._cbhook; SELF._cbhook=nil self:send(data,opts,cb,debugFlags.noCmd) end
     function self:subscribe(resource,id,namespace,cb) self:send({[resource]=id,namespace=namespace,command="subscribe"},nil,cb) end
+    function self:householdSubscribe(id) 
+      self:subscribe("householdId",id,"groups")
+      self:subscribe("householdId",id,"favorites")
+      self:subscribe("householdId",id,"playlists")
+      self.householdSubscribed = true
+    end
     function self:close() if connected then sock:close() log("socket","Close") connected=false coordinators[url]=nil end end
     sock:addEventListener("connected",function()
       connected = true log("socket","Connected")
@@ -144,13 +150,13 @@ function Sonos:__init(IP,initcb,debugFlags)
       con:cmd({namespace="favorites",command="getFavorites",householdId=SELF.householdId},nil,function(header,obj)
         SELF.favorites = obj.items
         post("favoritesUpdated","",{n=#obj.items})
-        initDone()
+        initDone(1)
       end)
     elseif header.namespace == "playlists" then
       con:cmd({namespace="playlists",command="getPlaylists",householdId=SELF.householdId},nil,function(header,obj)
         SELF.playlists = obj.playlists
         post("playlistsUpdated","",{n=#obj.playlists})
-        initDone()
+        initDone(2)
       end)
     end
   end
@@ -176,8 +182,9 @@ function Sonos:__init(IP,initcb,debugFlags)
         players[playerId].groupId=group.id
       end
     end
+    local hflag = false
     for url,c in pairs(coordinators) do
-      if not newCoordinators[url] then c:close()
+      if not newCoordinators[url] then c:close() hflag = c.householdSubscribed or hflag
       elseif not c.isSubcribed then
         c:subscribe('groupId',c.groupId,"playback")
         c:subscribe('groupId',c.groupId,"groupVolume")
@@ -188,8 +195,9 @@ function Sonos:__init(IP,initcb,debugFlags)
         c.isSubscribed = true
       end
     end
+    if hflag then local u,c = next(coordimnators) c:householdSubscribe(SELF.householdId) end -- Lost household subscription, re-subscribe
     post("groupsUpdated","",{groups=#self.groupNames,players=#self.playerNames})
-    initDone()
+    initDone(4)
   end
   
   self._player=setmetatable({},{__index=function(self,name) local p = SELF.players[name] assert(p,"Player not found:"..name) return p end})
@@ -198,11 +206,7 @@ function Sonos:__init(IP,initcb,debugFlags)
   local connection = createCoordinator(fmt("wss://%s:1443/websocket/api",IP))
   connection:send({namespace="households",command="getHouseholds"},nil,function(header,data)
     self.householdId = header.householdId
-    connection:send({namespace="groups", command="subscribe", householdId = header.householdId},nil,function(header,obj)
-      connection:send({namespace="favorites", command="subscribe", householdId = header.householdId},nil,function (header,obj)
-        connection:send({namespace="playlists", command="subscribe", householdId = header.householdId})
-      end)
-    end)
+    connection:householdSubscribe(self.householdId)
   end)
 end
 
@@ -316,9 +320,9 @@ function QuickApp:onInit()
       -- 4,playerB and playlist1,function() sonos:playPlaylist(playerB,playlist1) end, "Play favorite in group that player belongs to",
       -- 4,playerB,function() sonos:pause(playerB) end, "Pause group that player belongs to",
       -- 5,playerA and playerB,function() sonos:createGroup(playerB,playerA) end, "Create group with players",
-      -- 10,playerA,function() sonos:play(playerA) end, "Play both players in group",
-      -- 4,playerA,function() sonos:destroyGroup(sonos:playerGroup(playerA)) end, "Destroy group player belongs to",
-      -- 4,playerA,function() sonos:play(playerA) end, "Player group that player belongs to",
+      -- 10,playerA,function() sonos:play(playerA) end, "Play group that playerA belongs to  (both players)",
+      -- 4,playerA,function() sonos:removeGroup(sonos:playerGroup(playerA)) end, "Destroy group playerA belongs to",
+      -- 4,playerA,function() sonos:play(playerA) end, "Play group that playerA belongs to (only playerA)",
     }
     -- sonos:volume(playerA,40) -- set volume to group that player belongs to
     -- sonos:playerVolume(playerA,30) -- set player volume
