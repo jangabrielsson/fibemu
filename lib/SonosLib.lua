@@ -39,17 +39,20 @@ of this license document, but changing it is not allowed.
 class 'Sonos'
 Sonos.VERSION = "0.8"
 function Sonos:__init(IP,initcb,debugFlags)
+  self.TIMEOUT = 7
   local colors = {'green','blue','yellow','red','orange','purple','pink','cyan','magenta','lime'}
   local coordinators,eventMap,n = {},{},0
   local SELF,fmt=self,string.format
   print(fmt("SonosLib %s (c)jan@gabrielsson.com",Sonos.VERSION))
   self.debug = debugFlags or {}
-  local function IDF() return end
   local function LIST(t) return setmetatable(t,{__tostring=function() return table.concat(t,",") end}) end
-  local function Requests()
+  local function Requests() -- Request queue with timeout handling
     local self,map,id = {},{},42
-    function self:push(val,logger) local key=tostring(id) id=id+1 map[key]={val,logger} return key end
-    function self:pop(key) local val=map[key] or {} map[key]=nil return table.unpack(val) end
+    function self:push(cb,data) local key=tostring(id) id=id+1
+      local ref = setTimeout(function() print("TIMEOUT") cb({namespace=data.namespace,response=data.command,success=false},{reason='Timeout'}) map[key]=nil end,SELF.TIMEOUT*1000) -- Timeout
+      map[key]={cb,ref} return key 
+    end
+    function self:pop(key) local cb,ref = table.unpack(map[key] or {}) map[key]=nil if ref then clearTimeout(ref) end return cb end
     return self
   end
   local done,doneCB = 0,false
@@ -61,6 +64,7 @@ function Sonos:__init(IP,initcb,debugFlags)
     coordinators[url] = self
     local color = colors[n%#colors+1] n=n+1
     local function log(tag,fm,...) if debugFlags[tag] then print(fmt('<font color="%s">%s</font>',color,fmt(fm,...))) end end
+    function self:log(...) log(...) end
     local sock = net.WebSocketClientTls()
     local function connect()
       sock:connect(url, {
@@ -68,19 +72,20 @@ function Sonos:__init(IP,initcb,debugFlags)
         ["Sec-WebSocket-Protocol"] = "v1.api.smartspeaker.audio",
       })
     end
-    function self:send(data,opts,cb,logHandler,nop)
-      local logger = logHandler or log
+    local function dfltCmdLogger(header,_) 
+      log("socket","Cmd: %s:%s %s",header.namespace,header.response,header.success and "OK" or "FAILED")
+
+       end
+    function self:send(data,opts,cb,nop)
       local cont = function()
-        logger("socket","Send: %s:%s",data.namespace,data.command)
         if nop then return end
-        local id = cbs:push(cb or function() end,logger) data.cmdId=id
+        data.cmdId = cbs:push(cb or dfltCmdLogger,data)
         sock:send(json.encode({data,opts or {}}))
       end
       if connected then cont() else buffer[#buffer+1] = cont end
     end
-    function self:cmd(data,opts,cb,log) cb = cb or SELF._cbhook; SELF._cbhook=nil self:send(data,opts,cb,log,debugFlags.noCmd) end
-    local function subscribeLog(h) if h.success then log("socket","Subscribed to %s",h.namespace) else log("socket","Failed to subscribe to %s",h.namespace) end end
-    function self:subscribe(resource,id,namespace,cb) self:send({[resource]=id,namespace=namespace,command="subscribe"},nil,subscribeLog,IDF) end
+    function self:cmd(data,opts,cb) cb = cb or SELF._cbhook; SELF._cbhook=nil self:send(data,opts,cb,debugFlags.noCmd) end
+    function self:subscribe(resource,id,namespace,cb) self:send({[resource]=id,namespace=namespace,command="subscribe"},nil) end
     function self:householdSubscribe(id) 
       self:subscribe("householdId",id,"groups")
       self:subscribe("householdId",id,"favorites")
@@ -103,10 +108,11 @@ function Sonos:__init(IP,initcb,debugFlags)
     sock:addEventListener("dataReceived", function(data)
       data = json.decode(data)
       local header,obj = data[1],data[2]
-      local rcb,logger = cbs:pop(header.cmdId or {})
-      if rcb then logger("socket","Rec: %s:%s %s",header.namespace,header.response,header.success) return rcb(header,obj) end
-      if eventMap[header.type] then return eventMap[header.type](header,obj,color,self) end
-      if header.success==false then log("socket","Rec error: %s",tag) end
+      if header.cmdId then 
+        local rcb = cbs:pop(header.cmdId)
+        if rcb then rcb(header,obj) end
+      elseif eventMap[header.type] then return eventMap[header.type](header,obj,color,self)
+      else log("socket","Unknown event: %s",header.type) end
     end)
     sock:addEventListener("error", function(err) fibaro.error(__TAG,"Sonos connection",error) log("socket","Error") end)
     log("socket","Connecting to %s",url)
@@ -205,6 +211,7 @@ function Sonos:__init(IP,initcb,debugFlags)
   local connection = createCoordinator(fmt("wss://%s:1443/websocket/api",IP))
   connection:send({namespace="households",command="getHouseholds"},nil,function(header,data)
     self.householdId = header.householdId
+    connection:log("socket","HouseholdId: %s",self.householdId)
     connection:householdSubscribe(self.householdId)
   end)
 end
