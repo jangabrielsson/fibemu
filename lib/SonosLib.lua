@@ -250,7 +250,10 @@ function Sonos:createGroup(...)
 end
 function Sonos:destroyGroup(groupName)
   local group = self._group[groupName]
-  doGroupCmd(self,group.playerIds[1],"groups","modifyGroupMembers",{playerIdsToAdd={},playerIdsToRemove=group.playerIds})
+  local msg = {namespace="groups",command="modifyGroupMembers",groupId=group.id}
+  group.coordinator:cmd(msg,{playerIdsToRemove=group.playerIds},function(h,b)
+    print(42)
+  end)
 end
 
 -- Testing
@@ -258,7 +261,8 @@ local function delay(args)
   local t=0
   for i=1,#args,4 do
     local d,cond,f,doc=args[i],args[i+1],args[i+2],args[i+3]
-    if cond then t=t+d setTimeout(f,1000*t) end
+    local function f0() print(">"..doc) f() end
+    if cond then t=t+d setTimeout(f0,1000*t) end
   end
 end
 
@@ -276,6 +280,8 @@ function QuickApp:onInit()
     local playerB = sonos.playerNames[2]
     local favorite1 = (sonos.favorites[1] or {}).name
     local playlist1 = (sonos.playlists[1] or {}).name
+    print(("PlayerA='%s', PlayerB='%s'"):format(playerA,playerB))
+    print(("Favorite1='%s', Playlist1='%s'"):format(favorite1,playlist1))
     delay{
       -- 1,playerA,function() sonos:say(playerA,"Hello world",25) end, "TTS clip to player",
       -- 2,playerB,function() sonos:say(playerB,"Hello world again",25) end, "TTS clip to player",
@@ -293,10 +299,9 @@ function QuickApp:onInit()
       4,playerA,function() sonos:destroyGroup(sonos:playerGroup(playerA)) end, "Destroy group player belongs to",
       -- 4,playerA,function() sonos:play(playerA) end, "Player group that player belongs to",
     }
-    -- sonos:volume("TV Room",vol) -- set volume to group that player belongs to
-    -- sonos:playerVolume("TV Room",vol) -- set player volume
-    local group = sonos:playerGroup("Kontor") -- get group that player belongs to
-    local players = sonos:playersInGroup(sonos:playerGroup("Kontor")) -- get players in group
-    --sonos:createGroup("MyGroup",{"Kontor","TV Room"}) -- group players
+    -- sonos:volume(playerA,40) -- set volume to group that player belongs to
+    -- sonos:playerVolume(playerA,30) -- set player volume
+    local group = sonos:playerGroup(playerA) -- get group that player belongs to
+    local players = sonos:playersInGroup(sonos:playerGroup(playerA)) -- get players in group
   end,{socket=true, noCmd7=true})
 end
