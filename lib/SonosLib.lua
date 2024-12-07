@@ -163,7 +163,7 @@ function Sonos:__init(IP,initcb,debugFlags)
       end)
     end
   end
-  function eventMap.groups(header,obj) -- Groups changed, rebuild groups and players and subscriptions
+  function eventMap.groups(header,obj) -- Groups changed, rebuild coordinators, groups, players and subscriptions
     local newCoordinators = {}
     local groups,players = {},{}
     self.players,self.groups,self.groupNames,self.playerNames=players,groups,LIST({}),LIST({})
@@ -192,13 +192,11 @@ function Sonos:__init(IP,initcb,debugFlags)
         c:subscribe('groupId',c.groupId,"playback")
         c:subscribe('groupId',c.groupId,"groupVolume")
         c:subscribe('groupId',c.groupId,"playbackMetadata")
-        for _,p in ipairs(c.group.playerIds) do 
-          c:subscribe('playerId',p,"playerVolume") 
-        end
+        for _,p in ipairs(c.group.playerIds) do c:subscribe('playerId',p,"playerVolume") end
         c.isSubscribed = true
       end
     end
-    if hflag then local u,c = next(coordimnators) c:householdSubscribe(SELF.householdId) end -- Lost household subscription, re-subscribe
+    if hflag then local u,c = next(coordinators) c:householdSubscribe(SELF.householdId) end -- Lost household subscription, re-subscribe
     post("groupsUpdated","",{groups=#self.groupNames,players=#self.playerNames})
     initDone(4)
   end
