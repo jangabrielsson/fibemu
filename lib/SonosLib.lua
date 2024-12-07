@@ -117,7 +117,11 @@ function Sonos:__init(IP,initcb,debugFlags)
   
   function eventMap.groupVolume(header,obj,color)
     local group = SELF.groups[header.groupId] if not group then return end
-    group.volume=obj.volume post("groupVolume",group.id,{volume=obj.volume,muted=obj.muted},color)
+    group.volume,group.muted=obj.volume,obj.muted post("groupVolume",group.id,{volume=obj.volume,muted=obj.muted},color)
+  end
+  function eventMap.playerVolume(header,obj,color)
+    local player = SELF.groups[header.playerId] if not player then return end
+    player.volume,player.muted=obj.volume,obj.muted post("playerVolume",player.id,{volume=obj.volume,muted=obj.muted},color)
   end
   function eventMap.playbackStatus(header,obj,color)
     local status = obj.playbackState:match("_([%w]*)$"):lower()
@@ -150,7 +154,7 @@ function Sonos:__init(IP,initcb,debugFlags)
       end)
     end
   end
-  function eventMap.groups(header,obj) -- Groups changed
+  function eventMap.groups(header,obj) -- Groups changed, rebuild groups and players and subscriptions
     local newCoordinators = {}
     local groups,players = {},{}
     self.players,self.groups,self.groupNames,self.playerNames=players,groups,LIST({}),LIST({})
@@ -161,7 +165,7 @@ function Sonos:__init(IP,initcb,debugFlags)
     end
     for _,g in ipairs(obj.groups) do
       local coordinator = createCoordinator(players[g.coordinatorId].url)
-      coordinator.groupId = g.id
+      coordinator.groupId = g.id coordinator.group = g
       newCoordinators[players[g.coordinatorId].url] = true
       local group = {name=g.name, id=g.id, coordinator=coordinator, playerIds=g.playerIds}
       groups[g.id] = group
@@ -178,6 +182,9 @@ function Sonos:__init(IP,initcb,debugFlags)
         c:subscribe('groupId',c.groupId,"playback")
         c:subscribe('groupId',c.groupId,"groupVolume")
         c:subscribe('groupId',c.groupId,"playbackMetadata")
+        for _,p in ipairs(c.group.playerIds) do 
+          c:subscribe('playerId',p,"playerVolume") 
+        end
         c.isSubscribed = true
       end
     end
