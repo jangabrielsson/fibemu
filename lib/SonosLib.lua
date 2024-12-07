@@ -217,7 +217,7 @@ function Sonos:mute(playerName,state) doGroupCmd(self,playerName,"groupVolume","
 function Sonos:togglePlayPause(playerName) doGroupCmd(self,playerName,"playback","togglePlayPause") end
 
 local function find(list,val) for _,i in ipairs(list) do if i.name==val or i.id==val then return i.id end end end
-function Sonos:playFavorite(playerName,favoritem,action,modes)
+function Sonos:playFavorite(playerName,favorite,action,modes)
   __assert_type(favorite,'string')
   local favoriteId = find(self.favorites,favorite)
   if not favoriteId then error("Favorite not found: "..favorite) end
