@@ -46,17 +46,17 @@ function Sonos:__init(IP,initcb,debugFlags)
   self.debug = debugFlags or {}
   local function IDF() return end
   local function LIST(t) return setmetatable(t,{__tostring=function() return table.concat(t,",") end}) end
-  local function keyedQueue()
-    local self = { map={} }
-    function self:push(key,val,logger) self.map[key]=self.map[key] or {}; table.insert(self.map[key],{val,logger}) end
-    function self:pop(key) if self.map[key] then local d = table.remove(self.map[key],1) if d then return table.unpack(d) end end end
+  local function Requests()
+    local self,map,id = {},{},42
+    function self:push(val,logger) local key=tostring(id) id=id+1 map[key]={val,logger} return key end
+    function self:pop(key) local val=map[key] or {} map[key]=nil return table.unpack(val) end
     return self
   end
   local done,doneCB = 0,false
   local function initDone(mask) done=done|mask if done==7 then if not doneCB then initcb(SELF) doneCB=true end end end
   local function createCoordinator(url)
     if coordinators[url] then return coordinators[url] end
-    local connected,buffer,cbs = false,{},keyedQueue()
+    local connected,buffer,cbs = false,{},Requests()
     local self = {}
     coordinators[url] = self
     local color = colors[n%#colors+1] n=n+1
@@ -71,10 +71,9 @@ function Sonos:__init(IP,initcb,debugFlags)
     function self:send(data,opts,cb,logHandler,nop)
       local logger = logHandler or log
       local cont = function()
-        local tag=fmt("%s:%s",data.namespace,data.command)
-        logger("socket","Send: %s",tag)
+        logger("socket","Send: %s:%s",data.namespace,data.command)
         if nop then return end
-        cbs:push(tag,cb or function() end,logger)
+        local id = cbs:push(cb or function() end,logger) data.cmdId=id
         sock:send(json.encode({data,opts or {}}))
       end
       if connected then cont() else buffer[#buffer+1] = cont end
@@ -104,9 +103,8 @@ function Sonos:__init(IP,initcb,debugFlags)
     sock:addEventListener("dataReceived", function(data)
       data = json.decode(data)
       local header,obj = data[1],data[2]
-      local tag = fmt("%s:%s",header.namespace,header.response or "")
-      local rcb,logger = cbs:pop(tag)
-      if rcb then logger("socket","Rec: %s %s",tag,header.success) return rcb(header,obj) end
+      local rcb,logger = cbs:pop(header.cmdId or {})
+      if rcb then logger("socket","Rec: %s:%s %s",header.namespace,header.response,header.success) return rcb(header,obj) end
       if eventMap[header.type] then return eventMap[header.type](header,obj,color,self) end
       if header.success==false then log("socket","Rec error: %s",tag) end
     end)
