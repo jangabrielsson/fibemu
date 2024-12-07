@@ -106,7 +106,7 @@ function Sonos:__init(IP,initcb,debugFlags)
     connect()
     return self
   end
-
+  
   local function EVENT(str,ev) return setmetatable(ev,{__tostring=function() return str end}) end
   local function post(typ,id,args,color)
     local name = (SELF.groups[id] or SELF.players[id] or {name='Sonos'}).name
@@ -114,7 +114,7 @@ function Sonos:__init(IP,initcb,debugFlags)
     args.typ = typ
     if SELF.eventHandler then SELF.eventHandler(SELF,EVENT(str,args)) else print(str) end
   end
-
+  
   function eventMap.groupVolume(header,obj,color)
     local group = SELF.groups[header.groupId] if not group then return end
     group.volume=obj.volume post("groupVolume",group.id,{volume=obj.volume,muted=obj.muted},color)
@@ -184,10 +184,10 @@ function Sonos:__init(IP,initcb,debugFlags)
     post("groupsUpdated","",{groups=#self.groupNames,players=#self.playerNames})
     initDone()
   end
-
+  
   self._player=setmetatable({},{__index=function(self,name) local p = SELF.players[name] assert(p,"Player not found:"..name) return p end})
   self._group=setmetatable({},{__index=function(self,name) local g = SELF.groups[name] assert(g,"Group not found:"..name) return g end})
-
+  
   local connection = createCoordinator(fmt("wss://%s:1443/websocket/api",IP))
   connection:send({namespace="households",command="getHouseholds"},nil,function(header,data)
     self.householdId = header.householdId
@@ -223,8 +223,8 @@ function Sonos:playFavorite(playerName,favorite,action,modes)
   if not favoriteId then error("Favorite not found: "..favorite) end
   local player = self._player[playerName]
   player.coordinator:cmd(
-    {groupId=player.groupId, namespace="favorites", command="loadFavorite"},{favoriteId = favoriteId, playOnCompletion=true}
-  )
+  {groupId=player.groupId, namespace="favorites", command="loadFavorite"},{favoriteId = favoriteId, playOnCompletion=true}
+)
 end
 function Sonos:playPlaylist(playerName,playlist,action,modes)
   __assert_type(playlist,'string')
@@ -261,7 +261,7 @@ function Sonos:removeGroup(groupName)
   group.coordinator:cmd(msg,{playerIdsToRemove=group.playerIds})
 end
 function Sonos:cb(cb) self._cbhook = cb return self end
-function Sonos:getPlayer(playerName) 
+function Sonos:getPlayer(playerName)
   return setmetatable({},{
     __index=function(t,cmd) return function(...) self[cmd](self,playerName,...) end end
   })
@@ -319,16 +319,5 @@ function QuickApp:onInit()
     -- pl:pause()
     -- local group = sonos:playerGroup(playerA) -- get group that player belongs to
     -- local players = sonos:playersInGroup(sonos:playerGroup(playerA)) -- get players in group
-  end,{socket=true, noCmd7=true})
+  end,{socket=true, _noCmd=true})
 end
-
-      -- 1,playerA,function() sonos:say{player=playerA,msg="Hello world",volume=25} end, "TTS clip to player",
-      -- 2,playerB,function() sonos:say(playerB,"Hello world again",25) end, "TTS clip to player",
-      -- 2,playerA,function() sonos:clip(playerA,clip,25) end, "Audio clip to player with volume",
-      -- 2,playerA,function() sonos:play(playerA) end, "Play group that player belongs to",
-      -- 2,playerA,function() sonos:pause(playerA) end, "Pause group that player belongs to",
-      -- 2,playerB,function() sonos:play(playerB) end, "Play group that player belongs to",
-      -- 2,playerB,function() sonos:pause{player=playerB} end, "Pause group that player belongs to",
-      --sonos:createGroup{playerB,playerA}
-      
-      
