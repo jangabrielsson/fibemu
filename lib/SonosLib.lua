@@ -248,8 +248,8 @@ end
 
 local function doCmd(self,rsrc,id,obj,ns,cmd,args)
   local msg = {namespace=ns,command=cmd,[rsrc]=id}
-  for k,v in pairs(args or {}) do msg[k]=v end
-  obj.coordinator:cmd(msg,nil)
+  --for k,v in pairs(args or {}) do msg[k]=v end
+  obj.coordinator:cmd(msg,args)
 end
 local function doGroupCmd(self,playerName,ns,cmd,args) -- Cmds sent to group coordinator
   local group = self._player[playerName].group
@@ -274,27 +274,18 @@ function Sonos:playFavorite(playerName,favorite,action,modes)
   __assert_type(favorite,'string')
   local favoriteId = find(self.favorites,favorite)
   if not favoriteId then error("Favorite not found: "..favorite) end
-  local group = self._player[playerName].group
-  group.coordinator:cmd(
-  {groupId=group.id, namespace="favorites", command="loadFavorite"},{favoriteId = favoriteId, playOnCompletion=true}
-)
+  doGroupCmd(self,playerName,"favorites","loadFavorite",{favoriteId = favoriteId, playOnCompletion=true}))
 end
 function Sonos:playPlaylist(playerName,playlist,action,modes)
   __assert_type(playlist,'string')
   local playlistId = find(self.playlists,playlist)
   if not playlistId then error("Playlist not found: "..playlist) end
-  local group = self._player[playerName].group
-  group.coordinator:cmd({groupId=group.id, namespace="playlists", command="loadPlaylist"},{playlistId = playlistId, playOnCompletion=true})
+  doGroupCmd(self,playerName,"playlists","loadPlaylist",{playlistId = playlistId, playOnCompletion=true})
 end
 function Sonos:playerVolume(playerName,volume) doPlayerCmd(self,playerName,"playerVolume","setVolume",{volume=volume}) end
 function Sonos:playerMute(playerName,state) doPlayerCmd(self,playerName,"playerVolume","setMute",{muted=state~=false}) end
 function Sonos:playerRelativeVolume(playerName,volume) doPlayerCmd(self,playerName,"playerVolume","setRelativeVolume",{volumeDelta=volume}) end
-function Sonos:clip(playerName,url,volume)
-  local player = self._player[playerName]
-  player.coordinator:cmd(
-  {namespace="audioClip",playerId=player.id,command="loadAudioClip"},{name="SW",appId="com.xyz.sw",streamUrl=url,volume=volume}
-)
-end
+function Sonos:clip(playerName,url,volume) doPlayerCmd(self,playerName,"audioClip","loadAudioClip",{name="SW",appId="com.xyz.sw",streamUrl=url,volume=volume}) end
 function Sonos:say(playerName,text,volume,lang)
   local url=string.format("https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=%s&q=%s",lang or "en",text:gsub("%s+","+"))
   self:clip(playerName,url,volume)
@@ -354,6 +345,8 @@ if TEST then
       local function callback(headers,data)
         print("Callback",headers,data)
       end
+
+      sonos:playerVolume("TV Room",30)
       delay{
         -- 1,playerA,function() sonos:say(playerA,"Hello world",25) end, "TTS clip to player",
         -- 2,playerB,function() sonos:say(playerB,"Hello world again",25) end, "TTS clip to player",
