@@ -246,14 +246,19 @@ function Sonos:__init(IP,initcb,debugFlags)
   end)
 end
 
-local function doCmd(self,rsrc,id,playerName,ns,cmd,args)
-  local player = self._player[playerName]
-  local msg = {namespace=ns,command=cmd,[rsrc]=player[id]}
+local function doCmd(self,rsrc,id,obj,ns,cmd,args)
+  local msg = {namespace=ns,command=cmd,[rsrc]=id}
   for k,v in pairs(args or {}) do msg[k]=v end
-  player.coordinator:cmd(msg,nil)
+  obj.coordinator:cmd(msg,nil)
 end
-local function doGroupCmd(self,playerName,ns,cmd,args) doCmd(self,'groupId','groupId',playerName,ns,cmd,args) end
-local function doPlayerCmd(self,playerName,ns,cmd,args) doCmd(self,'playerId','id',playerName,ns,cmd,args) end
+local function doGroupCmd(self,playerName,ns,cmd,args) -- Cmds sent to group coordinator
+  local group = self._player[playerName].group
+  doCmd(self,'groupId',group.id,group,ns,cmd,args) 
+end
+local function doPlayerCmd(self,playerName,ns,cmd,args) -- Cmds sent to player directly
+  local player = self._player[playerName]
+  doCmd(self,'playerId',player.id,player,ns,cmd,args)
+end
 local function find(list,val) for _,i in ipairs(list) do if i.name==val or i.id==val then return i.id end end end
 
 function Sonos:play(playerName) doGroupCmd(self,playerName,"playback","play") end
@@ -269,17 +274,17 @@ function Sonos:playFavorite(playerName,favorite,action,modes)
   __assert_type(favorite,'string')
   local favoriteId = find(self.favorites,favorite)
   if not favoriteId then error("Favorite not found: "..favorite) end
-  local player = self._player[playerName]
-  player.coordinator:cmd(
-  {groupId=player.groupId, namespace="favorites", command="loadFavorite"},{favoriteId = favoriteId, playOnCompletion=true}
+  local group = self._player[playerName].group
+  group.coordinator:cmd(
+  {groupId=group.id, namespace="favorites", command="loadFavorite"},{favoriteId = favoriteId, playOnCompletion=true}
 )
 end
 function Sonos:playPlaylist(playerName,playlist,action,modes)
   __assert_type(playlist,'string')
   local playlistId = find(self.playlists,playlist)
   if not playlistId then error("Playlist not found: "..playlist) end
-  local player = self._player[playerName]
-  player.coordinator:cmd({groupId=player.groupId, namespace="playlists", command="loadPlaylist"},{playlistId = playlistId, playOnCompletion=true})
+  local group = self._player[playerName].group
+  group.coordinator:cmd({groupId=group.id, namespace="playlists", command="loadPlaylist"},{playlistId = playlistId, playOnCompletion=true})
 end
 function Sonos:playerVolume(playerName,volume) doPlayerCmd(self,playerName,"playerVolume","setVolume",{volume=volume}) end
 function Sonos:playerMute(playerName,state) doPlayerCmd(self,playerName,"playerVolume","setMute",{muted=state~=false}) end
@@ -299,9 +304,9 @@ function Sonos:playersInGroup(groupName) return self._group[groupName].playersId
 function Sonos:createGroup(...)
   local playerIds,p = {},nil
   for _,playerName in ipairs({...}) do p=p or playerName table.insert(playerIds,self._player[playerName].id) end
-  local player = self._player[p]
+  local group = self._player[p].group
   local msg = {namespace="groups",command="createGroup",householdId=self.householdId}
-  player.coordinator:cmd(msg,{playerIds=playerIds,musicContextGroupId=player.groupId})
+  group.coordinator:cmd(msg,{playerIds=playerIds,musicContextGroupId=group.id})
 end
 function Sonos:removeGroup(groupName)
   local group = self._group[groupName]
