@@ -41,7 +41,7 @@ class 'Sonos'
 Sonos.VERSION = "0.85"
 function Sonos:__init(IP,initcb,debugFlags)
   self.TIMEOUT = 30
-  local colors = {'green','blue','yellow','red','orange','purple','pink','cyan','magenta','lime'}
+  local colors = {'lightgreen','lightblue','yellow','red','orange','purple','pink','cyan','magenta','lime'}
   local coordinators,eventMap,n = {},{},0
   local SELF,fmt=self,string.format
   print(fmt("SonosLib %s (c)jan@gabrielsson.com",Sonos.VERSION))
@@ -71,7 +71,7 @@ function Sonos:__init(IP,initcb,debugFlags)
     coordinators[url] = self
     
     local function colorize(col,str) return fmt('<font color="%s">%s</font>',col,str) end
-    local function log(tag,fm,...) if debugFlags[tag] then print(colorize(color,fmt(fm,...))) end end
+    local function log(tag,fm,...) if SELF.debug[tag] then print(colorize(color,fmt(fm,...))) end end
     function self:log(...) log(...) end --export
     
     local function connect()
@@ -97,7 +97,7 @@ function Sonos:__init(IP,initcb,debugFlags)
       if connected then cont() else buffer[#buffer+1] = cont end
     end
     
-    function self:cmd(data,opts,cb) cb = cb or SELF._cbhook; SELF._cbhook=nil self:send(data,opts,cb,debugFlags.noCmd) end
+    function self:cmd(data,opts,cb) cb = cb or SELF._cbhook; SELF._cbhook=nil self:send(data,opts,cb,SELF.debug.noCmd) end
     
     function self:subscribe(resource,id,namespace,cb) self:send({[resource]=id,namespace=namespace,command="subscribe"},nil) end
     
@@ -138,8 +138,9 @@ function Sonos:__init(IP,initcb,debugFlags)
   
   local function post(typ,id,args,color)
     local name = (SELF.groups[id] or SELF.players[id] or {name='Sonos'}).name
+    color = color or "white"
     local str = fmt('<font color="%s">[%s:"%s",%s]</font>',color,typ,name,json.encode(args):sub(2,-2))
-    args.typ = typ
+    args.type = typ
     if SELF.eventHandler then SELF.eventHandler(SELF,EVENT(str,args)) else print(str) end
   end
   
@@ -267,20 +268,20 @@ function Sonos:skipToNextTrack(playerName) doGroupCmd(self,playerName,"playback"
 function Sonos:skipToPreviousTrack(playerName) doGroupCmd(self,playerName,"playback","skipToPreviousTrack") end
 function Sonos:volume(playerName,volume) doGroupCmd(self,playerName,"groupVolume","setVolume",{volume=volume}) end
 function Sonos:relativeVolume(playerName,delta) doGroupCmd(playerName,"groupVolume","setVolume",{volumeDelta=delta}) end
-function Sonos:mute(playerName,state) doGroupCmd(self,playerName,"groupVolume","mute",{muted=state~=false}) end
+function Sonos:mute(playerName,state) doGroupCmd(self,playerName,"groupVolume","setMute",{muted=state~=false}) end
 function Sonos:togglePlayPause(playerName) doGroupCmd(self,playerName,"playback","togglePlayPause") end
 
 function Sonos:playFavorite(playerName,favorite,action,modes)
   __assert_type(favorite,'string')
   local favoriteId = find(self.favorites,favorite)
   if not favoriteId then error("Favorite not found: "..favorite) end
-  doGroupCmd(self,playerName,"favorites","loadFavorite",{favoriteId = favoriteId, playOnCompletion=true}))
+  --doGroupCmd(self,playerName,"favorites","loadFavorite",{favoriteId = favoriteId,playOnCompletion = true})))
 end
 function Sonos:playPlaylist(playerName,playlist,action,modes)
   __assert_type(playlist,'string')
   local playlistId = find(self.playlists,playlist)
   if not playlistId then error("Playlist not found: "..playlist) end
-  doGroupCmd(self,playerName,"playlists","loadPlaylist",{playlistId = playlistId, playOnCompletion=true})
+  doGroupCmd(self,playerName,"playlists","loadPlaylist",{playlistId = playlistId, playOnCompletion=true}) 
 end
 function Sonos:playerVolume(playerName,volume) doPlayerCmd(self,playerName,"playerVolume","setVolume",{volume=volume}) end
 function Sonos:playerMute(playerName,state) doPlayerCmd(self,playerName,"playerVolume","setMute",{muted=state~=false}) end
@@ -346,7 +347,6 @@ if TEST then
         print("Callback",headers,data)
       end
 
-      sonos:playerVolume("TV Room",30)
       delay{
         -- 1,playerA,function() sonos:say(playerA,"Hello world",25) end, "TTS clip to player",
         -- 2,playerB,function() sonos:say(playerB,"Hello world again",25) end, "TTS clip to player",
