@@ -39,7 +39,7 @@ of this license document, but changing it is not allowed.
 class 'Sonos'
 Sonos.VERSION = "0.8"
 function Sonos:__init(IP,initcb,debugFlags)
-  self.TIMEOUT = 7
+  self.TIMEOUT = 30
   local colors = {'green','blue','yellow','red','orange','purple','pink','cyan','magenta','lime'}
   local coordinators,eventMap,n = {},{},0
   local SELF,fmt=self,string.format
@@ -53,6 +53,7 @@ function Sonos:__init(IP,initcb,debugFlags)
       map[key]={cb,ref} return key 
     end
     function self:pop(key) local cb,ref = table.unpack(map[key] or {}) map[key]=nil if ref then clearTimeout(ref) end return cb end
+    function self:cancelAll() for key in pairs(map) do self:pop(key) end end
     return self
   end
   local done,doneCB = 0,false
@@ -92,7 +93,7 @@ function Sonos:__init(IP,initcb,debugFlags)
       self:subscribe("householdId",id,"playlists")
       self.householdSubscribed = true
     end
-    function self:close() if connected then sock:close() log("socket","Close") connected=false coordinators[url]=nil end end
+    function self:close() if connected then sock:close() log("socket","Close") cbs:cancelAll() connected=false coordinators[url]=nil end end
     sock:addEventListener("connected",function()
       connected = true log("socket","Connected")
       for _,cont in ipairs(buffer) do cont() buffer={} end
