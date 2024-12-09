@@ -288,7 +288,9 @@ local function installQA(fname, conf)
             QA.syslogerr("install", "(merge) Can't create file - %s", files[#files])
             return
         end
-        f:write(table.concat(code, "\n"))
+        local code = table.concat(code, "\n")
+        f:write(code)
+        f:close()
     end
 
     function chandler.interface(var, val, vars) --%%interface=x,y,z
