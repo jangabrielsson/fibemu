@@ -38,7 +38,7 @@ of this license document, but changing it is not allowed.
 local TEST = true
 
 class 'Sonos'
-Sonos.VERSION = "0.85"
+Sonos.VERSION = "0.86"
 function Sonos:__init(IP,initcb,debugFlags)
   self.TIMEOUT = 30
   local colors = {'lightgreen','lightblue','yellow','orange','purple','pink','cyan','magenta','lime','red'}
@@ -136,19 +136,24 @@ function Sonos:__init(IP,initcb,debugFlags)
       elseif eventMap[header.type] then return eventMap[header.type](header,obj,color,self)
       else log("socket","Unknown event: %s",header.type) end
     end)
-    sock:addEventListener("error", function(err) fibaro.error(__TAG,"Sonos connection",err) log("socket","Error") end)
+
+    sock:addEventListener("error", function(err) 
+      fibaro.error(__TAG,"Sonos connection",err)
+      SELF.post("connectionError","",{reason="Connection failed",url=url},"red")
+    end)
 
     return self
   end
   
   local function post(typ,id,args,color)
-    local name = (SELF.groups[id] or SELF.players[id] or {name='Sonos'}).name
+    local name = (SELF.groups and SELF.groups[id] or SELF.players and SELF.players[id] or {name='Sonos'}).name
     color = color or "white"
     local str = fmt('<font color="%s">[%s:"%s",%s]</font>',color,typ,name,json.encode(args):sub(2,-2))
     args.type = typ
     if SELF.eventHandler then SELF.eventHandler(SELF,EVENT(str,args)) else print(str) end
   end
-  
+  self.post = post --export
+
   local players,groups = {},{}
   local function setupPlayers(_players)
     players = {} self.players = players self.playerNames = LIST({})
@@ -193,9 +198,12 @@ function Sonos:__init(IP,initcb,debugFlags)
   end
   
   function eventMap.playbackStatus(header,obj,color)
+    print("STAT",json.encode(obj))
     local status = obj.playbackState:match("_([%w]*)$"):lower()
     local group = SELF.groups[header.groupId] if not group then return end
-    group.status = status post("playbackStatus",group.id,{status=status},color)
+    group.playModes = obj.playModes
+    group.playModes._objectType = nil
+    group.status = status post("playbackStatus",group.id,{status=status,modes=group.playModes},color)
   end
   
   function eventMap.playerVolume(header,obj,color)
@@ -279,6 +287,10 @@ function Sonos:volume(playerName,volume) doGroupCmd(self,playerName,"groupVolume
 function Sonos:relativeVolume(playerName,delta) doGroupCmd(playerName,"groupVolume","setVolume",{volumeDelta=delta}) end
 function Sonos:mute(playerName,state) doGroupCmd(self,playerName,"groupVolume","setMute",{muted=state~=false}) end
 function Sonos:togglePlayPause(playerName) doGroupCmd(self,playerName,"playback","togglePlayPause") end
+function Sonos:setModes(playerName,m)
+  local modes = { ['repeat']=m['repeat'], shuffle=m.shuffle, crossfade=m.crossfade, repeatOne=m.repeatOne }
+  doGroupCmd(self,playerName,"playback","setPlayModes",{playModes=modes}) 
+end
 
 function Sonos:playFavorite(playerName,favorite,action,modes)
   __assert_type(favorite,'string')
@@ -338,11 +350,11 @@ if TEST then
     self:debug("onInit",self.name,self.id)
 
     local clip = "https://github.com/joepv/fibaro/raw/refs/heads/master/sonos-tts-example-eng.mp3"
-    Sonos("192.168.1.225",function(sonos)
+    function Sonos:eventHandler(event)
+      print(event) -- Just print out events, could be used to ex. update UI
+    end
+    Sonos("192.168.1.6",function(sonos)
       self:debug("Sonos Ready")
-      function sonos:eventHandler(event)
-        print(event) -- Just print out events, could be used to ex. update UI
-      end
       print("Players:",sonos.playerNames)
       print("Groups:",sonos.groupNames)
       local playerA = sonos.playerNames[1]
@@ -356,10 +368,9 @@ if TEST then
       local playlist1 = (sonos.playlists[1] or {}).name
       print(("PlayerA='%s', PlayerB='%s'"):format(playerA,playerB))
       print(("Favorite1='%s', Playlist1='%s'"):format(favorite1,playlist1))
-      local function callback(headers,data)
+      local function callback(headers,data) -- not used
         print("Callback",headers,data)
       end
-
       delay{
         -- 1,playerA,function() sonos:say(playerA,"Hello world",25) end, "TTS clip to player",
         -- 2,playerB,function() sonos:say(playerB,"Hello world again",25) end, "TTS clip to player",
