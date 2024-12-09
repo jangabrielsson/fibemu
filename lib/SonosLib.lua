@@ -42,7 +42,7 @@ Sonos.VERSION = "0.86"
 function Sonos:__init(IP,initcb,debugFlags)
   self.TIMEOUT = 30
   local colors = {'lightgreen','lightblue','yellow','orange','purple','pink','cyan','magenta','lime','red'}
-  local coordinators,eventMap,n = {},{},0
+  local coordinators,eventMap,_inited,n = {},{},false,0
   local SELF,fmt=self,string.format
   print(fmt("SonosLib %s (c)jan@gabrielsson.com",Sonos.VERSION))
   self.debug = debugFlags or {}
@@ -136,16 +136,18 @@ function Sonos:__init(IP,initcb,debugFlags)
       elseif eventMap[header.type] then return eventMap[header.type](header,obj,color,self)
       else log("socket","Unknown event: %s",header.type) end
     end)
-
+    
     sock:addEventListener("error", function(err) 
       fibaro.error(__TAG,"Sonos connection",err)
       SELF.post("connectionError","",{reason="Connection failed",url=url},"red")
     end)
-
+    
     return self
   end
   
+  local postBuffer = {}
   local function post(typ,id,args,color)
+    if not _inited then postBuffer[#postBuffer+1]={typ,id,args,color} return end
     local name = (SELF.groups and SELF.groups[id] or SELF.players and SELF.players[id] or {name='Sonos'}).name
     color = color or "white"
     local str = fmt('<font color="%s">[%s:"%s",%s]</font>',color,typ,name,json.encode(args):sub(2,-2))
@@ -153,7 +155,7 @@ function Sonos:__init(IP,initcb,debugFlags)
     if SELF.eventHandler then SELF.eventHandler(SELF,EVENT(str,args)) else print(str) end
   end
   self.post = post --export
-
+  
   local players,groups = {},{}
   local function setupPlayers(_players)
     players = {} self.players = players self.playerNames = LIST({})
@@ -186,7 +188,7 @@ function Sonos:__init(IP,initcb,debugFlags)
     end
     post("groupsUpdated","",{groups=#self.groupNames,players=#self.playerNames})
   end
-
+  
   function eventMap.groupVolume(header,obj,color)
     local group = SELF.groups[header.groupId] if not group then return end
     group.volume,group.muted=obj.volume,obj.muted post("groupVolume",group.id,{volume=obj.volume,muted=obj.muted},color)
@@ -256,7 +258,7 @@ function Sonos:__init(IP,initcb,debugFlags)
           connection:subscribe("householdId",self.householdId,"favorites")
           connection:subscribe("householdId",self.householdId,"playlists")
           connection:subscribe("householdId",self.householdId,"groups")
-          if initcb then initcb(self) end
+          if initcb then initcb(self) _inited=true for _,p in ipairs(postBuffer) do post(table.unpack(p)) end end
         end)
       end)
     end)
@@ -287,7 +289,7 @@ function Sonos:relativeVolume(playerName,delta) doGroupCmd(playerName,"groupVolu
 function Sonos:mute(playerName,state) doGroupCmd(self,playerName,"groupVolume","setMute",{muted=state~=false}) end
 function Sonos:togglePlayPause(playerName) doGroupCmd(self,playerName,"playback","togglePlayPause") end
 function Sonos:setModes(playerName,m)
-  local modes = { ['repeat']=m['repeat'], shuffle=m.shuffle, crossfade=m.crossfade, repeatOne=m.repeatOne }
+  local modes = { ['rep'..'eat']=m['rep'..'eat'], shuffle=m.shuffle, crossfade=m.crossfade, repeatOne=m.repeatOne }
   doGroupCmd(self,playerName,"playback","setPlayModes",{playModes=modes}) 
 end
 
@@ -334,6 +336,20 @@ function Sonos:getPlayer(playerName)
   })
 end
 
+local _init = QuickApp.__init
+function QuickApp:__init(...)
+  if QuickApp.preloadSonos then 
+    local _onInit = self.onInit
+    function self:onInit()
+      quickApp = self
+      Sonos(QuickApp.preloadSonos.ip,function(sonos)
+        self.sonos = sonos
+        if _onInit then _onInit(self) end
+      end,QuickApp.preloadSonos.debug)
+    end
+  end
+  _init(self,...)
+end
 ------------------------- Test code -----------------------
 if TEST then
   local function delay(args)
@@ -347,7 +363,7 @@ if TEST then
   
   function QuickApp:onInit()
     self:debug("onInit",self.name,self.id)
-
+    
     local clip = "https://github.com/joepv/fibaro/raw/refs/heads/master/sonos-tts-example-eng.mp3"
     function Sonos:eventHandler(event)
       print(event) -- Just print out events, could be used to ex. update UI
