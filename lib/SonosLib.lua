@@ -342,7 +342,14 @@ function QuickApp:__init(...)
     local _onInit = self.onInit
     function self:onInit()
       quickApp = self
-      Sonos(QuickApp.preloadSonos.ip,function(sonos)
+      local ip = QuickApp.preloadSonos.ip
+      local var = ip:match("qvar:(.*)")
+      if var then
+        for _,v in ipairs(self.properties.quickAppVariables) do
+          if v.name == var then ip = v.value break end
+        end
+      end
+      Sonos(ip,function(sonos)
         self.sonos = sonos
         if _onInit then _onInit(self) end
       end,QuickApp.preloadSonos.debug)
