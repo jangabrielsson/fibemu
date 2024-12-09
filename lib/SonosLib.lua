@@ -198,7 +198,6 @@ function Sonos:__init(IP,initcb,debugFlags)
   end
   
   function eventMap.playbackStatus(header,obj,color)
-    print("STAT",json.encode(obj))
     local status = obj.playbackState:match("_([%w]*)$"):lower()
     local group = SELF.groups[header.groupId] if not group then return end
     group.playModes = obj.playModes
