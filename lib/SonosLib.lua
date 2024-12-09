@@ -41,7 +41,7 @@ class 'Sonos'
 Sonos.VERSION = "0.85"
 function Sonos:__init(IP,initcb,debugFlags)
   self.TIMEOUT = 30
-  local colors = {'lightgreen','lightblue','yellow','red','orange','purple','pink','cyan','magenta','lime'}
+  local colors = {'lightgreen','lightblue','yellow','orange','purple','pink','cyan','magenta','lime','red'}
   local coordinators,eventMap,n = {},{},0
   local SELF,fmt=self,string.format
   print(fmt("SonosLib %s (c)jan@gabrielsson.com",Sonos.VERSION))
@@ -50,7 +50,8 @@ function Sonos:__init(IP,initcb,debugFlags)
   local function map(f,l) for k,v in pairs(l) do f(v,k) end end
   local function LIST(t) return setmetatable(t,{__tostring=function() return table.concat(t,",") end}) end
   local function EVENT(str,ev) return setmetatable(ev,{__tostring=function() return str end}) end
-  
+  local function PLAYER(p) return setmetatable(p,{__tostring=function(p) return fmt("[%s:%s]",p.name,p.id) end}) end
+  local function GROUP(g) return setmetatable(g,{__tostring=function(p) return fmt("[%s:%s]",p.name,p.id) end}) end
   local function Requests() -- Request queue with timeout handling
     local self,map,id = {},{},42
     function self:push(cb,data) local key=tostring(id) id=id+1
@@ -64,7 +65,7 @@ function Sonos:__init(IP,initcb,debugFlags)
   
   local function createCoordinator(url)
     if coordinators[url] then return coordinators[url] end
-    local connected,buffer,cbs = false,{},Requests()
+    local connected,started,buffer,cbs = false,false,{},Requests()
     local self = {}
     local sock = net.WebSocketClientTls()
     local color = colors[n%#colors+1] n=n+1
@@ -75,6 +76,7 @@ function Sonos:__init(IP,initcb,debugFlags)
     function self:log(...) log(...) end --export
     
     local function connect()
+      log("socket","Connecting to %s",url)
       sock:connect(url, {
         ["X-Sonos-Api-Key"] = "123e4567-e89b-12d3-a456-426655440000",
         ["Sec-WebSocket-Protocol"] = "v1.api.smartspeaker.audio",
@@ -94,7 +96,11 @@ function Sonos:__init(IP,initcb,debugFlags)
         data.cmdId = cbs:push(cb or dfltCmdLogger,data)
         sock:send(json.encode({data,opts or {}}))
       end
-      if connected then cont() else buffer[#buffer+1] = cont end
+      if connected then cont() 
+      else 
+        if not started then started=true connect() end
+        buffer[#buffer+1] = cont
+      end
     end
     
     function self:cmd(data,opts,cb) cb = cb or SELF._cbhook; SELF._cbhook=nil self:send(data,opts,cb,SELF.debug.noCmd) end
@@ -130,9 +136,8 @@ function Sonos:__init(IP,initcb,debugFlags)
       elseif eventMap[header.type] then return eventMap[header.type](header,obj,color,self)
       else log("socket","Unknown event: %s",header.type) end
     end)
-    sock:addEventListener("error", function(err) fibaro.error(__TAG,"Sonos connection",error) log("socket","Error") end)
-    log("socket","Connecting to %s",url)
-    connect()
+    sock:addEventListener("error", function(err) fibaro.error(__TAG,"Sonos connection",err) log("socket","Error") end)
+
     return self
   end
   
@@ -148,7 +153,11 @@ function Sonos:__init(IP,initcb,debugFlags)
   local function setupPlayers(_players)
     players = {} self.players = players self.playerNames = LIST({})
     for _,p in ipairs(_players) do
-      local player = {name=p.name, id=p.id, url=p.websocketUrl, coordinator=createCoordinator(p.websocketUrl)}
+      local player = PLAYER({name=p.name, id=p.id, url=p.websocketUrl, coordinator=createCoordinator(p.websocketUrl)})
+      player.softwareVersion = p.softwareVersion
+      player.apiVersion = p.apiVersion
+      player.minApiVersion = p.minApiVersion
+      player.capabilities = p.capabilities
       players[p.id],players[p.name] = player,player
       table.insert(self.playerNames,p.name)
       players[p.id].coordinator:subscribe('playerId',p.id,"playerVolume")
@@ -161,7 +170,7 @@ function Sonos:__init(IP,initcb,debugFlags)
       local coordinator = players[g.coordinatorId].coordinator
       local group = oldGroups[g.id]
       if not group then -- new group
-        group = {name=g.name, id=g.id, coordinator=coordinator, playerIds=g.playerIds}
+        group = GROUP({name=g.name, id=g.id, coordinator=coordinator, playerIds=g.playerIds})
         table.insert(self.groupNames,g.name)
         group.coordinator:subscribe('groupId',group.id,"playback")
         group.coordinator:subscribe('groupId',group.id,"groupVolume")
@@ -197,7 +206,7 @@ function Sonos:__init(IP,initcb,debugFlags)
   function eventMap.metadataStatus(header,obj,color)
     local g = SELF.groups[header.groupId] if not g then return end
     g.currentTrack = obj.currentItem.track.name
-    g.currentArtist = obj.currentItem.track.artist.name
+    g.currentArtist = (obj.currentItem.track.artist or {}).name or ""
     g.currentMetadata = obj
     g.metadata = obj post("metadata",g.id,{track=g.currentTrack,artist=g.currentArtist},color)
   end
@@ -275,7 +284,7 @@ function Sonos:playFavorite(playerName,favorite,action,modes)
   __assert_type(favorite,'string')
   local favoriteId = find(self.favorites,favorite)
   if not favoriteId then error("Favorite not found: "..favorite) end
-  --doGroupCmd(self,playerName,"favorites","loadFavorite",{favoriteId = favoriteId,playOnCompletion = true})))
+  doGroupCmd(self,playerName,"favorites","loadFavorite",{favoriteId = favoriteId,playOnCompletion = true})
 end
 function Sonos:playPlaylist(playerName,playlist,action,modes)
   __assert_type(playlist,'string')
@@ -306,6 +315,8 @@ function Sonos:removeGroup(groupName)
   group.coordinator:cmd(msg,{playerIdsToRemove=group.playerIds})
 end
 function Sonos:cb(cb) self._cbhook = cb return self end
+function Sonos:getPlayerObject(playerName) return self._player[playerName] end
+function Sonos:getGroupObject(groupName) return self._group[groupName] end
 function Sonos:getPlayer(playerName)
   return setmetatable({},{
     __index=function(t,cmd) return function(...) self[cmd](self,playerName,...) end end
@@ -325,8 +336,9 @@ if TEST then
   
   function QuickApp:onInit()
     self:debug("onInit",self.name,self.id)
+
     local clip = "https://github.com/joepv/fibaro/raw/refs/heads/master/sonos-tts-example-eng.mp3"
-    Sonos("192.168.1.6",function(sonos)
+    Sonos("192.168.1.225",function(sonos)
       self:debug("Sonos Ready")
       function sonos:eventHandler(event)
         print(event) -- Just print out events, could be used to ex. update UI
@@ -335,10 +347,11 @@ if TEST then
       print("Groups:",sonos.groupNames)
       local playerA = sonos.playerNames[1]
       local playerB = sonos.playerNames[2]
-      local PA = sonos._player[playerA]
+      local PA = sonos:getPlayerObject(playerA)
       print("PlayerA:",PA.name,PA.id)
-      local PB = sonos._player[playerB]
+      local PB = sonos:getPlayerObject(playerB)
       print("PlayerB:",PB.name,PB.id)
+      print("PB:",PB)
       local favorite1 = (sonos.favorites[1] or {}).name
       local playlist1 = (sonos.playlists[1] or {}).name
       print(("PlayerA='%s', PlayerB='%s'"):format(playerA,playerB))
