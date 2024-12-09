@@ -35,7 +35,7 @@ of this license document, but changing it is not allowed.
 -- sonos:removeGroup(groupName)            -- remove group. Ex. sonos:removeGroup(sonos:playerGroup(playerName))
 -- sonos:getPlayer(playerName)             -- Get player object. Ex. p = sonos:getPlayer(playerName); p:pause()
 -- sonos:cb(cb)                            -- Set callback function. Ex. sonos:cb(function(h,data) print(event) end):pause(playerName)
-local TEST = true
+local TEST = false
 
 class 'Sonos'
 Sonos.VERSION = "0.86"
