@@ -249,7 +249,7 @@ function net.UDPSocket(opts2)
     return self2
 end
 
-function net.WebSocketClient()
+function net.WebSocketClient(opts)
     local self = { _callback = {} }
     function self:connect(url, headers)
         local function cb(event, ...)

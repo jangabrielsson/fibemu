@@ -238,12 +238,13 @@ function tool.update(file, rsrc, name, path) -- move logic to files?
         printf("Updating viewLayout and uiCallbacks...")
     end
 
-    local viewLayout,uiCallbacks = fibemu.libs.ui.pruneStock(dev.properties)
+    local viewLayout,uiView,uiCallbacks = fibemu.libs.ui.pruneStock(dev.properties)
 
     local stat, res = api.put("/devices/" .. id, {
         properties = {
             uiCallbacks = updateUI and uiCallbacks or nil,
             viewLayout = updateUI and viewLayout or nil,
+            uiView = updateUI and uiView or nil,
             quickAppVariables = updateQvs and dev.properties.quickAppVariables or nil,
         }
     }, "hc3")

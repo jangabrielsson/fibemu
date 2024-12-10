@@ -229,6 +229,7 @@ local COLORMAP = {
   lightslateblue = "\027[38;5;105m",
   lightslategrey = "\027[38;5;103m",
   lightsteelblue = "\027[38;5;147m",
+  lightblue = "\027[38;5;147m",
   lightsteelblue1 = "\027[38;5;189m",
   lightsteelblue3 = "\027[38;5;146m",
   lightyellow3 = "\027[38;5;187m",

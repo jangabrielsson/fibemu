@@ -368,7 +368,7 @@ local function installQA(fname, conf)
 
     if vars.ui then
         ui.transformUI(vars.ui)
-        dev.properties.viewLayout = ui.mkViewLayout(vars.ui, nil, dev.id)
+        dev.properties.viewLayout,dev.properties.uiView = ui.mkViewLayout(vars.ui, nil, dev.id)
         dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(vars.ui)
         uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
         uiStruct, uiMap = annotateUI(uiStruct)
@@ -389,6 +389,7 @@ local function installQA(fname, conf)
         uiMap = uiMap or {},
         definedId = definedId,
         images = vars.images,
+        proxy = vars.proxy,
     }
 
     for k, v in pairs(vars.debug) do emu.debug[k] = v end
@@ -501,20 +502,6 @@ local function createChildDevice(pID, cdev)
     dev.parentId = pID
     local tag = "QUICKAPP" .. dev.id
 
-    -- local uiStruct, uiMap = {}, {}
-    -- if dev.properties.viewLayout then
-    --     uiStruct, uiMap = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks), nil
-    -- end
-
-    -- if next(uiStruct) == nil then
-    --     local UI = customUI[dev.type] or {}
-    --     ui.transformUI(UI)
-    --     dev.properties.viewLayout = ui.mkViewLayout(UI, nil, dev.id)
-    --     dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(UI)
-    --     uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
-    -- end
-    -- uiStruct, uiMap = annotateUI(uiStruct)
-
     local UI =  ui.view2UI(dev.properties.viewLayout or {}, dev.properties.uiCallbacks or {})
     local uiStruct, uiMap = nil, nil
 
@@ -522,7 +509,7 @@ local function createChildDevice(pID, cdev)
 
     if next(UI) then
         ui.transformUI(UI)
-        dev.properties.viewLayout = ui.mkViewLayout(UI, nil, dev.id)
+        dev.properties.viewLayout,dev.properties.uiView = ui.mkViewLayout(UI, nil, dev.id)
         dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(UI)
         uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
         uiStruct, uiMap = annotateUI(uiStruct)
@@ -661,13 +648,15 @@ local function createFQA(id)
     end
 
     local p = copy(dev.properties)
-    p.viewLayout, p.uiCallbacks = ui.pruneStock(p)
+    p.viewLayout, p.uiView, p.uiCallbacks = ui.pruneStock(p)
 
     local props = {
-        apiVersion = "1.2",
+        apiVersion = "1.3",
         quickAppVariables = p.quickAppVariables or {},
         uiCallbacks = #p.uiCallbacks > 0 and p.uiCallbacks or nil,
         viewLayout = p.viewLayout,
+        uiView = p.uiView,
+        useUiView=false,
         typeTemplateInitialized = true,
     }
     local fqa = {
@@ -708,13 +697,15 @@ local function file2fqa(fname)
     end
 
     local p = copy(dev.properties)
-    p.viewLayout, p.uiCallbacks = ui.pruneStock(p)
+    p.viewLayout, p.uiView, p.uiCallbacks = ui.pruneStock(p)
 
     local props = {
-        apiVersion = "1.2",
+        apiVersion = "1.3",
         quickAppVariables = p.quickAppVariables or {},
         uiCallbacks = #p.uiCallbacks > 0 and p.uiCallbacks or nil,
         viewLayout = p.viewLayout,
+        uiView = p.uiView,
+        useUiView=false,
         typeTemplateInitialized = true,
     }
     local fqa = {
