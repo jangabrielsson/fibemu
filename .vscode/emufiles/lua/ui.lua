@@ -196,21 +196,21 @@ local function collectViewLayoutRow(u,map)
             row[#row+1]={label=u.name, text=u.text}
           elseif u.type=='button' then
             local e ={[u.type]=u.name, text=u.text, value=u.value}
-            e.onReleased = empty(map[u.name].onReleased)
-            e.onLongPressDown = empty(map[u.name].onLongPressDown)
-            e.onLongPressReleased = empty(map[u.name].onLongPressReleased)
+            e.onReleased = empty((map[u.name] or {}).onReleased)
+            e.onLongPressDown = empty((map[u.name] or {}).onLongPressDown)
+            e.onLongPressReleased = empty((map[u.name] or {}).onLongPressReleased)
             row[#row+1]=e
           elseif u.type=='switch' then
             local e ={[u.type]=u.name, text=u.text, value=u.value}
-            e.onReleased = empty(map[u.name].onReleased)
-            e.onLongPressDown = empty(map[u.name].onLongPressDown)
-            e.onLongPressReleased = empty(map[u.name].onLongPressReleased)
+            e.onReleased = empty((map[u.name] or {}).onReleased)
+            e.onLongPressDown = empty((map[u.name] or {}).onLongPressDown)
+            e.onLongPressReleased = empty((map[u.name] or {}).onLongPressReleased)
             row[#row+1]=e
           elseif u.type=='slider' then
             row[#row+1]={
               slider=u.name, 
               text=u.text, 
-              onChanged=map[u.name].onChanged,
+              onChanged=(map[u.name] or {}).onChanged,
               max = u.max,
               min = u.min,
               step = u.step
@@ -220,7 +220,7 @@ local function collectViewLayoutRow(u,map)
               [u.selectionType=='multi' and 'multi' or 'select']=u.name, 
               text=u.text, 
               options=u.options,
-              onToggled=map[u.name].onToggled,
+              onToggled=(map[u.name] or {}).onToggled,
             }
           else
             print("Unknown type",json.encode(u))
