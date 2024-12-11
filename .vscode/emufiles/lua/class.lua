@@ -35,7 +35,7 @@ function class(name)
   function cl2.__tostring() return pname end
   function cl2.__call(_,...)
     index = index + 1
-    local obj = setmetatable({___index=index},cl)
+    local obj = setmetatable({___index=index,__USERDATA = true},cl)
     local init = rawget(cl,'__init')
     if init then init(obj,...) end
     return obj

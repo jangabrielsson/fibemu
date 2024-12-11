@@ -88,7 +88,7 @@ local function annotateUI(UI)
     for _, e in ipairs(UI) do
         if e[1] == nil then e = { e } end
         for _, e2 in ipairs(e) do
-            e2.type = e2.button and 'button' or e2.slider and 'slider' or e2.label and 'label' or e2.select and 'select' or e2.switch and 'switch'
+            e2.type = e2.button and 'button' or e2.slider and 'slider' or e2.label and 'label' or e2.select and 'select' or e2.switch and 'switch' or e2.multi and 'multi'
             map[e2[e2.type]] = e2
         end
         res[#res + 1] = e
