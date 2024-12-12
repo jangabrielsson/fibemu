@@ -42,6 +42,7 @@ function class(name)
   end
   _G[name] = setmetatable({ __org = cl },cl2)
   return function(parent)
+    if parent == nil then error("Parent class not found") end
     setmetatable(cl,parent.__org)
     if parent.__org.__tostring then -- inherent parent tostring
       cl.__tostring = parent.__org.__tostring

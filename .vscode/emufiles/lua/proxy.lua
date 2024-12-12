@@ -183,75 +183,83 @@ function QuickApp:launchProxy(name)
   
   
   api._intercept("POST","/plugins/updateView",function(m,path,data,hc3)
-    if hc3 == 'hc3' then return end
-    if data.deviceId == self.id then
+    if data.deviceId == self.id or self.childDevices[data.deviceId] then
       data = copy(data)
-      data.deviceId = self._proxyId
-      local data,res = api.post("/plugins/updateView",data,"hc3")
-      return true,data,res
+      if data.deviceId == self.id then data.deviceId = self._proxyId end
+      local data2,res = api.post("/plugins/updateView",data,"hc3")
+      return true,data2,res
     end
     return false
   end)
   
   api._intercept("POST","/plugins/updateProperty",function(m,path,data,hc3)
-    if hc3 == 'hc3' then return end
-    if data.deviceId == self.id then
+    if data.deviceId == self.id or self.childDevices[data.deviceId] then
       data = copy(data)
-      data.deviceId = self._proxyId
-      local data,res = api.post("/plugins/updateProperty",data,"hc3")
-      return true,data,res
+      if data.deviceId == self.id then data.deviceId = self._proxyId end
+      local data2,res = api.post("/plugins/updateProperty",data,"hc3")
+      return true,data2,res
     end
     return false
   end)
 
   api._intercept("POST","/plugins/interfaces",function(m,path,data,hc3)
-    if hc3 == 'hc3' then return end
-    if data.deviceId == self.id then
+    if data.deviceId == self.id or self.childDevices[data.deviceId] then
       data = copy(data)
-      data.deviceId = self._proxyId
-      local data,res = api.post("/plugins/interfaces",data,"hc3")
-      return true,data,res
+      if data.deviceId == self.id then data.deviceId = self._proxyId end
+      local data2,res = api.post("/plugins/interfaces",data,"hc3")
+      return true,data2,res
     end
     return false
   end)
 
   api._intercept("POST","/plugins/createChildDevice",function(m,path,data,hc3)
-    if hc3 == 'hc3' then return end
-    if data.deviceId == self.id then
+    if data.parentId == self.id then
       data = copy(data)
-      data.deviceId = self._proxyId
-      local data,res = api.post("/plugins/createChildDevice",data,"hc3")
-      return true,data,res
+      data.parentId = self._proxyId
+      if next(data.initialProperties) == nil then
+        data.initialProperties = nil
+      end
+      local data2,res,h,i = api.post(path,data,"hc3")
+      return true,data2,res
     end
     return false
   end)
 
-  api._intercept("GET","/devices/?parentId="..self.id,function(m,path,data,hc3)
-    if hc3 == 'hc3' then return end
-    local data,res = api.get("/devices/?parentId="..self._proxyId,"hc3")
-    return true,data,res
+  api._intercept("GET","/devices?parentId="..self.id,function(m,path,data,hc3)
+    local data2,res = api.get("/devices?parentId="..self._proxyId,"hc3")
+    return true,data2,res
   end)
 
 end
 
 function QuickApp:_ProxyOnAction(action)
   if action.deviceId == self._proxyId then
-    --print("Proxy call")
+    action.deviceId = self.id
   end
-  action.deviceId = self.id
   onAction(action.deviceId,action)
 end
 
 function QuickApp:_ProxyUIHandler(ev)
   if ev.deviceId == self._proxyId then
-    --print("Proxy UIHandler")
+    ev.deviceId = self.id
   end
-  ev.deviceId = self.id
   onUIEvent(ev.deviceId,ev)
 end
 
 QuickApp._hooks["proxy"] = function(self)
-  local name = fibaro.fibemu.DIR[plugin.mainDeviceId].proxy 
-  if name then self:launchProxy(name) end
+  local name = fibaro.fibemu.DIR[plugin.mainDeviceId].proxy
+  if name then
+    if name:sub(1,1) == '-' then
+      name = name:sub(2)
+      local p = api.get("/devices/?name="..urlencode(name),"hc3")
+      if p and next(p) then
+        print("/devices/"..p[1].id)
+        api.delete("/devices/"..p[1].id,nil,"hc3")
+        fibaro.trace(__TAG,"Proxy removed:",p[1].id,name)
+      end
+      return
+    end
+    self:launchProxy(name)
+  end
 end
 
