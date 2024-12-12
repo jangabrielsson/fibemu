@@ -187,9 +187,10 @@ function QuickApp:launchProxy(name)
     if data.deviceId == self.id then
       data = copy(data)
       data.deviceId = self._proxyId
-      api.post("/plugins/updateView",data,"hc3")
+      local data,res = api.post("/plugins/updateView",data,"hc3")
+      return true,data,res
     end
-    return
+    return false
   end)
   
   api._intercept("POST","/plugins/updateProperty",function(m,path,data,hc3)
@@ -197,10 +198,40 @@ function QuickApp:launchProxy(name)
     if data.deviceId == self.id then
       data = copy(data)
       data.deviceId = self._proxyId
-      api.post("/plugins/updateView",data,"hc3")
+      local data,res = api.post("/plugins/updateProperty",data,"hc3")
+      return true,data,res
     end
-    return
+    return false
   end)
+
+  api._intercept("POST","/plugins/interfaces",function(m,path,data,hc3)
+    if hc3 == 'hc3' then return end
+    if data.deviceId == self.id then
+      data = copy(data)
+      data.deviceId = self._proxyId
+      local data,res = api.post("/plugins/interfaces",data,"hc3")
+      return true,data,res
+    end
+    return false
+  end)
+
+  api._intercept("POST","/plugins/createChildDevice",function(m,path,data,hc3)
+    if hc3 == 'hc3' then return end
+    if data.deviceId == self.id then
+      data = copy(data)
+      data.deviceId = self._proxyId
+      local data,res = api.post("/plugins/createChildDevice",data,"hc3")
+      return true,data,res
+    end
+    return false
+  end)
+
+  api._intercept("GET","/devices/?parentId="..self.id,function(m,path,data,hc3)
+    if hc3 == 'hc3' then return end
+    local data,res = api.get("/devices/?parentId="..self._proxyId,"hc3")
+    return true,data,res
+  end)
+
 end
 
 function QuickApp:_ProxyOnAction(action)
