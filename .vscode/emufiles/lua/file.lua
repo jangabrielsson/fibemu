@@ -221,7 +221,7 @@ local function installQA(fname, conf)
 
     function chandler.zombie(var, val, vars) vars.zombie = tonumber(val) end
 
-    function chandler.proxy(var, val, vars) vars.proxy = tonumber(val) end
+    function chandler.proxy(var, val, vars) vars.proxy = eval(val) end
 
     function chandler.noStock(var, val, vars) vars.noStock = eval(val) end
     function chandler.fullLua(var, val, vars) vars.fullLua = eval(val) end
@@ -660,7 +660,7 @@ local function createFQA(id)
         typeTemplateInitialized = true,
     }
     local fqa = {
-        apiVersion = "1.2",
+        apiVersion = "1.3",
         name = dev.name,
         type = dev.type,
         files = files,

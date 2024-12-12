@@ -210,7 +210,7 @@ class FibaroEnvironment:
                     event = self.queue.get(block=True, timeout=delay)
                 except queue.Empty:
                     event = None
-                # print(f", {self.event}",file=sys.stderr)
+                ##print(f", {event}",file=sys.stderr)
                 if event:
                     try:
                         QA.onEvent(json.dumps(event[0]),event[1])

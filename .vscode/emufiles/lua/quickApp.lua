@@ -26,10 +26,7 @@ function QuickAppBase:__init(dev)
   self.parentId    = dev.parentId
   self.uiCallbacks = {}
   self._view       = {}
-  for _, e in ipairs(dev.properties.uiCallbacks or {}) do
-    self.uiCallbacks[e.name] = self.uiCallbacks[e.name] or {}
-    self.uiCallbacks[e.name][e.eventType] = e.callback
-  end
+  self:registerUICallbacks()
 end
 
 function QuickAppBase:debug(...) fibaro.debug(__TAG, ...) end
@@ -184,12 +181,14 @@ function QuickAppBase:updateView(elm, typ, val)
 end
 
 class 'QuickApp' (QuickAppBase)
+QuickApp._hooks = {}
 
 function QuickApp:__init(device)
   QuickAppBase.__init(self, device)
   self.childDevices = {}
   self:setupUICallbacks()
   if fibaro.fibemu.zombie then self:_setupZombie() end
+  for _,cb in pairs(self._hooks) do cb(self) end
   if self.onInit then
     self:onInit()
   end

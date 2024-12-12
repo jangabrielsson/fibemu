@@ -28,7 +28,7 @@
                   {{ option.text }}
                 </option>
               </select>
-              <select v-if="item.type == 'multi'" :id="item.id" v-bind="multiple"
+              <select v-if="item.type == 'multi'" :id="item.id" :multiple="true" v-bind:class="{ 'fix-height': 'true' }" v-model="multipleSelections"
               @change="selectChanged($event.target.id, $event.target.value)">
                 <option disabled selected="true" value="">Choose</option>
                 <option v-for="option in uiMap[item.id].options" :selected="uiMap[item.id].selectedItem===option.value" :key="option.value" :value="option.value">

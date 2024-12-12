@@ -436,7 +436,11 @@ function mqtt.Client.connect(uri, options)
 end
 -----------------------------------------------------------------------------
 
+local _intercepts = { GET={}, POST={}, PUT={}, DELETE={}, PATCH={} }
 local function callHC3S(x,y,z,w) -- sleep to let threads catch up (ex. importFQA)
+    if (_intercepts[x] or {})[y] then
+        if _intercepts[x][y](x,y,z,w) then return end
+    end
     local a,b,c = callHC3(x,y,z,w)
     if (w ~= 'hc3' and fibaro) and (fibaro.sleep ~= nil) then fibaro.sleep(0) end
     return a,b,c
@@ -447,4 +451,7 @@ api = {
     post = function(url, data, hc3) return callHC3S("POST", url, data, hc3) end,
     put = function(url, data, hc3) return callHC3S("PUT", url, data, hc3) end,
     delete = function(url, data, hc3) return callHC3S("DELETE", url, data, hc3) end,
+    _intercept = function(method, url, fun) 
+        _intercepts[method][url] = fun
+     end
 }

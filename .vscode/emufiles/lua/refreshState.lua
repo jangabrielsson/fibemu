@@ -367,9 +367,11 @@ function r.start()
     QA.pyhooks.refreshStates(true, url, options) -- Python function 
 end
 
-function r.hc3HookVar()
-    api.post("/globalVariables", {name=QA.FIBEMUVAR,value=tostring(os.time())}, "hc3")
-    local data = {url=string.format("http://%s:%s",config.hostIP,config.wport)}
+r.hookVarData = {}
+function r.hc3HookVar(QA)
+    api.post("/globalVariables", {name=QA.FIBEMUVAR,value=json.encode({time=tostring(os.orgtime())})}, "hc3")
+    local data = r.hookVarData
+    data.url=string.format("http://%s:%s",config.hostIP,config.wport)
     local function loop()
         data.time=os.orgtime()
         api.put("/globalVariables/"..QA.FIBEMUVAR, {name=QA.FIBEMUVAR, value=(json.encode(data))}, "hc3")
