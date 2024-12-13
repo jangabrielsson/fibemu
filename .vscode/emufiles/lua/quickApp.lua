@@ -346,8 +346,11 @@ function __onAction(id, actionName, args)
   onAction(id, { deviceId = id, actionName = actionName, args = json.decode(args).args })
 end
 
+local filterActionLog = {UIAction=true,_ProxyOnAction=true,_ProxyUIHandler=true}
 function onAction(id, event)
-  (fibaro.fibemu and fibaro.fibemu._print or print)("onAction: ", json.encode(event))
+  if not filterActionLog[event.actionName] then
+    (fibaro.fibemu and fibaro.fibemu._print or print)("onAction: ", json.encode(event))
+  end
   if quickApp.actionHandler then return quickApp:actionHandler(event) end
   if event.deviceId == quickApp.id then
     return quickApp:callAction(event.actionName, table.unpack(event.args))
