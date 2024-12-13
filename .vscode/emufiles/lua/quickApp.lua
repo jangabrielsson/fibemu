@@ -357,6 +357,16 @@ function onAction(id, event)
   quickApp:warning(string.format("Child with id:%s not found", id))
 end
 
+function QuickAppBase:UIAction(eventType, elementName, arg)
+  local event = {
+      deviceId = self.id, 
+      eventType = eventType,
+      elementName = elementName
+  }
+  event.values = arg ~= nil and  { arg } or json.array()
+  onUIEvent(self.id, event)
+end
+
 local function tryboolean(str) if str=='true' then return true elseif str=='false' then return false else return str end end
 
 QuickApp._uiTranslate = {}
