@@ -32,7 +32,7 @@ local function annotateUI(UI)
 end
 
 local sortKeys = {
-  "button", "slider", "label",
+  "button", "slider", "label","select","switch","multi",
   "text",
   "min", "max", "value",
   "visible",
@@ -57,11 +57,14 @@ local function toLua(t)
     for k, _ in pairs(t) do keys[#keys + 1] = k end
     table.sort(keys, keyCompare)
     for _, k in ipairs(keys) do
-      res[#res + 1] = string.format('%s="%s"', k, t[k])
+      local tk = type(t[k]) == 'table' and toLua(t[k]) or '"'..t[k]..'"'
+      res[#res + 1] = string.format('%s=%s', k, tk)
     end
     return "{" .. table.concat(res, ",") .. "}"
   end
 end
+
+fibaro.fibemu.toLua = toLua
 
 function QuickApp:createProxy(id,name)
   local code = [[
