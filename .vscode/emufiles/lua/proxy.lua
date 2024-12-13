@@ -142,6 +142,24 @@ function QuickApp:createProxy(id,name)
   return api.post("/quickApp/", fqa, "hc3")
 end
 
+local function dumpUI(UI)
+  local lines = {}
+  for _, row in ipairs(UI or {}) do
+    if row[1] then row = row[1] end
+    lines[#lines+1]="--%%u="..toLua(row)
+  end
+  print("Proxy UI:\n"..table.concat(lines,"\n"))
+end
+
+function fibaro.fibemu.dumpUIfromQA(id)
+  local dev = api.get("/devices/"..id)
+  if dev then 
+    local p = dev.properties
+    local uiStruct = ui.view2UI(p.viewLayout, p.uiCallbacks)
+    dumpUI(uiStruct)
+  else fibaro.error(__TAG,"Device not found:",id) end
+end
+
 function QuickApp:launchProxy(name)
   local p = api.get("/devices/?name="..urlencode(name))
   if p==nil or next(p)==nil then
@@ -169,12 +187,7 @@ function QuickApp:launchProxy(name)
     myself.uiMap = uiMap
     myself.UI = uiStruct
     
-    local lines = {}
-    for _, row in ipairs(myself.UI or {}) do
-      if row[2] == nil then row = row[1] end
-      lines[#lines+1]="--%%u="..toLua(row)
-    end
-    print("Proxy UI:\n"..table.concat(lines,"\n"))
+    dumpUI(self.UI)
   end
   self._proxyId = p.id
   local data = fibaro.fibemu.libs.refreshStates.hookVarData
@@ -201,7 +214,7 @@ function QuickApp:launchProxy(name)
     end
     return false
   end)
-
+  
   api._intercept("POST","/plugins/interfaces",function(m,path,data,hc3)
     if data.deviceId == self.id or self.childDevices[data.deviceId] then
       data = copy(data)
@@ -211,7 +224,7 @@ function QuickApp:launchProxy(name)
     end
     return false
   end)
-
+  
   api._intercept("POST","/plugins/createChildDevice",function(m,path,data,hc3)
     if data.parentId == self.id then
       data = copy(data)
@@ -224,12 +237,12 @@ function QuickApp:launchProxy(name)
     end
     return false
   end)
-
+  
   api._intercept("GET","/devices?parentId="..self.id,function(m,path,data,hc3)
     local data2,res = api.get("/devices?parentId="..self._proxyId,"hc3")
     return true,data2,res
   end)
-
+  
 end
 
 function QuickApp:_ProxyOnAction(action)
