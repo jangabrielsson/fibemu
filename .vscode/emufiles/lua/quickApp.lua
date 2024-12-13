@@ -366,7 +366,7 @@ function QuickAppBase:UIAction(eventType, elementName, arg)
       eventType = eventType,
       elementName = elementName
   }
-  event.values = arg ~= nil and  { arg } or json.array()
+  event.values = arg ~= nil and  { arg } or json.util.InitArray({})
   onUIEvent(self.id, event)
 end
 
