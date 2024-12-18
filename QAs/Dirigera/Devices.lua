@@ -11,6 +11,7 @@
 --- DoorSensor, magnetic sensor
 --- AirSensor, 
 --- BinaySwitch, Outlet
+--- Speaker, Sonos players
 ---------------------------------------------------------------
 DG = DG or { childs = {}}
 local fmt = string.format
@@ -18,13 +19,13 @@ local function round(s) return math.floor(s+0.5) end
 local devices = { id={}, type={}, deviceType={}, name={} } 
 DG.devices = devices
 
-local function copy(obj)
-  if type(obj) == 'table' then
-    local res = {}
-    for k, v in pairs(obj) do res[k] = copy(v) end
-    return res
-  else
-    return obj
+local function dumpAttributes(id,a)
+  for k,v in pairs(a or {}) do
+    local d = DG.devices.id[id]
+    local name = d.attributes.customName
+    name = name and name ~= "" and name or "<noname>"
+    v = type(v)=='table' and json.encode(v) or v
+    DEBUGF('test',"%s -%s: %s",name,k,v)
   end
 end
 
@@ -35,32 +36,38 @@ function QuickApp:defineClasses()
     self.id = d.id
     self.type = d.type
     self.deviceType = d.deviceType
-    self.name = d.attributes.customName
+    self.name = d.attributes.customName or "<noname>"
+    if self.name == "" then self.name = "<noname>" end
     self.attributes = d.attributes
     local r = {}
     for _,v in ipairs(d.capabilities.canReceive or {}) do r[v] = true end
     self.canReceive = r -- can-receieve map
     self.capabilities = d.capabilities
-    self.isReachable = d.isReachable
-    printc('yellow',"Init %s '%s' reachable: %s",self.deviceType,self.name,d.isReachable)
-    for k,v in pairs(d.attributes or {}) do
-      DEBUGF('test',"-%s: %s",k,v)
+    if self.isReachable ~= d.isReachable then
+      self.isReachable = d.isReachable
+      printc('yellow',"Init %s '%s' reachable: %s",self.deviceType,self.name,d.isReachable)
     end
+    dumpAttributes(d.id,d.attributes)
   end
   function DirigeraDevice:change(data)
-    printc('yellow',"Change '%s' reachable: %s",self.name,data.isReachable)
-    for k,v in pairs(data.attributesor or {}) do
-      DEBUGF('test',"-%s: %s",k,v)
+    if data.isReachable and self.isReachable ~= data.isReachable then
+      self.isReachable = data.isReachable
+      printc('yellow',"Change '%s' reachable: %s",self.name,data.isReachable)
     end
-    self.isReachable = data.isReachable
+    dumpAttributes(data.id,data.attributes)
     if self.child then self.child:updateProperty('dead',self.isReachable==false) end
-    self:update(data)
+    if self.child then self:update(data) end
   end
   function DirigeraDevice:update(d) end -- Called when device is updated
   function DirigeraDevice:created() 
-    if self.child then self.child:updateProperty('dead',self.isReachable==false) end
+    if self.child then 
+      local manufacturer, model = self.attributes.manufacturer or "", self.attributes.model or ""
+      setTimeout(function() self.child:updateProperty('manufacturer',manufacturer) end,0)
+      self.child:updateProperty('model',model)
+      self.child:updateProperty('dead',self.isReachable==false)
+    end
   end
-
+  
   --- Device classes
   class 'ChildDimmableLight'(QwikAppChild) -- Light that only have dimming capabilities
   function ChildDimmableLight:__init(d) QwikAppChild.__init(self,d) end
@@ -260,9 +267,80 @@ function QuickApp:defineClasses()
     DirigeraDevice.__init(self,d)
   end
   
+  class 'ChildSpeaker'(QwikAppChild)
+  function ChildSpeaker:__init(d) QwikAppChild.__init(self,d) end
+  function ChildSpeaker:play() self.dev:play() end
+  function ChildSpeaker:setMute(f) self.dev:setMute(f==0) end
+  function ChildSpeaker:stop() self.dev:stop() end
+  function ChildSpeaker:pause() self.dev:pause() end
+  function ChildSpeaker:next() self.dev:next() end
+  function ChildSpeaker:prev() self.dev:prev() end
+  function ChildSpeaker:setVolume(vol) self.dev:setVolume(vol) end
+  --playback: 'playbackPaused', // 'playbackPlaying'
   class 'Speaker'(DirigeraDevice)
   function Speaker:__init(d)
     DirigeraDevice.__init(self,d)
+    DG.childs[self.id] = {
+      name = self.name,
+      type = 'com.fibaro.player',
+      className = 'ChildSpeaker'
+    }
+  end
+  function Speaker:play()
+    quickApp:DPUT(fmt("/devices/%s",self.id),{{attributes = {playback = "playbackPlaying"}}})
+  end
+  function Speaker:stop()
+    quickApp:DPUT(fmt("/devices/%s",self.id),{{attributes = {playback = "playbackPaused"}}})
+  end
+  function Speaker:pause()
+    quickApp:DPUT(fmt("/devices/%s",self.id),{{attributes = {playback = "playbackPaused"}}})
+  end
+  function Speaker:setMute(v)
+    quickApp:DPUT(fmt("/devices/%s",self.id),{{attributes = {isMuted = v}}})
+  end
+  function Speaker:setVolume(v)
+    quickApp:DPUT(fmt("/devices/%s",self.id),{{attributes = {volume = v}}})
+  end
+  function Speaker:prev()
+    quickApp:DPUT(fmt("/devices/%s",self.id),{{attributes = {playback = "playbackPrevious"}}})
+  end
+  function Speaker:next()
+    quickApp:DPUT(fmt("/devices/%s",self.id),{{attributes = {playback = "playbackNext"}}})
+  end
+  local speakerStates = {
+    playbackPaused = 'paused',
+    playbackPlaying = 'playing',
+    playbackStopped = 'stopped',
+    playbackBuffering = 'buffering',
+    [""] = 'unknown'
+  }
+  local function getIF(v,dflt) if v==nil then return dflt else return v end end
+  function Speaker:update(d)
+    local stat,res = pcall(function()
+      local attr = d.attributes
+      if attr.playbackAudio then
+        self.playbackAudio = attr.playbackAudio.playItem
+      end
+      --self.power = geattr.power or self.power
+      self.volume = getIF(attr.volume,self.volume)
+      self.muted = getIF(attr.isMuted,self.muted)
+      self.state = getIF(attr.playback,self.state)
+      if self.child then
+        local child = self.child
+        child:updateProperty('volume',self.volume)
+        child:updateProperty('mute',self.muted)
+        child:updateProperty('state',speakerStates[self.state])
+        if self.playbackAudio then
+          local song = self.playbackAudio
+          child:setVariable("artist",song.artist or "")
+          child:setVariable("title",song.title or "")
+          child:setVariable("album",song.album or "")
+        end
+      end
+    end)
+    if not stat then 
+      printc("red","Speaker update error: %s",res) 
+    end
   end
   
   class 'Gateway'(DirigeraDevice)
@@ -361,9 +439,16 @@ function QuickApp:defineClasses()
   end
   
   class 'ChildPM25Sensor'(QwikAppChild)
-  function ChildPM25Sensor:__init(d) QwikAppChild.__init(self,d) end
+  function ChildPM25Sensor:__init(d) 
+    QwikAppChild.__init(self,d) 
+    setTimeout(function() self:updateProperty("unit"," µg/m³") end,0)
+    setTimeout(function() self:updateProperty("deviceIcon",550) end,0)
+  end
   class 'ChildVocSensor'(QwikAppChild)
-  function ChildVocSensor:__init(d) QwikAppChild.__init(self,d) end
+  function ChildVocSensor:__init(d) QwikAppChild.__init(self,d) 
+    setTimeout(function() self:updateProperty("unit"," ppm") end,0)
+    setTimeout(function() self:updateProperty("deviceIcon",273) end,0)
+  end
   class 'ChildTempSensor'(QwikAppChild)
   function ChildTempSensor:__init(d) QwikAppChild.__init(self,d) end
   class 'ChildHumiditySensor'(QwikAppChild)
@@ -372,24 +457,29 @@ function QuickApp:defineClasses()
   class 'AirSensor'(DirigeraDevice)
   function AirSensor:__init(d)
     DirigeraDevice.__init(self,d)
-    -- DG.childs[self.id.."_pm25"] = {
-    --   name = self.name.."(PM25)",
-    --   type = 'com.fibaro.multilevelSensor',
-    --   className = 'ChildPM25Sensor'
-    -- }
-    -- DG.childs[self.id.."_voc"] = {
-    --   name = self.name.."(VOC)",
-    --   type = 'com.fibaro.multilevelSensor',
-    --   className = 'ChildVocSensor'
-    -- }
+    local manufacturer, model = d.attributes.manufacturer or "", d.attributes.model or ""
+    DG.childs[self.id.."_pm25"] = {
+      name = self.name.."(PM25)",
+      type = 'com.fibaro.multilevelSensor',
+      properties = {unit = " µg/m³", manufacturer = manufacturer, model = model},
+      className = 'ChildPM25Sensor'
+    }
+    DG.childs[self.id.."_voc"] = {
+      name = self.name.."(tVOC)",
+      type = 'com.fibaro.multilevelSensor',
+      properties = {unit = " ppm", manufacturer = manufacturer, model = model},
+      className = 'ChildVocSensor'
+    }
     DG.childs[self.id] = {
       name = self.name.."(Humidity)",
       type = 'com.fibaro.humiditySensor',
+      properties = {manufacturer = manufacturer, model = model},
       className = 'ChildHumiditySensor'
     }
     DG.childs[self.id.."_temp"] = {
       name = self.name.."(Temp)",
       type = 'com.fibaro.temperatureSensor',
+      
       className = 'ChildTempSensor'
     }
   end
@@ -398,14 +488,14 @@ function QuickApp:defineClasses()
     self.currentPM25 = d.attributes.currentPM25 or self.currentPM25
     self.vocIndex = d.attributes.vocIndex or self.vocIndex
     self.currentTemperature = d.attributes.currentTemperature or self.currentTemperature
-    -- local PM = quickApp.children[self.id.."_pm25"]
-    -- if PM then PM:updateProperty('value',self.currentPM25) end
+    local PM = quickApp.children[self.id.."_pm25"]
+    if PM then PM:updateProperty('value',self.currentPM25) end
     local RH = quickApp.children[self.id]
     if RH then RH:updateProperty('value',self.currentRH) end
     local TEMP = quickApp.children[self.id.."_temp"]
     if TEMP then TEMP:updateProperty('value',self.currentTemperature) end
-    -- local VOC = quickApp.children[self.id.."_voc"]
-    -- if VOC then VOC:updateProperty('value',self.vocIndex) end
+    local VOC = quickApp.children[self.id.."_voc"]
+    if VOC then VOC:updateProperty('value',self.vocIndex) end
   end
   
   class 'ChildBinarySwitch'(QwikAppChild)
@@ -440,6 +530,7 @@ function QuickApp:defineClasses()
     quickApp:DPUT(fmt("/devices/%s",self.id),{{attributes = {isOn = false}}})
   end
   function BinarySwitch:update(data)
+    if not self.child then return end
     self.currentAmps = data.attributes.currentAmps or self.currentAmps
     self.currentVoltage = data.attributes.currentVoltage or self.currentVoltage
     self.currentActivePower = data.attributes.currentActivePower or self.currentActivePower
@@ -485,7 +576,7 @@ function QuickApp:defineClasses()
   function DG:addScene(d)
     scenes[d.info.name] = d
   end
-
+  
   function QuickApp:scene(name,trigger)
     local scene = scenes[name]
     if not scene then ERRORF("Scene %s not found",name) return end
@@ -495,40 +586,40 @@ function QuickApp:defineClasses()
       self:DPOST(fmt("/scenes/%s/trigger",scene.id))
     end
   end
-
+  
   function QuickApp:createScene(name,icon,sceneType,triggers,actions)
-        ---Creates a new scene.
-       --- Note:
-        ---To create an empty scene leave actions and triggers None.
-        -- Args:
-        --     info (Info): Name & Icon
-        --     type (SceneType): typically USER_SCENE
-        --     triggers (List[Trigger]): Triggers for the Scene (An app trigger will be created automatically)
-        --     actions (List[Action]): Actions that will be run on Trigger
-
-        -- Returns:
-        --     Scene: Returns the newly created scene.
-        local triggerList = json.util.InitArray({})
-        if triggers then
-          for _,x in ipairs(triggers) do triggerList[#triggerList+1] = json.encode(x) end
-
-        end
-        local actionList = json.util.InitArray({})
-        if actions then
-            for _,x in ipairs(actions) do actionList[#actionList+1] = json.encode(x) end
-        end
-        local data = {
-            info = {name=name,icon=icon or "scenesSnowflake"},
-            type =  sceneType or "userScene",
-            triggers = triggerList,
-            actions = actionList,
-        }
-        local d = json.encode(data)
-        self:DPOST("/scenes/",data,function(d)
-          print(json.encode(d))
-        end)
-      end
-
+    ---Creates a new scene.
+    --- Note:
+    ---To create an empty scene leave actions and triggers None.
+    -- Args:
+    --     info (Info): Name & Icon
+    --     type (SceneType): typically USER_SCENE
+    --     triggers (List[Trigger]): Triggers for the Scene (An app trigger will be created automatically)
+    --     actions (List[Action]): Actions that will be run on Trigger
+    
+    -- Returns:
+    --     Scene: Returns the newly created scene.
+    local triggerList = json.util.InitArray({})
+    if triggers then
+      for _,x in ipairs(triggers) do triggerList[#triggerList+1] = json.encode(x) end
+      
+    end
+    local actionList = json.util.InitArray({})
+    if actions then
+      for _,x in ipairs(actions) do actionList[#actionList+1] = json.encode(x) end
+    end
+    local data = {
+      info = {name=name,icon=icon or "scenesSnowflake"},
+      type =  sceneType or "userScene",
+      triggers = triggerList,
+      actions = actionList,
+    }
+    local d = json.encode(data)
+    self:DPOST("/scenes/",data,function(d)
+      print(json.encode(d))
+    end)
+  end
+  
   function DG:linkDevices() 
     for _,d in pairs(devices.id) do
       local child = quickApp.children[d.id]

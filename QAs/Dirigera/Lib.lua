@@ -9,6 +9,16 @@ function printc(col,f,...)
   print(str)
 end
 
+function table.copy(obj)
+  if type(obj) == 'table' then
+    local res = {}
+    for k, v in pairs(obj) do res[k] = table.copy(v) end
+    return res
+  else
+    return obj
+  end
+end
+
 function DEBUGF(tag,fmt,...)
   if fibaro.debugFlags[tag] then
     print(fmt:format(...))
@@ -173,16 +183,6 @@ function QuickApp:DDEL(url,data,cb)
       ERRORF("Error delete data: %s %s", err,data or "")
     end
   })
-end
-
-EVENT = EVENT or {}
-function QuickApp:post(ev,t)
-  if type(ev) == 'function' then
-    return setTimeout(ev,t or 0)
-  end
-  local h = EVENT[ev.type]
-  if not h then ERRORF("No handler for event type: %s",ev.type) end
-  return setTimeout(function() h(EVENT,ev) end,t or 0)
 end
 
 local function round(x) return math.floor(x+0.5) end
