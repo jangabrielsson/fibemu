@@ -150,7 +150,8 @@ end
 local function dumpUI(UI)
   local lines = {}
   for _, row in ipairs(UI or {}) do
-    if row[1] then row = row[1] end
+    for _,l in ipairs(row) do l.type=nil end
+    if not row[2] then row = row[1] end
     lines[#lines+1]="--%%u="..toLua(row)
   end
   print("Proxy UI:\n"..table.concat(lines,"\n"))
