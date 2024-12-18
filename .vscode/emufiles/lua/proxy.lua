@@ -57,7 +57,9 @@ local function toLua(t)
     for k, _ in pairs(t) do keys[#keys + 1] = k end
     table.sort(keys, keyCompare)
     for _, k in ipairs(keys) do
-      local tk = type(t[k]) == 'table' and toLua(t[k]) or '"'..t[k]..'"'
+      local tk = type(t[k]) == 'table' and toLua(t[k]) 
+        or (type(t[k]) == 'boolean' or type(t[k])=='number') and tostring(t[k])
+        or '"'..t[k]..'"'
       res[#res + 1] = string.format('%s=%s', k, tk)
     end
     return "{" .. table.concat(res, ",") .. "}"
@@ -190,7 +192,7 @@ function QuickApp:launchProxy(name)
     myself.uiMap = uiMap
     myself.UI = uiStruct
     
-    dumpUI(self.UI)
+    dumpUI(myself.UI)
   end
   self._proxyId = p.id
   local data = fibaro.fibemu.libs.refreshStates.hookVarData
@@ -241,6 +243,22 @@ function QuickApp:launchProxy(name)
     return false
   end)
   
+  api._interceptpattern("DELETE","/plugins/removeChildDevice/(%d+)",function(m,path,data,hc3,id)
+    local chs = api.get("/devices?parentId="..self.id)
+    local isChild = false
+    for _,ch in ipairs(chs) do
+      if ch.id == tonumber(id) then
+        isChild = true
+        break
+      end
+    end
+    if isChild then
+      local data2,res = api.delete("/plugins/removeChildDevice/"..id,{},"hc3")
+      return true,data2,res
+    end
+    return false
+  end)
+
   api._intercept("GET","/devices?parentId="..self.id,function(m,path,data,hc3)
     local data2,res = api.get("/devices?parentId="..self._proxyId,"hc3")
     return true,data2,res

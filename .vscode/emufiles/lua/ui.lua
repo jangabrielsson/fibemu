@@ -20,7 +20,7 @@ local ELMS = {
   end,
   multi = function(d,w)
     if d.options then map(function(e) e.type='option' end,d.options) end
-    return {name=d.name,style={weight=d.weight or w or "0.50"},text=d.text,type="select", selectionType='multi',
+    return {name=d.name,style={weight=d.weight or w or "0.50"},text=d.text,type="select",visible=true, selectionType='multi',
       options = d.options or {{value="1", type="option", text="option2"}, {value = "2", type="option", text="option3"}},
       values = d.values or { "option3" }
     }
@@ -30,7 +30,7 @@ local ELMS = {
   end,
   switch = function(d,w)
     d.value = d.value == nil and "false" or tostring(d.value)
-    return {name=d.name,style={weight=w or d.weight or "0.50"},text=d.text,type="switch", value=d.value}
+    return {name=d.name,visible=true,style={weight=w or d.weight or "0.50"},text=d.text,type="switch", value=d.value}
   end,
   option = function(d,_)
     return {name=d.name, type="option", value=d.value or "Hupp"}
@@ -195,13 +195,13 @@ local function collectViewLayoutRow(u,map)
           if u.type=='label' then
             row[#row+1]={label=u.name, text=u.text}
           elseif u.type=='button' then
-            local e ={[u.type]=u.name, text=u.text, value=u.value}
+            local e ={[u.type]=u.name, text=u.text, value=u.value, visible=u.visible==nil and true or u.visible}
             e.onReleased = empty((map[u.name] or {}).onReleased)
             e.onLongPressDown = empty((map[u.name] or {}).onLongPressDown)
             e.onLongPressReleased = empty((map[u.name] or {}).onLongPressReleased)
             row[#row+1]=e
           elseif u.type=='switch' then
-            local e ={[u.type]=u.name, text=u.text, value=u.value}
+            local e ={[u.type]=u.name, text=u.text, value=u.value, visible=u.visible==nil and true or u.visible}
             e.onReleased = empty((map[u.name] or {}).onReleased)
             e.onLongPressDown = empty((map[u.name] or {}).onLongPressDown)
             e.onLongPressReleased = empty((map[u.name] or {}).onLongPressReleased)
@@ -213,13 +213,15 @@ local function collectViewLayoutRow(u,map)
               onChanged=(map[u.name] or {}).onChanged,
               max = u.max,
               min = u.min,
-              step = u.step
+              step = u.step,
+              visible = u.visible==nil and true or u.visible,
             }
           elseif u.type=='select' then
             row[#row+1]={
               [u.selectionType=='multi' and 'multi' or 'select']=u.name, 
               text=u.text, 
               options=u.options,
+              visible = u.visible==nil and true or u.visible,
               onToggled=(map[u.name] or {}).onToggled,
             }
           else

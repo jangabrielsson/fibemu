@@ -439,10 +439,20 @@ end
 -----------------------------------------------------------------------------
 
 local _intercepts = { GET={}, POST={}, PUT={}, DELETE={}, PATCH={} }
+local _interceptPatterns = { GET={}, POST={}, PUT={}, DELETE={}, PATCH={} }
 local function callHC3S(x,y,z,w) -- sleep to let threads catch up (ex. importFQA)
     if w ~= "hc3" and (_intercepts[x] or {})[y] then
         local a,b,c = _intercepts[x][y](x,y,z,w)
         if a then return b,c end
+    end
+    if  w ~= "hc3" and  next(_interceptPatterns[x]) then
+        for p,f in pairs(_interceptPatterns[x]) do
+            local args = {y:match(p)}
+            if args and #args > 0 then
+                local a,b,c = f(x,y,z,w,table.unpack(args))
+                if a then return b,c end
+            end
+        end
     end
     local a,b,c = callHC3(x,y,z,w)
     if (w ~= 'hc3' and fibaro) and (fibaro.sleep ~= nil) then fibaro.sleep(0) end
@@ -456,5 +466,8 @@ api = {
     delete = function(url, data, hc3) return callHC3S("DELETE", url, data, hc3) end,
     _intercept = function(method, url, fun) 
         _intercepts[method][url] = fun
+     end,
+     _interceptpattern = function(method, url, fun) 
+        _interceptPatterns[method][url] = fun
      end
 }
