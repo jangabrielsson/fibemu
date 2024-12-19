@@ -38,7 +38,7 @@ of this license document, but changing it is not allowed.
 local TEST = false
 
 class 'Sonos'
-Sonos.VERSION = "0.86"
+Sonos.VERSION = "0.87"
 function Sonos:__init(IP,initcb,debugFlags)
   self.TIMEOUT = 30
   local colors = {'lightgreen','lightblue','yellow','orange','purple','pink','cyan','magenta','lime','red'}
@@ -342,13 +342,14 @@ function QuickApp:__init(...)
     local _onInit = self.onInit
     function self:onInit()
       quickApp = self
-      local ip = QuickApp.preloadSonos.ip
+      local ip = QuickApp.preloadSonos.ip or ""
       local var = ip:match("qvar:(.*)")
       if var then
         for _,v in ipairs(self.properties.quickAppVariables) do
           if v.name == var then ip = v.value break end
         end
       end
+      assert(ip~="","Sonos IP not set")
       Sonos(ip,function(sonos)
         self.sonos = sonos
         if _onInit then _onInit(self) end
