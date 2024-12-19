@@ -470,14 +470,14 @@ customUI = {
             { slider = 'sliderSP',   onChanged = 'sliderSPChanged', min = '40', max = '80', step = '1', value = '72' },
         },
         {
-            { button = 'btnAuto', text = "Auto", onReleased = 'thermoModeSet' },
-            { button = 'btnOff',  text = 'Off',  onReleased = 'thermoModeSet' },
+            { button = 'btnAuto', text = "Auto", onReleased = 'setThermostatMode' },
+            { button = 'btnOff',  text = 'Off',  onReleased = 'setThermostatMode' },
         },
         {
-            { button = 'btnHeat', text = "Heat", onReleased = 'thermoModeSet' },
-            { button = 'btnCool',  text = 'Cool',  onReleased = 'thermoModeSet' },
+            { button = 'btnHeat', text = "Heat", onReleased = 'setThermostatMode' },
+            { button = 'btnCool',  text = 'Cool',  onReleased = 'setThermostatMode' },
         },
-        { button = 'btnEco', text = "Eco", onReleased = 'thermoModeSet' },
+        { button = 'btnEco', text = "Eco", onReleased = 'setThermostatMode' },
     },
 }
 
