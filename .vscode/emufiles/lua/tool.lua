@@ -66,38 +66,6 @@ local function writeFile(fname, content, silent)
     return true
 end
 
-local sortKeys = {
-    "button", "slider", "label",
-    "text",
-    "min", "max", "value",
-    "visible",
-    "onRelease", "onChanged",
-}
-local sortOrder = {}
-for i, s in ipairs(sortKeys) do sortOrder[s] = "\n" .. string.char(i + 64) .. " " .. s end
-local function keyCompare(a, b)
-    local av, bv = sortOrder[a] or a, sortOrder[b] or b
-    return av < bv
-end
-
-local function toLua(t)
-    if type(t) == 'table' and t[1] then
-        local res = {}
-        for _, v in ipairs(t) do
-            res[#res + 1] = toLua(v)
-        end
-        return "{" .. table.concat(res, ",") .. "}"
-    else
-        local res, keys = {}, {}
-        for k, _ in pairs(t) do keys[#keys + 1] = k end
-        table.sort(keys, keyCompare)
-        for _, k in ipairs(keys) do
-            res[#res + 1] = string.format('%s="%s"', k, t[k])
-        end
-        return "{" .. table.concat(res, ",") .. "}"
-    end
-end
-
 function tool.download_unpack(file, rsrc, id, path)
     printf("Downloading QA %s to %s", name, path)
     local fqa, code = api.get("/quickApp/export/" .. id, "hc3")
@@ -140,7 +108,7 @@ function tool.download_unpack(file, rsrc, id, path)
     outf("--%%%%id=%s", id)
     qa.UI = uilib.view2UI(fqa.initialProperties.viewLayout, fqa.initialProperties.uiCallbacks)
     for _, row in ipairs(qa.UI or {}) do
-        outf("--%%%%u=%s", toLua(row))
+        outf("--%%%%u=%s", fibemu.toLua(row))
     end
     for n, fd in pairs(files) do
         outf("--%%%%file=%s,%s;", fd.fname, n)
@@ -238,12 +206,13 @@ function tool.update(file, rsrc, name, path) -- move logic to files?
         printf("Updating viewLayout and uiCallbacks...")
     end
 
-    local viewLayout,uiCallbacks = fibemu.libs.ui.pruneStock(dev.properties)
+    local viewLayout,uiView,uiCallbacks = fibemu.libs.ui.pruneStock(dev.properties)
 
     local stat, res = api.put("/devices/" .. id, {
         properties = {
             uiCallbacks = updateUI and uiCallbacks or nil,
             viewLayout = updateUI and viewLayout or nil,
+            uiView = updateUI and uiView or nil,
             quickAppVariables = updateQvs and dev.properties.quickAppVariables or nil,
         }
     }, "hc3")

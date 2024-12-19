@@ -33,7 +33,12 @@ local function getToken(IP, code, codeVerifier, cb)
       checkCertificate = false
     },
     success = function(response)
-      local data = json.decode(response.data)
+      local stat,res = pcall(json.decode,response.data)
+      if not stat then
+        ERRORF("Error get token: %s ", json.encode(response))
+        return
+      end
+      local data = res
       cb(data.access_token)
     end,
     error = function(err)
@@ -59,7 +64,11 @@ local function sendChallenge(IP, codeVerifier)
     },
     success = function(response)
       local data = json.decode(response.data)
-      print("Press the action button on Dirigera then hit 'Get token'' ..." )
+      if data == nil then 
+        ERRORF("Error requesting token: %s", json.encode(response))
+        return
+      end
+      print("Press the action button on the bottom of the Dirigera hub, then press QA button 'Get token'' ..." )
       Hub.lastRequest = { IP=IP, codeVerifier=codeVerifier, code=data.code}
       --getToken(IP, data.code, codeVerifier, cb)
     end,

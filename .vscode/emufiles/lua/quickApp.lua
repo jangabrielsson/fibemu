@@ -26,10 +26,7 @@ function QuickAppBase:__init(dev)
   self.parentId    = dev.parentId
   self.uiCallbacks = {}
   self._view       = {}
-  for _, e in ipairs(dev.properties.uiCallbacks or {}) do
-    self.uiCallbacks[e.name] = self.uiCallbacks[e.name] or {}
-    self.uiCallbacks[e.name][e.eventType] = e.callback
-  end
+  self:registerUICallbacks()
 end
 
 function QuickAppBase:debug(...) fibaro.debug(__TAG, ...) end
@@ -184,12 +181,14 @@ function QuickAppBase:updateView(elm, typ, val)
 end
 
 class 'QuickApp' (QuickAppBase)
+QuickApp._hooks = {}
 
 function QuickApp:__init(device)
   QuickAppBase.__init(self, device)
   self.childDevices = {}
   self:setupUICallbacks()
   if fibaro.fibemu.zombie then self:_setupZombie() end
+  for _,cb in pairs(self._hooks) do cb(self) end
   if self.onInit then
     self:onInit()
   end
@@ -347,8 +346,11 @@ function __onAction(id, actionName, args)
   onAction(id, { deviceId = id, actionName = actionName, args = json.decode(args).args })
 end
 
+local filterActionLog = {UIAction=true,_ProxyOnAction=true,_ProxyUIHandler=true}
 function onAction(id, event)
-  (fibaro.fibemu and fibaro.fibemu._print or print)("onAction: ", json.encode(event))
+  if not filterActionLog[event.actionName] then
+    (fibaro.fibemu and fibaro.fibemu._print or print)("onAction: ", json.encode(event))
+  end
   if quickApp.actionHandler then return quickApp:actionHandler(event) end
   if event.deviceId == quickApp.id then
     return quickApp:callAction(event.actionName, table.unpack(event.args))
@@ -356,6 +358,16 @@ function onAction(id, event)
     return quickApp.childDevices[event.deviceId]:callAction(event.actionName, table.unpack(event.args))
   end
   quickApp:warning(string.format("Child with id:%s not found", id))
+end
+
+function QuickAppBase:UIAction(eventType, elementName, arg)
+  local event = {
+      deviceId = self.id, 
+      eventType = eventType,
+      elementName = elementName
+  }
+  event.values = arg ~= nil and  { arg } or json.util.InitArray({})
+  onUIEvent(self.id, event)
 end
 
 local function tryboolean(str) if str=='true' then return true elseif str=='false' then return false else return str end end

@@ -41,6 +41,7 @@ end
 
 local function callHC3(method, path, data, hc3)
     local lcl = hc3 ~= "hc3"
+    if foop == 0 then print("A3") end
     local fibemu = fibaro and fibaro.fibemu and fibaro.fibemu.config and fibaro.fibemu or QA
     local conf = fibemu.config
     for p,_ in pairs( fibemu.passThrough or {}) do
@@ -53,8 +54,9 @@ local function callHC3(method, path, data, hc3)
     local port = hc3 and conf.port or conf.wport
     local creds = hc3 and conf.creds or nil
     local url = fmt("http://%s:%s/api%s", host, port, path)
-    if fibemu.debugFlags.hc3_http and not path=="/globalVariables/FIBEMU" then
-        fibemu.syslog(__TAG or "HC3", "%s: %s", method, url)
+    if foop == 0 then print("A4",fibemu.debugFlags.hc3_http,path) end
+    if fibemu.debugFlags.hc3_http and path~="/globalVariables/FIBEMU" then
+        fibemu.syslog(__TAG or "HC3", "%s: %s %s", method, url, json.encode(data or {}))
     end
     local options = {
         timeout = HC3_TIMEOUT,
@@ -249,7 +251,7 @@ function net.UDPSocket(opts2)
     return self2
 end
 
-function net.WebSocketClient()
+function net.WebSocketClient(opts)
     local self = { _callback = {} }
     function self:connect(url, headers)
         local function cb(event, ...)
@@ -436,7 +438,22 @@ function mqtt.Client.connect(uri, options)
 end
 -----------------------------------------------------------------------------
 
+local _intercepts = { GET={}, POST={}, PUT={}, DELETE={}, PATCH={} }
+local _interceptPatterns = { GET={}, POST={}, PUT={}, DELETE={}, PATCH={} }
 local function callHC3S(x,y,z,w) -- sleep to let threads catch up (ex. importFQA)
+    if w ~= "hc3" and (_intercepts[x] or {})[y] then
+        local a,b,c = _intercepts[x][y](x,y,z,w)
+        if a then return b,c end
+    end
+    if  w ~= "hc3" and  next(_interceptPatterns[x]) then
+        for p,f in pairs(_interceptPatterns[x]) do
+            local args = {y:match(p)}
+            if args and #args > 0 then
+                local a,b,c = f(x,y,z,w,table.unpack(args))
+                if a then return b,c end
+            end
+        end
+    end
     local a,b,c = callHC3(x,y,z,w)
     if (w ~= 'hc3' and fibaro) and (fibaro.sleep ~= nil) then fibaro.sleep(0) end
     return a,b,c
@@ -447,4 +464,10 @@ api = {
     post = function(url, data, hc3) return callHC3S("POST", url, data, hc3) end,
     put = function(url, data, hc3) return callHC3S("PUT", url, data, hc3) end,
     delete = function(url, data, hc3) return callHC3S("DELETE", url, data, hc3) end,
+    _intercept = function(method, url, fun) 
+        _intercepts[method][url] = fun
+     end,
+     _interceptpattern = function(method, url, fun) 
+        _interceptPatterns[method][url] = fun
+     end
 }

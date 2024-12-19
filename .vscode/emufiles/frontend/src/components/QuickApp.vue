@@ -127,7 +127,9 @@ export default {
                         } else if (item.type == "label") {
                             item.id = item.label;
                         } else if (item.type == "select") {
-                            item.id = item.select;
+                            item.id = item.select;                       
+                         } else if (item.type == "multi") {
+                            item.id = item.multi;
                         } else if (item.type == "switch") {
                             console.log("Switch: " + item.text);
                             item.id = item.switch;

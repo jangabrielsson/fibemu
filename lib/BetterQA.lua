@@ -9,6 +9,12 @@ function QuickApp:tracef(f,...) self:trace(fmt(f,...)) end
 function QuickApp:warningf(f,...) self:warning(fmt(f,...)) end
 function QuickApp:errorf(f,...) self:error(fmt(f,...)) end
 
+function DEBUG(flag,...)
+  if QuickApp.debugFlags and QuickApp.debugFlags[flag] then
+    fibaro.debug(__TAG,...)
+  end
+end
+
 local function getVariable(self,name)
   __assert_type(name, "string")
   for key,value in pairs(self.properties.quickAppVariables) do
@@ -76,4 +82,26 @@ function QuickApp:__init(...)
     if _onInit then _onInit(self) end
   end
   _init(self,...)
+end
+
+local _chilInit = QuickAppChild.__init
+
+function QuickAppChild:__init(...)
+  local _onInit = self.onInit
+  function self:onInit()
+    self.qvar = setmetatable({},{
+      __index = function(t,k) return getVariable(self,k) end,
+      __newindex = function(t,k,v) return setVariable(self,k,v) end,   
+    })
+    self.storage = setmetatable({},{
+      __index = function(key) return self:internalStorageGet(key) end,
+      __newindex = function(key,val)
+        if val == nil then self:internalStorageRemove(key)
+        else self:internalStorageSet(key,val) end
+      end
+    })
+    self.lng = quickApp.lng -- Children gets same language table as parent.
+    if _onInit then _onInit(self) end
+  end
+  _chilInit(self,...)
 end

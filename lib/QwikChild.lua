@@ -1,5 +1,5 @@
 do
-  local VERSION = "1.0"
+  local VERSION = "1.1"
   print("QwikAppChild library v"..VERSION)
   local childID = 'ChildID'
   local classID = 'ClassName'
@@ -28,13 +28,12 @@ do
     self._sid = tonumber(uid:match("(%d+)$"))
   end
 
-  function QuickApp:createChildDevice(uid,props,interfaces,className)
+  function QuickApp:createChildDevice0(uid,props,interfaces,className)
     __assert_type(uid,'string')
     __assert_type(className,'string')
     props.initialProperties = props.initialProperties or {}
     props.initialInterfaces = interfaces
     UID = uid
-    print(json.encode(props))
     local c = createChild(self,props,_G[className])
     UID = nil
     if not c then return end
@@ -92,7 +91,7 @@ do
             type = ch.data.type,
             initialProperties = ch.data.properties,
           }
-          self:createChildDevice(ch.uid,props,ch.data.interfaces,ch.data.className)
+          self:createChildDevice0(ch.uid,props,ch.data.interfaces,ch.data.className)
         end
       end
     end)

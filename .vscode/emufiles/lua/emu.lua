@@ -339,7 +339,7 @@ local function createEnvironment(id)
     -- env.fibaro.pyhooks = pyhooks
     if debugFlags.dark or config.dark then util.fibColors['TEXT'] = util.fibColors['DARKTEXT'] end
 
-    for _, l in ipairs({"class.lua", "fibaro.lua", "net.lua", "quickApp.lua", "fibemu.lua", "scene.lua" }) do
+    for _, l in ipairs({"class.lua", "fibaro.lua", "net.lua", "quickApp.lua", "proxy.lua", "fibemu.lua", "scene.lua" }) do
         local fn = luapath .. l
         if qa.debug.libraryfiles then
             QA.syslog(qa.tag, "Loading library " .. fn)
@@ -806,4 +806,4 @@ end
 if not config.nogreet then
     QA.syslog("boot", "QA emulator started")
 end
-if (not config.lcl) and config.fibemuvar then refreshStates.hc3HookVar() end
+if (not config.lcl) and config.fibemuvar then refreshStates.hc3HookVar(QA) end

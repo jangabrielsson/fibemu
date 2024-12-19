@@ -35,13 +35,14 @@ function class(name)
   function cl2.__tostring() return pname end
   function cl2.__call(_,...)
     index = index + 1
-    local obj = setmetatable({___index=index},cl)
+    local obj = setmetatable({___index=index,__USERDATA = true},cl)
     local init = rawget(cl,'__init')
     if init then init(obj,...) end
     return obj
   end
   _G[name] = setmetatable({ __org = cl },cl2)
   return function(parent)
+    if parent == nil then error("Parent class not found") end
     setmetatable(cl,parent.__org)
     if parent.__org.__tostring then -- inherent parent tostring
       cl.__tostring = parent.__org.__tostring

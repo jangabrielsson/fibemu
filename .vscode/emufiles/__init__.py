@@ -19,7 +19,7 @@ if __name__ == "__main__":
     print(f"Host name {hostname}",file=sys.stderr)
     hostIP = socket.gethostbyname(hostname)
     print(f"Host ip {hostIP}",file=sys.stderr)
-    version = "0.42"
+    version = "0.50"
     parser = argparse.ArgumentParser(
                     prog='fibemu',
                     description='QA/HC3 emulator for HC3',

@@ -320,7 +320,18 @@ local EventTypes = { -- There are more, but these are what I seen so far...
         f=function(d,e) return true end,
         l=function(d,e) return fmt("%s %s",e.type,tostring(d.id)) end
     },
-
+    SprinklerSequenceStartedEvent = {
+        f=function(d,e) return true end,
+        l=function(d,e) return fmt("%s %s",e.type,tostring(d.sequenceId)) end
+    },
+    SprinklerSequenceFinishedEvent = {
+        f=function(d,e) return true end,
+        l=function(d,e) return fmt("%s %s",e.type,tostring(d.sequenceId)) end
+    },
+    DeviceGroupActionRanEvent = {
+        f=function(d,e) return true end,
+        l=function(d,e) return fmt("%s %s",e.type,d.actionName) end
+    },
     --Unknown event type: 	{"data":{"scheduleId":4,"sequenceId":4},"created":1717128000,"type":"SprinklerSequenceStartedEvent","createdMillis":1717128000600}
     --Unknown event type: 	{"data":{"scheduleId":4,"sequenceId":4},"created":1717128900,"type":"SprinklerSequenceFinishedEvent","createdMillis":1717128900602}
 }
@@ -367,9 +378,11 @@ function r.start()
     QA.pyhooks.refreshStates(true, url, options) -- Python function 
 end
 
-function r.hc3HookVar()
-    api.post("/globalVariables", {name=QA.FIBEMUVAR,value=tostring(os.time())}, "hc3")
-    local data = {url=string.format("http://%s:%s",config.hostIP,config.wport)}
+r.hookVarData = {}
+function r.hc3HookVar(QA)
+    api.post("/globalVariables", {name=QA.FIBEMUVAR,value=json.encode({time=tostring(os.orgtime())})}, "hc3")
+    local data = r.hookVarData
+    data.url=string.format("http://%s:%s",config.hostIP,config.wport)
     local function loop()
         data.time=os.orgtime()
         api.put("/globalVariables/"..QA.FIBEMUVAR, {name=QA.FIBEMUVAR, value=(json.encode(data))}, "hc3")

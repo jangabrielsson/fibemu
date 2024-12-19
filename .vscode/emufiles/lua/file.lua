@@ -88,7 +88,7 @@ local function annotateUI(UI)
     for _, e in ipairs(UI) do
         if e[1] == nil then e = { e } end
         for _, e2 in ipairs(e) do
-            e2.type = e2.button and 'button' or e2.slider and 'slider' or e2.label and 'label' or e2.select and 'select' or e2.switch and 'switch'
+            e2.type = e2.button and 'button' or e2.slider and 'slider' or e2.label and 'label' or e2.select and 'select' or e2.switch and 'switch' or e2.multi and 'multi'
             map[e2[e2.type]] = e2
         end
         res[#res + 1] = e
@@ -221,7 +221,7 @@ local function installQA(fname, conf)
 
     function chandler.zombie(var, val, vars) vars.zombie = tonumber(val) end
 
-    function chandler.proxy(var, val, vars) vars.proxy = tonumber(val) end
+    function chandler.proxy(var, val, vars) vars.proxy = eval(val) end
 
     function chandler.noStock(var, val, vars) vars.noStock = eval(val) end
     function chandler.fullLua(var, val, vars) vars.fullLua = eval(val) end
@@ -288,7 +288,9 @@ local function installQA(fname, conf)
             QA.syslogerr("install", "(merge) Can't create file - %s", files[#files])
             return
         end
-        f:write(table.concat(code, "\n"))
+        local code = table.concat(code, "\n")
+        f:write(code)
+        f:close()
     end
 
     function chandler.interface(var, val, vars) --%%interface=x,y,z
@@ -366,7 +368,7 @@ local function installQA(fname, conf)
 
     if vars.ui then
         ui.transformUI(vars.ui)
-        dev.properties.viewLayout = ui.mkViewLayout(vars.ui, nil, dev.id)
+        dev.properties.viewLayout,dev.properties.uiView = ui.mkViewLayout(vars.ui, nil, dev.id)
         dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(vars.ui)
         uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
         uiStruct, uiMap = annotateUI(uiStruct)
@@ -387,6 +389,7 @@ local function installQA(fname, conf)
         uiMap = uiMap or {},
         definedId = definedId,
         images = vars.images,
+        proxy = vars.proxy,
     }
 
     for k, v in pairs(vars.debug) do emu.debug[k] = v end
@@ -499,20 +502,6 @@ local function createChildDevice(pID, cdev)
     dev.parentId = pID
     local tag = "QUICKAPP" .. dev.id
 
-    -- local uiStruct, uiMap = {}, {}
-    -- if dev.properties.viewLayout then
-    --     uiStruct, uiMap = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks), nil
-    -- end
-
-    -- if next(uiStruct) == nil then
-    --     local UI = customUI[dev.type] or {}
-    --     ui.transformUI(UI)
-    --     dev.properties.viewLayout = ui.mkViewLayout(UI, nil, dev.id)
-    --     dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(UI)
-    --     uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
-    -- end
-    -- uiStruct, uiMap = annotateUI(uiStruct)
-
     local UI =  ui.view2UI(dev.properties.viewLayout or {}, dev.properties.uiCallbacks or {})
     local uiStruct, uiMap = nil, nil
 
@@ -520,7 +509,7 @@ local function createChildDevice(pID, cdev)
 
     if next(UI) then
         ui.transformUI(UI)
-        dev.properties.viewLayout = ui.mkViewLayout(UI, nil, dev.id)
+        dev.properties.viewLayout,dev.properties.uiView = ui.mkViewLayout(UI, nil, dev.id)
         dev.properties.uiCallbacks = ui.uiStruct2uiCallbacks(UI)
         uiStruct = ui.view2UI(dev.properties.viewLayout, dev.properties.uiCallbacks)
         uiStruct, uiMap = annotateUI(uiStruct)
@@ -659,17 +648,19 @@ local function createFQA(id)
     end
 
     local p = copy(dev.properties)
-    p.viewLayout, p.uiCallbacks = ui.pruneStock(p)
+    p.viewLayout, p.uiView, p.uiCallbacks = ui.pruneStock(p)
 
     local props = {
-        apiVersion = "1.2",
+        apiVersion = "1.3",
         quickAppVariables = p.quickAppVariables or {},
         uiCallbacks = #p.uiCallbacks > 0 and p.uiCallbacks or nil,
         viewLayout = p.viewLayout,
+        uiView = p.uiView,
+        useUiView=false,
         typeTemplateInitialized = true,
     }
     local fqa = {
-        apiVersion = "1.2",
+        apiVersion = "1.3",
         name = dev.name,
         type = dev.type,
         files = files,
@@ -706,13 +697,15 @@ local function file2fqa(fname)
     end
 
     local p = copy(dev.properties)
-    p.viewLayout, p.uiCallbacks = ui.pruneStock(p)
+    p.viewLayout, p.uiView, p.uiCallbacks = ui.pruneStock(p)
 
     local props = {
-        apiVersion = "1.2",
+        apiVersion = "1.3",
         quickAppVariables = p.quickAppVariables or {},
         uiCallbacks = #p.uiCallbacks > 0 and p.uiCallbacks or nil,
         viewLayout = p.viewLayout,
+        uiView = p.uiView,
+        useUiView=false,
         typeTemplateInitialized = true,
     }
     local fqa = {
