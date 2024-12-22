@@ -4,6 +4,7 @@
 --%%debug=refresh:false
 --%%file=lib/QwikChild.lua,child;
 --%%u={slider='slider_ID_0',text='slider',onChanged='fopp'}
+--%%u={button='btnId1',text='Plonk',onChanged='plonk'}
 
 class 'MyBinarySwitch'(QwikAppChild)
 function MyBinarySwitch:__init(device)
@@ -31,7 +32,7 @@ function QuickApp:onInit()
 end
 
 function QuickApp:fopp(ev)
-  print("BARF",ev.values[1])
+  print("Slider",ev.values[1])
 end
 
 function QuickApp:foo(a,b,c) print(a,b,c) end

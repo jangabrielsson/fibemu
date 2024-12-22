@@ -49,7 +49,7 @@ end
 function Event:read(ev)
     self.sock:read({
         success = function(msg)
-            self:debug("Echo '%s'",msg)
+            self:debug("Echo2 '%s'",msg)
             self.sock:write(string.format("Echo '%s'\n",msg))
             self:post{type='prompt'}
         end,
