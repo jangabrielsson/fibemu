@@ -172,6 +172,12 @@ local function uiStruct2uiCallbacks(UI)
         local cbt = e.name..defu
         if e.onReleased then
           cbt = e.onReleased
+        elseif e.onLongPressReleased then
+            cbt = e.onLongPressReleased
+            deff = "onLongPressReleased"
+        elseif e.onLongPressDown then
+          cbt = e.onLongPressDown
+          deff = "onLongPressDown"
         elseif e.onChanged then
           cbt = e.onChanged
         elseif e.onToggled then
@@ -336,7 +342,7 @@ local function pruneViewLayout(vl)
 end
 
 local function pruneuiView(vl)
-  local x = vl
+  local x = vl or {}
   local items = {}
   for i = 1,#x do
       --print(json.encode(x[i]))
