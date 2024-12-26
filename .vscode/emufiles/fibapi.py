@@ -10,7 +10,7 @@ from fastapi.responses import Response
 from fastapi.openapi.utils import get_openapi
 from typing import Any, Dict, List, Optional, Tuple
 from fastapi  import Depends
-from fastapi import status 
+from fastapi import status
 from fastapi import Request
 from pydantic import BaseModel
 from pydantic import Field
@@ -89,7 +89,7 @@ def my_schema():
        "contact": {
            "name": "Get Help with this API",
            "url": "https://forum.fibaro.com/topic/66394-visual-studio-code-vscode-for-quickapp-development/",
-          ## "email": 
+          ## "email":
        },
        "license": {
            "name": "Apache 2.0",
@@ -171,9 +171,16 @@ async def read_item(id: int, request: Request):
     return templates.TemplateResponse("infoqa.html", {"request": request, "emu": emu, "qa": qa, "ui": ui, "qvs":qvs})
 
 ''' Emulator methods '''
-@app.get("emu/info", tags=["Emulator methods"])
+@app.get("/emu/info", tags=["Emulator methods"])
 async def get_emulator_info():
     return {"message": "Hello from FibEmu!"}
+
+@app.get("/emu/config", tags=["Emulator methods"])
+async def get_emulator_config():
+    emu = fibenv.get('fe')
+    cfgs = emu.config
+    cfgList = [{'name': name, 'value': cfgs[name]} for name in cfgs]
+    return cfgList
 
 @app.post("/emu/dump", tags=["Emulator methods"])
 async def dump_emulator_resources(response: Response, fname: str = Body(...)):
@@ -473,7 +480,7 @@ class RefreshStatesQuery(BaseModel):
     last: int = 0
     lang: str = "en"
     rand: float = 0.09580020181569104
-    logs: bool = False  
+    logs: bool = False
 
 @app.get("/api/refreshStates", tags=["RefreshStates methods"])
 async def get_refreshStates_events(response: Response, query: RefreshStatesQuery = Depends()):
@@ -519,7 +526,7 @@ async def update_qa_view(args: UpdateViewParams):
 
 class RestartParams(BaseModel):
     deviceId: int
-    
+
 @app.post("/api/plugins/restart", tags=["Plugins methods"])
 async def restart_qa(args: RestartParams, response: Response):
     args = dict(args)
@@ -829,7 +836,7 @@ async def post_PartitionTryArm(id: int, response: Response):
     item,code = fibenv.get('fe').luaCall("getResource","alarms/v1/partitions",id)
     response.status_code = code
     return item if code < 300 else None
-    
+
 ''' alarm devices methods '''
 @app.get("/api/alarms/v1/devices/", tags=["Alarm devices methods"])
 async def get_alarm_devices(response: Response):
@@ -877,7 +884,7 @@ async def get_Energy_Devices(response: Response):
     items,code = fibenv.get('fe').luaCall("getResource","energy/devices")
     response.status_code = code
     return list(items.values()) if code < 300 else None
-    
+
 @app.get("/api/energy/devices", tags=["Energy devices methods"])
 async def get_Energy_Devices(response: Response):
     items,code = fibenv.get('fe').luaCall("getResource","energy/devices")

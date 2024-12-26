@@ -10,13 +10,13 @@
   "dependencies": {
     "axios": "^1.4.0",
     "bootstrap": "^5.3.1",
-    "vue": "^3.3.4",
+    "vue": "^3.5.13",
     "vue-router": "^4.2.4",
     "vue3-rich-accordion": "^0.0.7",
     "vuex": "^4.1.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.2.3",
-    "vite": "^4.4.6"
+    "vite": "^4.5.5"
   }
 }
