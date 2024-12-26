@@ -136,7 +136,7 @@
       "args": [
         "-l",
         "-f",
-        "${file}"
+        "C:/Users/vermi/source/repos/fibaro/quickApp/Nest/main.lua" //"${file}"
       ],
       "console": "integratedTerminal",
       "justMyCode": true,
