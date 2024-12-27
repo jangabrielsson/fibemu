@@ -148,53 +148,51 @@ end
 local function transformUI(UI) -- { button=<text> } => {type="button", name=<text>}
   traverse(UI,
     function(e)
-      if e.button then e.name,e.type,e.onReleased=e.button,'button',e.onReleased or e.f; e.f=nil
-      elseif e.slider then e.name,e.type,e.onChanged=e.slider,'slider',e.onChanged or e.f; e.f=nil
-      elseif e.select then e.name,e.type=e.select,'select'
-      elseif e.switch then e.name,e.type=e.switch,'switch'
-      elseif e.multi then e.name,e.type=e.multi,'multi'
-      elseif e.option then e.name,e.type=e.option,'option'
-      elseif e.image then e.name,e.type=e.image,'image'
-      elseif e.label then e.name,e.type=e.label,'label'
-      elseif e.space then e.weight,e.type=e.space,'space' end
+      if e.button then 
+        e.name,e.type,e.onReleased=e.button,'button',e.onReleased or e.f; e.f=nil
+      elseif e.slider then 
+        e.name,e.type,e.onChanged=e.slider,'slider',e.onChanged or e.f; e.f=nil
+      elseif e.select then 
+        e.name,e.type=e.select,'select'
+      elseif e.switch then 
+        e.name,e.type=e.switch,'switch'
+      elseif e.multi then 
+        e.name,e.type=e.multi,'multi'
+      elseif e.option then 
+        e.name,e.type=e.option,'option'
+      elseif e.image then 
+        e.name,e.type=e.image,'image'
+      elseif e.label then 
+        e.name,e.type=e.label,'label'
+      elseif e.space then 
+        e.weight,e.type=e.space,'space' end
     end)
   return UI
 end
 
 local function uiStruct2uiCallbacks(UI)
-  local cb = {}
+  local cbs = {}
   traverse(UI,
     function(e)
-      if e.name then
-        -- {callback="foo",name="foo",eventType="onReleased"}
-        local defu = (e.button or e.switch) and "Clicked" or e.slider and "Change" or (e.select or e.multi) and "Toggle" or ""
-        local deff = (e.button or e.switch) and "onReleased" or e.slider and "onChanged" or (e.select or e.multi) and "onToggled" or ""
-        local cbt = e.name..defu
-        if e.onReleased then
-          cbt = e.onReleased
-        elseif e.onLongPressReleased then
-            cbt = e.onLongPressReleased
-            deff = "onLongPressReleased"
-        elseif e.onLongPressDown then
-          cbt = e.onLongPressDown
-          deff = "onLongPressDown"
-        elseif e.onChanged then
-          cbt = e.onChanged
-        elseif e.onToggled then
-          cbt = e.onToggled
-        end
-        if e.button or e.slider or e.switch or e.multi or e.select then
-          cb[#cb+1]={callback=cbt,eventType=deff,name=e.name}
-        end
+      if e.type == 'button' or e.type=='switch' then
+        cbs[#cbs+1]={callback=e.onReleased or "",eventType='onReleased',name=e.name}
+        cbs[#cbs+1]={callback=e.onLongPressDown or "",eventType='onLongPressDown',name=e.name}
+        cbs[#cbs+1]={callback=e.onLongPressReleased or "",eventType='onLongPressReleased',name=e.name}
+      elseif e.type == 'slider' then
+        cbs[#cbs+1]={callback=e.onChanged or "",eventType='onChanged',name=e.name}
+      elseif e.type == 'select' then
+        cbs[#cbs+1]={callback=e.onToggled or "",eventType='onToggled',name=e.name}
+      elseif e.type == 'multi' then
+        cbs[#cbs+1]={callback=e.onToggled or "",eventType='onToggled',name=e.name}
       end
     end)
-  return cb
+  return cbs
 end
 
 
 local function collectViewLayoutRow(u,map)
     local row = {}
-    local function empty(a) return a~="" and a or nil end
+    local function empty(a) return a~="" and a or "" end
     local function conv(u)
       if type(u) == 'table' then
         if u.name then
