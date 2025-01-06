@@ -1,5 +1,5 @@
 do
-  local VERSION = "1.1"
+  local VERSION = "1.2"
   print("QwikAppChild library v"..VERSION)
   local childID = 'ChildID'
   local classID = 'ClassName'
@@ -40,6 +40,16 @@ do
     c:internalStorageSet(childID,uid,true)
     c:internalStorageSet(classID,className,true)
     return c
+  end
+
+  function QuickApp:getChildrenUidMap()
+    local cdevs,map = api.get("/devices?parentId="..self.id) or {},{}
+    for _,child in ipairs(cdevs) do
+      local uid = getVar(child.id,childID)
+      local className = getVar(child.id,classID)
+      if uid then map[uid]={id=child.id,className=className} end
+    end
+    return map
   end
 
   function QuickApp:loadExistingChildren(chs)

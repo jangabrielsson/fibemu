@@ -6,6 +6,7 @@
 --%%var=url:config.HASS_url
 
 --%%file=lib/QwikChild.lua,QC;
+--%%file=QAs/HASS/Utils.lua,utils;
 --%%file=QAs/HASS/HASSClasses.lua,classes;
 --%%file=lib/BetterQA.lua,BQA;
 
@@ -15,80 +16,19 @@
 
 HASS = HASS or {}
 
-local VERSION = "0.2"
-local URL = ""
-local token =""
-local fmt = string.format 
-function printf(fmt,...) print(fmt:format(...)) end
-fibaro.debugFlags = fibaro.debugFlags or {}
-function DEBUGF(flag,fmt,...) if fibaro.debugFlags[flag] then printf(fmt,...) end end
-function ERRORF(f,...) fibaro.error(fmt(f,...)) end
-
-function GET(path,cb)
-  local url = URL..path
-  local sts,err = net.HTTPClient():request(url,{
-    options = {
-      method = 'GET',
-      --checkCertificate = false, -- if you get handshake error, try uncomment this
-      timeout = 10000,
-      headers = {
-        ["Content-Type"] = "application/json",
-        ["Authorization"] = "Bearer " .. token
-      }
-    },
-    success = function(resp)
-      if resp.status == 200 then 
-         if cb then cb(json.decode(resp.data)) end 
-      else 
-        fibaro.error(__TAG,json.encode(resp)) 
-      end
-    end,
-    error = function(err)
-      fibaro.error(__TAG,url,err)
-    end
-  })
-end
-
-function POST(path,payload,cb)
-  local url = URL..path
-  net.HTTPClient():request(url,{
-    options = {
-      method = 'POST',
-      checkCertificate = false, -- if you get handshake error, try uncomment this
-      headers = {
-        ["Content-Type"] = "application/json",
-        ["Authorization"] = "Bearer " .. token
-      },
-      data = json.encode(payload)
-    },
-    success = function(resp)
-      if resp.status == 200 then if cb then cb(resp.data) end end
-    end,
-    error = function(err)
-      fibaro.error(__TAG,url,err)
-    end
-  })
-end
+local VERSION = "0.45"
+local fmt = string.format
 
 local MessageHandler = {}
-function MessageHandler.auth_required(data,ws,s)
+function MessageHandler.auth_required(data,ws)
   DEBUGF('test',"Websocket auth reqired")
-  s:send(json.encode({type= "auth",access_token = token}))
+  ws:sendRaw({type= "auth",access_token = HASS.token})
 end
-function MessageHandler.auth_ok(data,ws,s)
+function MessageHandler.auth_ok(data,ws)
   DEBUGF('test',"Websocket auth OK")
-  s:send(json.encode({id=99,type= "subscribe_events",event_type= "state_changed"}))
+  quickApp:authenticated()
 end
-function MessageHandler.result(data,ws)
-  DEBUGF('test',"Result %s",json.encode(data))
-  -- ws({type = "get_states"},function(data)
-  --   for _,e in ipairs(data.result) do
-  --     if e.entity_id == "light.right_window" then
-  --       DEBUGF('test',"Entity %s",e.entity_id)
-  --     end
-  --   end
-  -- end)
-end
+
 function MessageHandler.event(data,ws)
   local data = data.event.data
   local entity = data.entity_id
@@ -97,100 +37,60 @@ function MessageHandler.event(data,ws)
   if child and child.change then child:change(data.new_state,data.old_state) end
 end
 
-function QuickApp:setupWebSocket()
-  DEBUGF('test',"Websocket connect")
-  local URL = "ws://192.168.1.161:8123/api"
-  local url = URL.."/websocket"
-  local headers = {
-    ["Authorization"] = "Bearer "..token
-  }
-  local mid,mcbs = 99,{}
-  local ws = function(data,cb)
-    mid = mid + 1
-    data.id = mid
-    mcbs[mid] = {
-      cb = cb,
-      timeout = setTimeout(function()
-        mcbs[mid] = nil
-        end,5000) -- 5s timeout
-    }
-    self.sock:send(json.encode(data))
-  end
-
-  local function handleConnected()
-    DEBUGF('test',"Connected")
-  end
-  local function handleDisconnected(a,b)
-    DEBUGF('test',"Disconnected")
-    self:warning("Disconnected - will restart in 5s")
-    setTimeout(function()
-      plugin.restart()
-    end,5000)
-  end
-  local function handleError(err)
-    ERRORF("Error: %s", err)
-  end
-  local function handleDataReceived(data)
-    data = json.decode(data)
-    if data.id and mcbs[data.id] then
-      local cb,timeout = mcbs[data.id].cb,mcbs[data.id].timeout
-      mcbs[data.id] = nil
-      clearTimeout(timeout)
-      pcall(cb,data)
-      return
-    end
-    local handler  = MessageHandler[data.type or ""]
-    if handler then handler(data,ws,self.sock) 
-    else
-      DEBUGF('test',"Unknown message type: %s",data.type)
-    end
-  end
-  self.sock = net.WebSocketClientTls()
-  self.sock:addEventListener("connected", handleConnected)
-  self.sock:addEventListener("disconnected", handleDisconnected)
-  self.sock:addEventListener("error", handleError)
-  self.sock:addEventListener("dataReceived", handleDataReceived) 
-  
-  DEBUGF('test',"Connect: %s",url)
-  self.sock:connect(url)
-end
-
 function QuickApp:onInit()
-  -- GET("/services",function(data)
-  --   print("Services",json.encode(data))
-  -- end)
-  fibaro.debugFlags.test = true
   print(self.name,"v:"..VERSION)
+  fibaro.debugFlags.test = true
+  fibaro.debugFlags.wsc = true
   self:updateView("title","text",self.name.." v:"..VERSION)
-  token = self.qvar.token
-  URL = self.qvar.url
+
+  local token,URL = self.qvar.token,self.qvar.url
   if not(token and URL) then
     self:warning("Please set URL and token")
     return
   end
-  URL = fmt("http://%s/api",URL)
-  GET("/states",function(data)
+
+  HASS.URL = fmt("http://%s/api",URL)
+  HASS.token = token
+---@diagnostic disable-next-line: undefined-global
+  local WS = WSConnection("192.168.1.161:8123",token)
+  self.WS = WS
+  function WS:msgHandler(data)
+    local f = MessageHandler[data.type]
+    if f then f(data,self) else print(json.encode(data)) end
+  end
+  WS:connect()
+end
+
+local skipUnknowns = {battery=true,timestamp=true}
+function QuickApp:authenticated() -- Called when websocket is authenticated
+  DEBUGF('test',"Fetching HASS devices")
+  self.WS:send({type= "get_states"},function(data)
+    data = data.result
+    DEBUGF('test',"...fetched %d devices",#data)
     local allDevices = {}
     local unknowns = {}
     local devices = self.storage.devices or {}
     local children = {} HASS.children = children
     for _,e in ipairs(data) do
+      local domain = e.entity_id:match("^(.-)%.")
       if HASS.deviceTypes[e.attributes.device_class or ""] then
         allDevices[e.entity_id] = {type=e.attributes.device_class,data=e}
-      elseif e.entity_id:match("^light%.") then
-        allDevices[e.entity_id] = {type="light",data=e}
+      elseif HASS.deviceTypes[domain] then
+        allDevices[e.entity_id] = {type=domain,data=e}
       else
-        unknowns[#unknowns+1] = fmt("Unknown entity %s %s",e.entity_id,e.attributes.device_class or "")
+        if not skipUnknowns[e.attributes.device_class or ""] then
+          unknowns[#unknowns+1] = fmt("Unknown entity %s %s",e.entity_id,e.attributes.device_class or "")
+        end
       end
       if devices[e.entity_id] then
         children[e.entity_id] =  HASS.childData(allDevices[e.entity_id])
       end
     end
+    self.WS:send({type= "subscribe_events",event_type= "state_changed"})
     table.sort(unknowns)
     print("<br>"..table.concat(unknowns,"<br>"))
     self:populatePopup(allDevices)
     self:initChildren(children)
-    self:setupWebSocket()
   end)
 end
 
