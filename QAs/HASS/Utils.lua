@@ -71,6 +71,8 @@ function WSConnection:connect()
   self.sock:connect(self.url)
 end
 
+getmetatable("").__idiv = function(str,len) return (#str < len or #str < 4) and str or str:sub(1,len-2)..".." end -- truncate strings
+
 function string.buff(b)
   local self,buff = {},b or {}
   function self.printf(fmt,...) table.insert(buff,fmt:format(...)) end

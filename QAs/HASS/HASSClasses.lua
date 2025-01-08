@@ -23,27 +23,36 @@ local fmt = string.format
 local function member(t,v)
   for _,m in ipairs(t) do if m == v then return true end end
 end
+local function copy(t) -- shallow copy
+  local r = {} for k,v in pairs(t) do r[k] = v end return r
+end
 
 -- Supported HASS types and initial QA config values
 local deviceTypes = {}
 
 function deviceTypes.light(d,e)
   -- depending on capabilities we may want to create different fibaro types...
-  local attr = e.attributes.supported_color_modes or {}
-  if #attr == 0 then
-     fibaro.warning(__TAG,"No attributes.supported_color_modes for",e.entity_id)
-     return
-  end
-  if #attr == 1 and attr[1] == "onoff" then
+  local attr = e.attributes
+  local support = {}
+  for _,a in ipairs(attr.supported_color_modes or {}) do support[a] = true end
+  if attr.rgb_color then --or support.xy then
+    d.type = "com.fibaro.colorController"
+    d.className = "ColorRGBLight"
+    d.properties = {colorComponents = {red=0,green=0,blue=0,warmWhite=0}}
+  elseif support.xy then --or support.xy then
+    d.type = "com.fibaro.colorController"
+    d.className = "ColorXYLight"
+    d.properties = {colorComponents = {red=0,green=0,blue=0,warmWhite=0}}
+  elseif attr.brightness or support.brightness then
+    d.type = "com.fibaro.multilevelSwitch"
+    d.className = "DimLight"
+  elseif support.onoff then -- plug
     d.type = "com.fibaro.binarySwitch"
     d.className = "BinarySwitch"
-  elseif member(attr,"brightness") then
-    d.type = "com.fibaro.multilevelSwitch"
-    d.className = "Light"
   else
     fibaro.warning(__TAG,"Unsupported attributes.supported_color_modes for ",
     e.entity_id,
-    table.concat(attr,",")
+    table.concat(attr.supported_color_modes or {},",")
     )
     return nil
   end
@@ -134,6 +143,12 @@ end
 function deviceTypes.device_tracker(d,e)
   d.type = "com.fibaro.binarySensor"
   d.className = "DeviceTracker"
+  return d
+end
+
+function deviceTypes.calendar(d,e)
+  d.type = "com.fibaro.binarySensor"
+  d.className = "Calendar"
   return d
 end
 
@@ -258,24 +273,73 @@ function HASSChild:change(new,old)
   if self.update then self:update(new,old) end
 end
 
-class 'Light'(HASSChild)
-function Light:__init(device)
+class 'DimLight'(HASSChild) 
+function DimLight:__init(device)
   HASSChild.__init(self, device)
   local state = self._initData.hass.state
   local attr = self._initData.hass.attributes
   self:updateProperty('state',state=='on')
   self:updateProperty('value',attr.brightness or 0)
 end
-function Light:update(new,old)
+function DimLight:update(new,old)
   self:updateProperty('state',new.state=='on')
   self:updateProperty('value',new.attributes.brightness or new.state=='on' or false)
 end
-function Light:setValue(v)
+function DimLight:setValue(v)
   self:send("turn_on",{entity_id=self._uid, brightness = v})
 end
-function Light:turnOn() self:send("turn_on",{entity_id=self._uid}) end
-function Light:turnOff() self:send("turn_off",{entity_id=self._uid}) end
-function Light:toggle() self:send("toggle",{entity_id=self._uid}) end
+function DimLight:turnOn() self:send("turn_on",{entity_id=self._uid}) end
+function DimLight:turnOff() self:send("turn_off",{entity_id=self._uid}) end
+function DimLight:toggle() self:send("toggle",{entity_id=self._uid}) end
+
+class 'ColorRGBLight'(DimLight)
+function ColorRGBLight:__init(device)
+  DimLight.__init(self, device)
+  self:update(self._initData.hass)
+end
+function ColorRGBLight:setColor(r,g,b,w)
+  local color = {r, g, b, w}
+  self:send("turn_on",{entity_id=self._uid, rgb_color = color})
+end
+function ColorRGBLight:setColorComponents(colorComponents) -- Called by HC3 UI
+  DEBUGF('color',"setColorComponents called %s",json.encode(colorComponents))
+  if colorComponents.warmWhite and not colorComponents.red then
+    DEBUGF('color',"setColorComponents.temp")
+    return self:setTemperature(colorComponents.warmWhite) -- 0..255
+  end
+  local cc = self.properties.colorComponents
+  local isColorChanged = false
+  for k,v in pairs(colorComponents) do
+    if cc[k] and cc[k] ~= v then isColorChanged = true end
+  end
+  if isColorChanged == true then
+    --self:updateProperty("colorComponents", cc)
+    self:setColor(cc["red"], cc["green"], cc["blue"], cc["white"])
+  end
+end
+function ColorRGBLight:update(new,old)
+  local rgb = new.attributes.rgb_color
+  if rgb == nil then
+    print("ToDo convert xy to rgb")
+    return 
+  end
+  rgb = {red = rgb[1], green = rgb[2], blue = rgb[3], white = rgb[4]}
+  local color = string.format("%d,%d,%d,%d", rgb.red or 0, rgb.green or 0, rgb.blue or 0, rgb.white or 0) 
+  self:updateProperty('color',color)
+  local cc = self.properties.colorComponents
+  for k,v in pairs(rgb) do cc[k] = v end
+  self:updateProperty('colorComponents',cc)
+end
+
+class 'ColorXYLight'(ColorRGBLight)
+function ColorXYLight:__init(device)
+  ColorRGBLight.__init(self, device)
+end
+function ColorRGBLight:setColor(r,g,b,w)
+  print("ToDo convert xy to rgb")
+  -- local xy = rgbToXy(r,g,b,w)
+  -- self:send("turn_on",{entity_id=self._uid, xy = xy})
+end
 
 class 'BinarySwitch'(HASSChild) -- Plug looking like light
 function BinarySwitch:__init(device)
@@ -513,4 +577,57 @@ end
 -- handle action for setting set point for heating
 function Thermostat:setHeatingThermostatSetpoint(value, unit)
   --self:updateProperty("heatingThermostatSetpoint", { value= value, unit= unit or "C" })
+end
+
+class 'Calendar'(HASSChild)
+function Calendar:__init(device)
+  HASSChild.__init(self, device)
+  local d = self._initData.hass
+  self:update(d)
+end
+function Calendar:logState(d)
+  local a = d.attributes
+  local pr = string.buff()
+  pr.printf("Calendar %s\n",d.state)
+  pr.printf("  all day: %s\n",a.all_day)
+  pr.printf("  start: %s\n",a.start_time)
+  pr.printf("  end: %s\n",a.end_time)
+  pr.printf("  location: %s\n",a.location or "")
+  pr.printf("  description: %s\n",(a.description or "") // 60)
+  pr.printf("  message: %s\n",(a.message or "") // 60)
+  print(pr.tostring())
+end
+function Calendar:update(new,old)
+  self:logState(new)
+  self.qvar.allDay = new.attributes.all_day
+  self.qvar.start = new.attributes.start_time
+  self.qvar['end'] = new.attributes.end_time
+  self.qvar.location = new.attributes.location
+  local descr = new.attributes.description or ""
+  self.qvar.description = descr
+  self.qvar.message = new.attributes.message
+  local event,descr,before = descr:match("#(.-);(.-);?([%d:]*)#")
+  before = before or ""
+  if event then
+    self.qvar.event = event
+    self.qvar.eventDescr = descr or ""
+  end
+  if new.state=='off' and before~="" then
+    -- 2025-01-21 18:00:00
+    local year,month,day,hour,min = before:match("(%d+)-(%d+)-(%d+) (%d+):(%d+)")
+    local t = os.time({year=year,month=month,day=day,hour=hour,min=min,sec=0})
+    if self.timer then clearTimeout(self.timer) end
+    self.timer = setTimeout(function()
+      self.timer = nil
+      self:publishEvent(event,descr) end,
+      (t-os.time())*1000)
+    -- timer for event
+  elseif new.state=='on' and before=="" then
+    self:publishEvent(event,descr)
+  end
+  self:updateProperty('value',new.state=='on')
+end
+function Calendar:publishEvent(name,descr)
+  api.post("/customEvent",{name=name,descr=descr})
+  api.post("/customEvent/"..name)
 end

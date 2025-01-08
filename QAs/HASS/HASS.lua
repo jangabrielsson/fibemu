@@ -18,7 +18,7 @@
 
 HASS = HASS or {}
 
-local VERSION = "0.48"
+local VERSION = "0.50"
 local fmt = string.format
 local token,URL
 
@@ -64,7 +64,7 @@ function QuickApp:onInit()
   WS:connect()
 end
 
-local skipUnknowns = {batterys=true,timestamp=true,update=true}
+local skipUnknowns = {scene=true,batterys=true,timestamp=true,update=true}
 function QuickApp:authenticated() -- Called when websocket is authenticated
   DEBUGF('test',"Fetching HASS devices")
   self.WS:send({type= "get_states"},function(data)
@@ -97,6 +97,10 @@ function QuickApp:authenticated() -- Called when websocket is authenticated
       if devices[e.entity_id] then
         -- If this entity is selected, create a child init data for QA
         children[e.entity_id] =  HASS.childData(allDevices[e.entity_id])
+      else
+        if allDevices[e.entity_id] then 
+          HASS.childData(allDevices[e.entity_id]) -- for debugging
+        end 
       end
     end
     table.sort(unknowns)
