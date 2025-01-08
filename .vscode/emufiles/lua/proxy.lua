@@ -82,7 +82,7 @@ function QuickApp:createProxy(id,name)
     end
   
     --setTimeout(function() fibaro.call(self.id,"foo",4,5,6) end,2000)
-    local IGNORE={updateView=true,setVariable=true,updateProperty=true,MEMORYWATCH=true,PROXY=true,APIPOST=true,APIPUT=true,APIGET=true} -- Rewrite!!!!
+    local IGNORE={updateView=true,setVariable=true,updateProperty=true,MEMORYWATCH=true,PROXY=true,APIPOST=true,APIPUT=true,APIGET=true,_addInterfaces=true,_deleteInterfaces=true} -- Rewrite!!!!
   
     local function CALLIDE(path,payload)
       local url = ip..path
@@ -106,7 +106,20 @@ function QuickApp:createProxy(id,name)
         CALLIDE("/api/devices/"..remoteID.."/action/_ProxyUIHandler",{ args = {ev} })
       end
     end
+
+    function QuickApp:_addInterfaces(id,ifs)
+        api.post("/plugins/interfaces",{
+          action="add",deviceId=id,interfaces=ifs
+        })
+     end
+     function QuickApp:_deleteInterfaces(id,ifs)
+             api.post("/plugins/interfaces",{
+          action="delete",deviceId=id,interfaces=ifs
+        })
+     end
   
+    function QuickApp:initChildDevices() end
+
     local function loop()
       local stat,res = pcall(function()
         local var,err = __fibaro_get_global_variable("FIBEMU")
@@ -164,6 +177,13 @@ function fibaro.fibemu.dumpUIfromQA(id)
     local uiStruct = ui.view2UI(p.viewLayout, p.uiCallbacks)
     dumpUI(uiStruct)
   else fibaro.error(__TAG,"Device not found:",id) end
+end
+
+function fibaro.callHC3(deviceId, actionName, ...)
+  __assert_type(actionName, "string")
+  __assert_type(deviceId, "number")
+  local arg = { ... }; -- arg = #arg > 0 and arg or nil
+  return api.post("/devices/" .. deviceId .. "/action/" .. actionName, {args = arg},"hc3")
 end
 
 function QuickApp:launchProxy(name)
@@ -225,7 +245,9 @@ function QuickApp:launchProxy(name)
     if data.deviceId == self.id or self.childDevices[data.deviceId] then
       data = copy(data)
       if data.deviceId == self.id then data.deviceId = self._proxyId end
-      local data2,res = api.post("/plugins/interfaces",data,"hc3")
+      --local data2,res = api.post("/plugins/interfaces",data,"hc3")
+      local m = data.action == "add" and "_addInterfaces" or "_deleteInterfaces"
+      local data2,res = fibaro.callHC3(data.deviceId,m,data.deviceId,data.interfaces)
       return true,data2,res
     end
     return false

@@ -1,5 +1,25 @@
+--[[
+Supported devices:
+  Property      Type           QA type                         QA className
+  -------------------------------------------------------------------------
+  domain        switch         com.fibaro.binarySwitch         Switch
+  domain        light          com.fibaro.multilevelSwitch     Light
+                               com.fibaro.binarySwitch         BinarySwitch
+  device_class  temperature    com.fibaro.temperatureSensor    Temperature
+  device_class  illuminance    com.fibaro.lightSensor          Illuminance
+  device_class  humidity       com.fibaro.humiditySensor       Humidity
+  device_class  motion         com.fibaro.motionSensor         Motion
+  device_class  opening        com.fibaro.doorSensor           DoorSensor
+  domain        binary_sensor  com.fibaro.binarySensor         BinarySensor
+  device_class  pm25           com.fibaro.multilevelSensor     Pm25
+  domain        lock           com.fibaro.doorLock             DoorLock
+  domain        fan            com.fibaro.genericDevice        Fan
+  domain        cover          com.fibaro.rollerShutter        Cover
+  domain        device_tracker com.fibaro.binarySensor         DeviceTracker
+--]]
 ---@diagnostic disable: undefined-global
 HASS = HASS or {} -- Table to stire "global" HASS functions and data
+local fmt = string.format
 local function member(t,v)
   for _,m in ipairs(t) do if m == v then return true end end
 end
@@ -24,7 +44,8 @@ function deviceTypes.light(d,e)
     fibaro.warning(__TAG,"Unsupported attributes.supported_color_modes for ",
     e.entity_id,
     table.concat(attr,",")
-  )
+    )
+    return nil
   end
   return d
 end
@@ -110,6 +131,22 @@ function deviceTypes.cover(d,e)
   return d
 end
 
+function deviceTypes.device_tracker(d,e)
+  d.type = "com.fibaro.binarySensor"
+  d.className = "DeviceTracker"
+  return d
+end
+
+function deviceTypes.climate(d,e)
+  -- com.fibaro.hvacSystemAuto
+  -- com.fibaro.hvacSystemHeat
+  -- com.fibaro.hvacSystemCool
+  -- com.fibaro.coolAutomationHvac
+  d.type = "com.fibaro.hvacSystemAuto"
+  d.className = "Thermostat"
+  return d
+end
+
 -- Returns child init data for a HASS device
 function HASS.childData(e)
   local typ,data = e.type,e.data
@@ -121,6 +158,64 @@ function HASS.childData(e)
 end
 HASS.deviceTypes = deviceTypes
 
+---------------- HASS device addons ----------------
+--- batter, power, energy, etc. -------------------
+local addons = {}
+-- categories: battery, power, voltage, current, energy
+local batteries,energy,power = {},{},{}
+class 'AddOn'
+function AddOn:__init(e,prop)
+  self.entity_id = e.entity_id
+  self.state = e.state
+  self.prop = prop
+  self.attributes = e.attributes
+  self.subscribers = {}
+end
+function AddOn:subscriber(uid)
+  self.subscribers[uid] = true
+end
+function AddOn:update(new)
+  self.state = new.state
+  for c,_ in pairs(self.subscribers) do c:updateAddOn(self.prop,self.state) end
+end
+function AddOn:__tostring()
+  return fmt("%s %s %s",self.prop,self.entity_id,self.state)
+end
+local AD = {}
+function AD.battery(e) addons[e.entity_id] = AddOn(e,"batteryLevel") end
+function AD.power(e) addons[e.entity_id] = AddOn(e,"power") end
+function AD.energy(e) addons[e.entity_id] = AddOn(e,"energy") end
+function AD.current(e) addons[e.entity_id] = AddOn(e,"current") end
+function AD.voltage(e) addons[e.entity_id] = AddOn(e,"voltage") end
+HASS.deviceAddons = AD
+
+function HASS.resolveAddons()
+  for _,c in pairs(quickApp.childDevices) do
+    if c.battery then
+      if not addons[c.battery] then
+        fibaro.warning(__TAG,fmt("Battery %s not found for %s",c.battery,c.uid))
+      else
+        addons[c.battery]:subscriber(c)
+      end
+    end
+  end
+  for _,b in pairs(batteries) do b:update(b) end
+end
+
+function HASS.dumpAddons()
+  local function dump(title,prop)
+    local t = {}
+    for k,a in pairs(addons) do if a.prop==prop then t[#t+1] = k end end
+    table.sort(t)
+    printf("<br>%s:<br>-%s",title,table.concat(t,"<br>-"))
+  end
+  print("Addons:")
+  dump("Battery","batteryLevel")
+  dump("Power","power")
+  dump("Energy","energy")
+  dump("Current","current")
+  dump("Voltage","voltage")
+end
 ------------------------------------------------------
 --- QuickApp classes for HASS devices ----------------
 ------------------------------------------------------
@@ -129,18 +224,27 @@ HASS.deviceTypes = deviceTypes
 class 'HASSChild'(QwikAppChild)
 function HASSChild:__init(device)
   QwikAppChild.__init(self, device)
+  quickApp.childDevices[self.id] = self -- Hack to get the child devices reged.
   self.uid = self._uid
   self.domain = self.uid:match("^(.-)%.")
   self._initData = HASS.children[self.uid]
   self.url = self._initData
-  self:delayProp('dead',self._initData.hass.state == 'unavailable')
+  self.battery = self.qvar.battery
+  local hasBattery = self:hasInterface("battery")
+  if not self.battery and hasBattery then
+    DEBUGF("child","Removing battery interface from %s",self.uid)
+    self:deleteInterfaces({"battery"})
+  elseif self.battery and not hasBattery then
+    DEBUGF("child","Adding battery interface to %s",self.uid)
+    self:addInterfaces({"battery"})
+  end
+  self:updateProperty('dead',self._initData.hass.state == 'unavailable')
 end
 function HASSChild:send(cmd,data,cb) -- send command
   self.parent.WS:serviceCall(self.domain,cmd,data,cb)
 end
-function HASSChild:delayProp(name,value)
-  -- Need to delay the setting of the property because device not created yet...
-  setTimeout(function() self:updateProperty(name,value) end, 0)
+function HASSChild:updateBattery(value)
+  self:updateProperty('batteryLevel',math.floor(tonumber(value)+0.5)) 
 end
 function HASSChild:change(new,old)
   self:updateProperty('dead',new.state == 'unavailable') -- Update dead property
@@ -152,8 +256,8 @@ function Light:__init(device)
   HASSChild.__init(self, device)
   local state = self._initData.hass.state
   local attr = self._initData.hass.attributes
-  self:delayProp('state',state=='on')
-  self:delayProp('value',attr.brightness or 0)
+  self:updateProperty('state',state=='on')
+  self:updateProperty('value',attr.brightness or 0)
 end
 function Light:update(new,old)
   self:updateProperty('state',new.state=='on')
@@ -170,8 +274,8 @@ class 'BinarySwitch'(HASSChild) -- Plug looking like light
 function BinarySwitch:__init(device)
   HASSChild.__init(self, device)
   local state = self._initData.hass.state
-  self:delayProp('state',state=='on')
-  self:delayProp('value',state=='on')
+  self:updateProperty('state',state=='on')
+  self:updateProperty('value',state=='on')
 end
 function BinarySwitch:update(new,old)
   self:updateProperty('state',new.state=='on')
@@ -185,8 +289,8 @@ class 'BinarySensor'(HASSChild)
 function BinarySensor:__init(device)
   HASSChild.__init(self, device)
   local state = self._initData.hass.state
-  self:delayProp('state',state=='on')
-  self:delayProp('value',state=='on')
+  self:updateProperty('state',state=='on')
+  self:updateProperty('value',state=='on')
 end
 function BinarySensor:update(new,old)
   self:updateProperty('state',new.state=='on')
@@ -197,7 +301,7 @@ class 'Switch'(HASSChild)
 function Switch:__init(device)
   HASSChild.__init(self, device)
   local state = self._initData.hass.state
-  self:delayProp('value',state=='on')
+  self:updateProperty('value',state=='on')
 end
 function Switch:update(new,old)
   self:updateProperty('value',new.state=='on')
@@ -226,7 +330,7 @@ class 'Motion'(HASSChild)
 function Motion:__init(device)
   HASSChild.__init(self, device)
   local state = self._initData.hass.state
-  self:delayProp('value',state=='on')
+  self:updateProperty('value',state=='on')
 end
 function Motion:update(new,old)
   self:updateProperty('value',new.state=='on')
@@ -239,7 +343,7 @@ function Illuminance:__init(device)
   local level = self._initData.hass.attributes.light_level
   local lux = toLux(level)
   --print(lux) --What is the lux value????
-  self:delayProp('value',lux)
+  self:updateProperty('value',lux)
 end
 function Illuminance:update(new,old)
   self:updateProperty('value',toLux(new.attributes.light_level))
@@ -249,7 +353,7 @@ class 'DoorSensor'(HASSChild)
 function DoorSensor:__init(device)
   HASSChild.__init(self, device)
   local state = self._initData.hass.state
-  self:delayProp('value',state=='on')
+  self:updateProperty('value',state=='on')
 end
 function DoorSensor:update(new,old)
   self:updateProperty('value',new.state=='on')
@@ -259,7 +363,7 @@ class 'DoorLock'(HASSChild)
 function DoorLock:__init(device)
   HASSChild.__init(self, device)
   local state = self._initData.hass.state
-  self:delayProp('secured',state=='locked' and 255 or 0)
+  self:updateProperty('secured',state=='locked' and 255 or 0)
 end
 function DoorLock:update(new,old)
   self:updateProperty('secured',new.state=='locked' and 255 or 0)
@@ -271,7 +375,7 @@ class 'Temperature'(HASSChild)
 function Temperature:__init(device)
   HASSChild.__init(self, device)
   local state = self._initData.hass.state
-  self:delayProp('value',tonumber(state))
+  self:updateProperty('value',tonumber(state))
 end
 function Temperature:update(new,old)
   self:updateProperty('value',tonumber(new.state))
@@ -281,7 +385,7 @@ class 'Humidity'(HASSChild)
 function Humidity:__init(device)
   HASSChild.__init(self, device)
   local state = self._initData.hass.state
-  self:delayProp('value',tonumber(state))
+  self:updateProperty('value',tonumber(state))
 end
 function Humidity:update(new,old)
   self:updateProperty('value',tonumber(new.state))
@@ -291,7 +395,7 @@ class 'Pm25'(HASSChild)
 function Pm25:__init(device)
   HASSChild.__init(self, device)
   local state = self._initData.hass.state
-  self:delayProp('value',tonumber(state))
+  self:updateProperty('value',tonumber(state))
 end
 function Pm25:update(new,old)
   self:updateProperty('value',tonumber(new.state))
@@ -302,7 +406,7 @@ function Fan:__init(device)
   HASSChild.__init(self, device)
   local state = self._initData.hass.state
   self:logState(self._initData.hass)
-  --self:delayProp('value',tonumber(state))
+  --self:updateProperty('value',tonumber(state))
 end
 function Fan:logState(d)
   local a = d.attributes
@@ -313,6 +417,25 @@ function Fan:update(new,old)
   --self:updateProperty('value',tonumber(new.state))
 end
 
+class 'DeviceTracker'(HASSChild) --Binary sensor, ON when home
+function DeviceTracker:__init(device) -- Location displayed in log property
+  HASSChild.__init(self, device)
+  local state = self._initData.hass.state
+  --self:logState(self._initData.hass)
+  self:updateProperty('value',state=='home')
+  self:updateProperty('log',state)
+end
+function DeviceTracker:logState(d)
+  local a = d.attributes
+  printf("DeviceTracker %s",d.state)
+end
+function DeviceTracker:update(new,old)
+  --self:logState(new)
+  self:updateProperty('value',new.state=='home')
+  self:updateProperty('log',new.state)
+end
+
+
 class 'Cover'(HASSChild) --TBD
 function Cover:__init(device)
   HASSChild.__init(self, device)
@@ -321,7 +444,7 @@ function Cover:__init(device)
   local state = d.state
   local percentage = d.attributes.current_position or 0
   local val = state=='open' and 99 or state=='closed' and 0 or percentage
-  self:delayProp('value',val)
+  self:updateProperty('value',val)
 end
 function Cover:open() self:send("open_cover",{entity_id=self._uid}) end
 function Cover:close() self:send("close_cover",{entity_id=self._uid}) end
@@ -343,4 +466,44 @@ function Cover:update(new,old)
   local percentage = new.attributes.current_position or 0
   local val = state=='open' and 100 or state=='closed' and 0 or percentage
   self:updateProperty('value',val)
+end
+
+class 'Thermostat'(HASSChild) --TBD
+function Thermostat:__init(device)
+  HASSChild.__init(self, device)
+  local d = self._initData.hass
+  local a = d.attributes
+  self:updateProperty("supportedThermostatModes", a.preset_modes)
+  self:logState(d)
+  self:updateProperty('thermostatMode',d.state)
+end
+function Thermostat:logState(d)
+  local a = d.attributes
+  local pr = string.buff()
+  pr.printf("Thermostat %s\n",d.state)
+  pr.printf("  current temperature: %s\n",a.current_temperature)
+  pr.printf("  temperature: %s\n",a.temperature)
+  pr.printf("  min temperature: %s\n",a.min_temp)
+  pr.printf("  min temperature: %s\n",a.min_temp)
+  pr.printf("  hvac action %s\n",a.hvac_action)
+  pr.printf("  hvac modes %s\n",json.encode(a.hvac_modes))
+  pr.printf("  preset mode %s\n",a.preset_mode)
+  pr.printf("  preset modes %s\n",json.encode(a.preset_modes))
+  print(pr.tostring())
+end
+function Thermostat:update(new,old)
+  self:logState(new)
+  local state = new.state
+  self:updateProperty('thermostatMode',state)
+end
+function Thermostat:setThermostatMode(mode)
+  self:updateProperty("thermostatMode", mode)
+end
+-- handle action for setting set point for cooling
+function Thermostat:setCoolingThermostatSetpoint(value, unit)
+  --self:updateProperty("coolingThermostatSetpoint", { value= value, unit= unit or "C" })
+end
+-- handle action for setting set point for heating
+function Thermostat:setHeatingThermostatSetpoint(value, unit)
+  --self:updateProperty("heatingThermostatSetpoint", { value= value, unit= unit or "C" })
 end

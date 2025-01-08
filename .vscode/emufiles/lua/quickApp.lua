@@ -109,6 +109,12 @@ function QuickAppBase:isTypeOf(typ)
   return getHierarchy():isTypeOf(self.type,typ)
 end
 
+function QuickAppBase:hasInterface(if1)
+  __assert_type(if1, "string")
+  local ifs = api.get("/devices/" .. self.id).interfaces or {}
+  for _,i in ipairs(ifs) do if i == if1 then return true end end
+end
+
 function QuickAppBase:addInterfaces(ifs)
   __assert_type(ifs, "table")
   api.post("/plugins/interfaces", { action = 'add', deviceId = self.id, interfaces = ifs })

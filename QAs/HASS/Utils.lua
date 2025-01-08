@@ -1,56 +1,9 @@
 ---@diagnostic disable: undefined-global
-HASS = HASS or {}
 local fmt = string.format
 function printf(fmt,...) print(fmt:format(...)) end
 fibaro.debugFlags = fibaro.debugFlags or {}
 function DEBUGF(flag,fmt,...) if fibaro.debugFlags[flag] then printf(fmt,...) end end
 function ERRORF(f,...) fibaro.error(fmt(f,...)) end
-
--- function GET(path,cb)
---   local url = HASS.URL..path
---   net.HTTPClient():request(url,{
---     options = {
---       method = 'GET',
---       --checkCertificate = false, -- if you get handshake error, try uncomment this
---       timeout = 10000,
---       headers = {
---         ["Content-Type"] = "application/json",
---         ["Authorization"] = "Bearer " .. HASS.token
---       }
---     },
---     success = function(resp)
---       if resp.status == 200 then
---          if cb then cb(json.decode(resp.data)) end
---       else
---         fibaro.error(__TAG,json.encode(resp))
---       end
---     end,
---     error = function(err)
---       fibaro.error(__TAG,url,err)
---     end
---   })
--- end
-
--- function POST(path,payload,cb)
---   local url = HASS.URL..path
---   net.HTTPClient():request(url,{
---     options = {
---       method = 'POST',
---       checkCertificate = false, -- if you get handshake error, try uncomment this
---       headers = {
---         ["Content-Type"] = "application/json",
---         ["Authorization"] = "Bearer " .. HASS.token
---       },
---       data = json.encode(payload)
---     },
---     success = function(resp)
---       if resp.status == 200 then if cb then cb(resp.data) end end
---     end,
---     error = function(err)
---       fibaro.error(__TAG,url,err)
---     end
---   })
--- end
 
 class 'WSConnection'
 function WSConnection:__init(url,token)
@@ -97,7 +50,10 @@ function WSConnection:connect()
       local cb,timeout = mcbs[data.id].cb,mcbs[data.id].timeout
       mcbs[data.id] = nil
       if timeout then clearTimeout(timeout) end
-      if cb then pcall(cb,data) else print(json.encode(data)) end
+      if cb then 
+        local stat,err = pcall(cb,data) 
+        if not stat then ERRORF("Callback error: %s",err) end
+      else print(json.encode(data)) end
       return
     end
     if self.msgHandler then self:msgHandler(data)
@@ -113,4 +69,17 @@ function WSConnection:connect()
 
   DEBUGF('wsc',"Connect: %s",self.url)
   self.sock:connect(self.url)
+end
+
+function string.buff(b)
+  local self,buff = {},b or {}
+  function self.printf(fmt,...) table.insert(buff,fmt:format(...)) end
+  function self.tostring()
+    local str = table.concat(buff)
+    str = str:gsub("\n","<br>")
+    str = str:gsub("  ","&nbsp;&nbsp;")
+    print(table.concat(buff))
+    buff = {}
+  end
+  return self
 end
