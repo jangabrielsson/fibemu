@@ -1,6 +1,6 @@
 QuickApp._betterQAversions="0.5"
-QuickApp.debugFlags = QuickApp.debugFlags or {}
-QuickApp.translations = QuickApp.translations or {}
+fibaro.debugFlags = fibaro.debugFlags or {}
+fibaro.translations = fibaro.translations or {}
 QuickApp.language = nil
 
 local fmt = string.format
@@ -10,7 +10,7 @@ function QuickApp:warningf(f,...) self:warning(fmt(f,...)) end
 function QuickApp:errorf(f,...) self:error(fmt(f,...)) end
 
 function DEBUG(flag,...)
-  if QuickApp.debugFlags and QuickApp.debugFlags[flag] then
+  if fibaro.debugFlags and fibaro.debugFlags[flag] then
     fibaro.debug(__TAG,...)
   end
 end
@@ -41,6 +41,7 @@ local _init = QuickApp.__init
 
 function QuickApp:__init(...)
   local _onInit = self.onInit
+  self.translations = fibaro.translations
   function self:onInit()
     quickApp = self
     self.qvar = setmetatable({},{
@@ -48,8 +49,8 @@ function QuickApp:__init(...)
       __newindex = function(t,k,v) return setVariable(self,k,v) end,   
     })
     self.storage = setmetatable({},{
-      __index = function(key) return self:internalStorageGet(key) end,
-      __newindex = function(key,val)
+      __index = function(t,key) return self:internalStorageGet(key) end,
+      __newindex = function(t,key,val)
         if val == nil then self:internalStorageRemove(key)
         else self:internalStorageSet(key,val) end
       end

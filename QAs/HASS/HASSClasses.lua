@@ -199,22 +199,26 @@ function HASS.resolveAddons()
       end
     end
   end
-  for _,b in pairs(batteries) do b:update(b) end
+  for _,b in pairs(addons) do b:update(b) end
 end
 
 function HASS.dumpAddons()
+  local pr = string.buff({"\n"})
   local function dump(title,prop)
     local t = {}
-    for k,a in pairs(addons) do if a.prop==prop then t[#t+1] = k end end
+    for k,a in pairs(addons) do 
+      if a.prop==prop then t[#t+1] = k end
+    end
     table.sort(t)
-    printf("<br>%s:<br>-%s",title,table.concat(t,"<br>-"))
+    pr.printf("\n%s:\n-%s",title,table.concat(t,"\n-"))
   end
-  print("Addons:")
+  pr.printf("Addons:")
   dump("Battery","batteryLevel")
   dump("Power","power")
   dump("Energy","energy")
   dump("Current","current")
   dump("Voltage","voltage")
+  print(pr.tostring())
 end
 ------------------------------------------------------
 --- QuickApp classes for HASS devices ----------------
@@ -229,22 +233,25 @@ function HASSChild:__init(device)
   self.domain = self.uid:match("^(.-)%.")
   self._initData = HASS.children[self.uid]
   self.url = self._initData
-  self.battery = self.qvar.battery
-  local hasBattery = self:hasInterface("battery")
-  if not self.battery and hasBattery then
-    DEBUGF("child","Removing battery interface from %s",self.uid)
-    self:deleteInterfaces({"battery"})
-  elseif self.battery and not hasBattery then
-    DEBUGF("child","Adding battery interface to %s",self.uid)
-    self:addInterfaces({"battery"})
+  -- Check if interfaces defined with quickVars, and add/remove accordingly
+  for _,i in ipairs({'battery','power','energy'}) do
+    local hasIF = self:hasInterface(i)
+    if not self[i] and hasIF then
+      DEBUGF("child","Removing %s interface from %s",i,self.uid)
+      self:deleteInterfaces({i})
+    elseif self[i] and not hasIF then
+      DEBUGF("child","Adding %s interface to %s",i,self.uid)
+      self:addInterfaces({i})
+    end
   end
   self:updateProperty('dead',self._initData.hass.state == 'unavailable')
 end
 function HASSChild:send(cmd,data,cb) -- send command
   self.parent.WS:serviceCall(self.domain,cmd,data,cb)
 end
-function HASSChild:updateBattery(value)
-  self:updateProperty('batteryLevel',math.floor(tonumber(value)+0.5)) 
+function HASSChild:updateAddOn(prop,value)
+  if tonumber(value) then value = math.floor(tonumber(value)+0.5) end
+  self:updateProperty(prop,value) 
 end
 function HASSChild:change(new,old)
   self:updateProperty('dead',new.state == 'unavailable') -- Update dead property
