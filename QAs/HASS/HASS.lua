@@ -46,6 +46,7 @@ function QuickApp:onInit()
   fibaro.debugFlags.test = true
   fibaro.debugFlags.wsc = true  -- websocket states
   fibaro.debugFlags.child = true  -- Child qa
+  fibaro.debugFlags.color = true  -- Child qa
   self:updateView("title","text",self.name.." v:"..VERSION)
 
   token,URL = self.qvar.token,self.qvar.url
@@ -79,9 +80,12 @@ function QuickApp:authenticated() -- Called when websocket is authenticated
       local category = e.attributes.device_class or false
       --print("entity",e.entity_id)
       -- Mapping HASS entity to QA class is done
+      -- 0. by custom mapping
       -- 1. by attributes.device_class
       -- 2. by domain
-      if HASS.deviceTypes[category] then
+      if HASS.customEntity[e.entity_id] then 
+        allDevices[e.entity_id] = {type=HASS.customEntity[e.entity_id],data=e}
+      elseif HASS.deviceTypes[category] then
         allDevices[e.entity_id] = {type=category,data=e}
       elseif HASS.deviceTypes[domain] then
         --print("domain",domain,e.entity_id)

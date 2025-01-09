@@ -26,6 +26,8 @@ end
 local function copy(t) -- shallow copy
   local r = {} for k,v in pairs(t) do r[k] = v end return r
 end
+local function to100(v) return math.floor((v/255.0)*100+0.5) end
+local function to255(v) return math.floor((v/100.0)*255+0.5) end
 
 -- Supported HASS types and initial QA config values
 local deviceTypes = {}
@@ -39,10 +41,12 @@ function deviceTypes.light(d,e)
     d.type = "com.fibaro.colorController"
     d.className = "ColorRGBLight"
     d.properties = {colorComponents = {red=0,green=0,blue=0,warmWhite=0}}
+    d.interfaces = {"ringColor","colorTemperature"}
   elseif support.xy then --or support.xy then
     d.type = "com.fibaro.colorController"
     d.className = "ColorXYLight"
     d.properties = {colorComponents = {red=0,green=0,blue=0,warmWhite=0}}
+    d.interfaces = {"ringColor","colorTemperature"}
   elseif attr.brightness or support.brightness then
     d.type = "com.fibaro.multilevelSwitch"
     d.className = "DimLight"
@@ -206,7 +210,7 @@ HASS.deviceAddons = AD
 
 function HASS.resolveAddons()
   for _,c in pairs(quickApp.childDevices) do
-    if c.battery then
+    if c.battery then   -- ToDo, make it generic for all addOns...
       if not addons[c.battery] then
         fibaro.warning(__TAG,fmt("Battery %s not found for %s",c.battery,c.uid))
       else
@@ -235,6 +239,20 @@ function HASS.dumpAddons()
   dump("Voltage","voltage")
   print(pr.tostring())
 end
+
+-----------------------------------------------------
+HASS.customEntity = {} -- Custom entity types
+--[[
+HASS.customEntity = {[my_entity_id] = "my_type"}
+function HASS.deviceTypes.my_type(d,e)
+  d.type = "com.fibaro.specialType"
+  d.className = "MySpecialTypClass"
+  return d
+end
+Alt. if my_entity_id is a light but not recognized by domain/device_category
+HASS.customEntity = {[my_entity_id] = "light"}
+--]]
+
 ------------------------------------------------------
 --- QuickApp classes for HASS devices ----------------
 ------------------------------------------------------
@@ -276,17 +294,15 @@ end
 class 'DimLight'(HASSChild) 
 function DimLight:__init(device)
   HASSChild.__init(self, device)
-  local state = self._initData.hass.state
-  local attr = self._initData.hass.attributes
-  self:updateProperty('state',state=='on')
-  self:updateProperty('value',attr.brightness or 0)
+  self:update(self._initData.hass)
 end
 function DimLight:update(new,old)
-  self:updateProperty('state',new.state=='on')
-  self:updateProperty('value',new.attributes.brightness or new.state=='on' or false)
+  local state,br = new.state=='on',new.attributes.brightness
+  self:updateProperty('state',state)
+  self:updateProperty('value',state and to100(br) or 0)
 end
 function DimLight:setValue(v)
-  self:send("turn_on",{entity_id=self._uid, brightness = v})
+  self:send("turn_on",{entity_id=self._uid, brightness = to255(v)})
 end
 function DimLight:turnOn() self:send("turn_on",{entity_id=self._uid}) end
 function DimLight:turnOff() self:send("turn_off",{entity_id=self._uid}) end
@@ -298,8 +314,8 @@ function ColorRGBLight:__init(device)
   self:update(self._initData.hass)
 end
 function ColorRGBLight:setColor(r,g,b,w)
-  local color = {r, g, b, w}
-  self:send("turn_on",{entity_id=self._uid, rgb_color = color})
+  -- send to HASS and wait for update coming back
+  self:send("turn_on",{entity_id=self._uid, rgb_color = {r, g, b, w}})
 end
 function ColorRGBLight:setColorComponents(colorComponents) -- Called by HC3 UI
   DEBUGF('color',"setColorComponents called %s",json.encode(colorComponents))
@@ -310,24 +326,25 @@ function ColorRGBLight:setColorComponents(colorComponents) -- Called by HC3 UI
   local cc = self.properties.colorComponents
   local isColorChanged = false
   for k,v in pairs(colorComponents) do
-    if cc[k] and cc[k] ~= v then isColorChanged = true end
+    if cc[k] and cc[k] ~= v then cc[k]=v isColorChanged = true end
   end
   if isColorChanged == true then
-    --self:updateProperty("colorComponents", cc)
     self:setColor(cc["red"], cc["green"], cc["blue"], cc["white"])
   end
 end
 function ColorRGBLight:update(new,old)
+  DimLight.update(self,new,old)
   local rgb = new.attributes.rgb_color
   if rgb == nil then
     print("ToDo convert xy to rgb")
     return 
   end
+  print("ColorRGBLight",new.state,new.attributes.brightness,json.encode(rgb))
   rgb = {red = rgb[1], green = rgb[2], blue = rgb[3], white = rgb[4]}
   local color = string.format("%d,%d,%d,%d", rgb.red or 0, rgb.green or 0, rgb.blue or 0, rgb.white or 0) 
   self:updateProperty('color',color)
   local cc = self.properties.colorComponents
-  for k,v in pairs(rgb) do cc[k] = v end
+  for k,v in pairs(rgb) do if cc[k] then cc[k] = v end end
   self:updateProperty('colorComponents',cc)
 end
 
@@ -335,7 +352,7 @@ class 'ColorXYLight'(ColorRGBLight)
 function ColorXYLight:__init(device)
   ColorRGBLight.__init(self, device)
 end
-function ColorRGBLight:setColor(r,g,b,w)
+function ColorXYLight:setColor(r,g,b,w)
   print("ToDo convert xy to rgb")
   -- local xy = rgbToXy(r,g,b,w)
   -- self:send("turn_on",{entity_id=self._uid, xy = xy})
@@ -344,9 +361,7 @@ end
 class 'BinarySwitch'(HASSChild) -- Plug looking like light
 function BinarySwitch:__init(device)
   HASSChild.__init(self, device)
-  local state = self._initData.hass.state
-  self:updateProperty('state',state=='on')
-  self:updateProperty('value',state=='on')
+  self:update(self._initData.hass)
 end
 function BinarySwitch:update(new,old)
   self:updateProperty('state',new.state=='on')
@@ -359,9 +374,7 @@ function BinarySwitch:toggle() self:send('toggle',{entity_id=self._uid}) end
 class 'BinarySensor'(HASSChild) 
 function BinarySensor:__init(device)
   HASSChild.__init(self, device)
-  local state = self._initData.hass.state
-  self:updateProperty('state',state=='on')
-  self:updateProperty('value',state=='on')
+  self:update(self._initData.hass)
 end
 function BinarySensor:update(new,old)
   self:updateProperty('state',new.state=='on')
@@ -371,8 +384,7 @@ end
 class 'Switch'(HASSChild)
 function Switch:__init(device)
   HASSChild.__init(self, device)
-  local state = self._initData.hass.state
-  self:updateProperty('value',state=='on')
+  self:update(self._initData.hass.state)
 end
 function Switch:update(new,old)
   self:updateProperty('value',new.state=='on')
@@ -384,6 +396,7 @@ function Switch:toggle() self:send("toggle", {entity_id=self.entity_id}) end
 class 'Button'(HASSChild)
 function Button:__init(device)
   HASSChild.__init(self, device)
+  self:update(self._initData.hass)
 end
 function Button:update(new,old)
   printf(self._uid,json.encode(new)) -- TBD
@@ -392,6 +405,7 @@ end
 class 'Speaker'(HASSChild)
 function Speaker:__init(device)
   HASSChild.__init(self, device)
+  self:update(self._initData.hass)
 end
 function Speaker:update(new,old)
   printf(self._uid,json.encode(new)) -- TBD
@@ -400,8 +414,7 @@ end
 class 'Motion'(HASSChild)
 function Motion:__init(device)
   HASSChild.__init(self, device)
-  local state = self._initData.hass.state
-  self:updateProperty('value',state=='on')
+  self:update(self._initData.hass)
 end
 function Motion:update(new,old)
   self:updateProperty('value',new.state=='on')
@@ -411,10 +424,7 @@ class 'Illuminance'(HASSChild)
 local function toLux(value) return 10 ^ ((value - 1) / 10000) end
 function Illuminance:__init(device)
   HASSChild.__init(self, device)
-  local level = self._initData.hass.attributes.light_level
-  local lux = toLux(level)
-  --print(lux) --What is the lux value????
-  self:updateProperty('value',lux)
+  self:update(self._initData.hass)
 end
 function Illuminance:update(new,old)
   self:updateProperty('value',toLux(new.attributes.light_level))
@@ -423,8 +433,7 @@ end
 class 'DoorSensor'(HASSChild)
 function DoorSensor:__init(device)
   HASSChild.__init(self, device)
-  local state = self._initData.hass.state
-  self:updateProperty('value',state=='on')
+  self:update(self._initData.hass)
 end
 function DoorSensor:update(new,old)
   self:updateProperty('value',new.state=='on')
@@ -433,8 +442,7 @@ end
 class 'DoorLock'(HASSChild)
 function DoorLock:__init(device)
   HASSChild.__init(self, device)
-  local state = self._initData.hass.state
-  self:updateProperty('secured',state=='locked' and 255 or 0)
+  self:update(self._initData.hass)
 end
 function DoorLock:update(new,old)
   self:updateProperty('secured',new.state=='locked' and 255 or 0)
@@ -445,8 +453,7 @@ function DoorLock:unsecure() self:send("unlock", {entity_id=self._uid}) end
 class 'Temperature'(HASSChild)
 function Temperature:__init(device)
   HASSChild.__init(self, device)
-  local state = self._initData.hass.state
-  self:updateProperty('value',tonumber(state))
+  self:update(self._initData.hass)
 end
 function Temperature:update(new,old)
   self:updateProperty('value',tonumber(new.state))
@@ -455,8 +462,7 @@ end
 class 'Humidity'(HASSChild)
 function Humidity:__init(device)
   HASSChild.__init(self, device)
-  local state = self._initData.hass.state
-  self:updateProperty('value',tonumber(state))
+  self:update(self._initData.hass)
 end
 function Humidity:update(new,old)
   self:updateProperty('value',tonumber(new.state))
@@ -465,8 +471,7 @@ end
 class 'Pm25'(HASSChild)
 function Pm25:__init(device)
   HASSChild.__init(self, device)
-  local state = self._initData.hass.state
-  self:updateProperty('value',tonumber(state))
+  self:update(self._initData.hass)
 end
 function Pm25:update(new,old)
   self:updateProperty('value',tonumber(new.state))
@@ -475,9 +480,7 @@ end
 class 'Fan'(HASSChild) --TBD
 function Fan:__init(device)
   HASSChild.__init(self, device)
-  local state = self._initData.hass.state
-  self:logState(self._initData.hass)
-  --self:updateProperty('value',tonumber(state))
+  self:update(self._initData.hass)
 end
 function Fan:logState(d)
   local a = d.attributes
@@ -491,10 +494,7 @@ end
 class 'DeviceTracker'(HASSChild) --Binary sensor, ON when home
 function DeviceTracker:__init(device) -- Location displayed in log property
   HASSChild.__init(self, device)
-  local state = self._initData.hass.state
-  --self:logState(self._initData.hass)
-  self:updateProperty('value',state=='home')
-  self:updateProperty('log',state)
+  self:update(self._initData.hass)
 end
 function DeviceTracker:logState(d)
   local a = d.attributes
@@ -510,12 +510,7 @@ end
 class 'Cover'(HASSChild) --TBD
 function Cover:__init(device)
   HASSChild.__init(self, device)
-  local d = self._initData.hass
-  self:logState(d)
-  local state = d.state
-  local percentage = d.attributes.current_position or 0
-  local val = state=='open' and 99 or state=='closed' and 0 or percentage
-  self:updateProperty('value',val)
+  self:update(self._initData.hass)
 end
 function Cover:open() self:send("open_cover",{entity_id=self._uid}) end
 function Cover:close() self:send("close_cover",{entity_id=self._uid}) end
@@ -535,18 +530,14 @@ function Cover:update(new,old)
   self:logState(new)
   local state = new.state
   local percentage = new.attributes.current_position or 0
-  local val = state=='open' and 100 or state=='closed' and 0 or percentage
+  local val = percentage
   self:updateProperty('value',val)
 end
 
 class 'Thermostat'(HASSChild) --TBD
 function Thermostat:__init(device)
   HASSChild.__init(self, device)
-  local d = self._initData.hass
-  local a = d.attributes
-  self:updateProperty("supportedThermostatModes", a.preset_modes)
-  self:logState(d)
-  self:updateProperty('thermostatMode',d.state)
+  self:update(self._initData.hass)
 end
 function Thermostat:logState(d)
   local a = d.attributes
@@ -565,6 +556,8 @@ end
 function Thermostat:update(new,old)
   self:logState(new)
   local state = new.state
+  local a = new.attributes
+  self:updateProperty("supportedThermostatModes", a.preset_modes)
   self:updateProperty('thermostatMode',state)
 end
 function Thermostat:setThermostatMode(mode)
@@ -582,8 +575,7 @@ end
 class 'Calendar'(HASSChild)
 function Calendar:__init(device)
   HASSChild.__init(self, device)
-  local d = self._initData.hass
-  self:update(d)
+  self:update(self._initData.hass)
 end
 function Calendar:logState(d)
   local a = d.attributes

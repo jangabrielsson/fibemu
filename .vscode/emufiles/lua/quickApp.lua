@@ -111,7 +111,11 @@ end
 
 function QuickAppBase:hasInterface(if1)
   __assert_type(if1, "string")
-  local ifs = api.get("/devices/" .. self.id).interfaces or {}
+  local ifs = (api.get("/devices/" .. self.id,"hc3") or {}).interfaces or {}
+  if #ifs == 0 then
+    self:warning("No interfaces found for device " .. self.id)
+    return nil
+  end
   for _,i in ipairs(ifs) do if i == if1 then return true end end
 end
 
@@ -154,7 +158,7 @@ end
 function QuickAppBase:updateProperty(prop, val)
   __assert_type(prop, 'string')
   local old = self.properties[prop]
-  if old ~= val then
+  if type(val)=='table' or old ~= val then
     api.post("/plugins/updateProperty", { deviceId = self.id, propertyName = prop, value = val })
     self.properties[prop] = val
   else
