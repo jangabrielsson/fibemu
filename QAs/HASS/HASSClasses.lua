@@ -26,6 +26,7 @@ end
 local function copy(t) -- shallow copy
   local r = {} for k,v in pairs(t) do r[k] = v end return r
 end
+local function round(v) return math.floor(v+0.5) end
 local function to100(v) return math.floor((v/255.0)*100+0.5) end
 local function to255(v) return math.floor((v/100.0)*255+0.5) end
 
@@ -90,7 +91,7 @@ function deviceTypes.button(d,e)
 end
 
 function deviceTypes.speaker(d,e)
-  d.type = "com.fibaro.speaker"
+  d.type = "com.fibaro.sonosSpeaker"
   d.className = "Speaker"
   return d
 end
@@ -256,7 +257,17 @@ HASS.customEntity = {[my_entity_id] = "light"}
 ------------------------------------------------------
 --- QuickApp classes for HASS devices ----------------
 ------------------------------------------------------
-
+--[[
+  The general flow is that the HASS devices sends events to the 
+  child QA, and the child QA updates it's properties accordingly.
+  Ex. If a HASS binary switch is turned on it sends a state_changed
+  event to the child QA with state=='on' and the child QA updates
+  it's state property to true.
+  When the child QA is turned on (self:turnOn()), we send the state change
+  to the HASS device, and we wait for the update back from the HASS device.
+  Alt. we could update the child QA state property directly, and wait for the
+  HASS update to verify that. At the moment we don't.
+--]]
 -- Base class for HASS devices
 class 'HASSChild'(QwikAppChild)
 function HASSChild:__init(device)
@@ -339,7 +350,7 @@ function ColorRGBLight:update(new,old)
     print("ToDo convert xy to rgb")
     return 
   end
-  print("ColorRGBLight",new.state,new.attributes.brightness,json.encode(rgb))
+  DEBUGF("color","ColorRGBLight %s %s %s",new.state,new.attributes.brightness,json.encode(rgb))
   rgb = {red = rgb[1], green = rgb[2], blue = rgb[3], white = rgb[4]}
   local color = string.format("%d,%d,%d,%d", rgb.red or 0, rgb.green or 0, rgb.blue or 0, rgb.white or 0) 
   self:updateProperty('color',color)
@@ -407,8 +418,29 @@ function Speaker:__init(device)
   HASSChild.__init(self, device)
   self:update(self._initData.hass)
 end
+function Speaker:play() self:send("play",{entity_id=self._uid}) end
+function Speaker:pause() self:send("pause",{entity_id=self._uid}) end
+function Speaker:stop() self:send("stop",{entity_id=self._uid}) end
+function Speaker:next() self:send("next",{entity_id=self._uid}) end
+function Speaker:prev() self:send("prev",{entity_id=self._uid}) end
+function Speaker:setVolume(volume) 
+  print("VOLUME",volume)
+  self:send("volume_set",{entity_id=self._uid, volume_level = volume/100})
+end
+function Speaker:setMute(mute)
+  self:send("volume_mute",{entity_id=self._uid, is_volume_muted = mute})
+end
+function Speaker:logState(d)
+  local a = d.attributes
+  printf("Speaker %s vol:%s muted:%s",d.state,a.volume_level,a.is_volume_muted)
+end
 function Speaker:update(new,old)
-  printf(self._uid,json.encode(new)) -- TBD
+  self:logState(new)
+  local state = new.state
+  local a = new.attributes
+  self:updateProperty("state", state)
+  self:updateProperty("muted", a.is_volume_muted)
+  self:updateProperty("volume", round(a.volume_level*100))
 end
 
 class 'Motion'(HASSChild)
@@ -421,7 +453,7 @@ function Motion:update(new,old)
 end
 
 class 'Illuminance'(HASSChild)
-local function toLux(value) return 10 ^ ((value - 1) / 10000) end
+local function toLux(value) return 10 ^ ((value - 1) / 10000) end -- Tbd, This is not right!
 function Illuminance:__init(device)
   HASSChild.__init(self, device)
   self:update(self._initData.hass)

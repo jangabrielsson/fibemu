@@ -44,7 +44,11 @@ function WSConnection:connect()
   local function handleError(err)
     ERRORF("Error: %s", err)
   end
+  local nEvents = 0
+  setInterval(function()
+  end,60*60*1000)
   local function handleDataReceived(data)
+    nEvents = nEvents+1
     data = json.decode(data)
     if data.id and mcbs[data.id] then
       local cb,timeout = mcbs[data.id].cb,mcbs[data.id].timeout

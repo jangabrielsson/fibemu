@@ -18,7 +18,7 @@
 
 HASS = HASS or {}
 
-local VERSION = "0.50"
+local VERSION = "0.52"
 local fmt = string.format
 local token,URL
 
@@ -35,7 +35,7 @@ end
 function MessageHandler.event(data,ws)
   local data = data.event.data
   local entity = data.entity_id
-  DEBUGF('test',"Event %s",entity)
+  DEBUGF('event',"Event %s",entity)
   local child = quickApp.children[entity]
   if child and child.change then child:change(data.new_state,data.old_state)
   elseif HASS.deviceAddons[entity] then HASS.deviceAddons[entity]:update(data) end
@@ -47,6 +47,7 @@ function QuickApp:onInit()
   fibaro.debugFlags.wsc = true  -- websocket states
   fibaro.debugFlags.child = true  -- Child qa
   fibaro.debugFlags.color = true  -- Child qa
+  fibaro.debugFlags.event = true  -- Child qa
   self:updateView("title","text",self.name.." v:"..VERSION)
 
   token,URL = self.qvar.token,self.qvar.url
@@ -78,12 +79,15 @@ function QuickApp:authenticated() -- Called when websocket is authenticated
     for _,e in ipairs(data) do
       local domain = e.entity_id:match("^(.-)%.")
       local category = e.attributes.device_class or false
+      if category == 'button' then 
+        print("fjarr",e.entity_id)
+      end
       --print("entity",e.entity_id)
       -- Mapping HASS entity to QA class is done
       -- 0. by custom mapping
       -- 1. by attributes.device_class
       -- 2. by domain
-      if HASS.customEntity[e.entity_id] then 
+      if HASS.customEntity[e.entity_id] then
         allDevices[e.entity_id] = {type=HASS.customEntity[e.entity_id],data=e}
       elseif HASS.deviceTypes[category] then
         allDevices[e.entity_id] = {type=category,data=e}
@@ -102,9 +106,9 @@ function QuickApp:authenticated() -- Called when websocket is authenticated
         -- If this entity is selected, create a child init data for QA
         children[e.entity_id] =  HASS.childData(allDevices[e.entity_id])
       else
-        if allDevices[e.entity_id] then 
+        if allDevices[e.entity_id] then
           HASS.childData(allDevices[e.entity_id]) -- for debugging
-        end 
+        end
       end
     end
     table.sort(unknowns)
@@ -118,6 +122,9 @@ function QuickApp:authenticated() -- Called when websocket is authenticated
   end)
 end
 
+--- Populates a popup dialog with device information.
+-- @param allDevices table A collection of devices to be displayed in the popup
+-- @return nil
 function QuickApp:populatePopup(allDevices)
   local options = {}
   local values = {}
@@ -128,7 +135,7 @@ function QuickApp:populatePopup(allDevices)
     local i = {text=name,type="option",value=id}
     table.insert(options,i)
     newDevices[id] = devices[id] or false
-    if newDevices[id] then 
+    if newDevices[id] then
       table.insert(values,id)
     end
   end
@@ -147,9 +154,5 @@ function QuickApp:deviceSelect(data)
   self.storage.devices = devices
   self:restart()
 end
-
-
-
-
 
 function QuickApp:restart() plugin.restart() end
