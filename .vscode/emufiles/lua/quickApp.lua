@@ -385,7 +385,7 @@ local function tryboolean(str) if str=='true' then return true elseif str=='fals
 QuickApp._uiTranslate = {}
 function onUIEvent(id, event)
   local QA0 = quickApp
-  if id ~= event.deviceId then QA0 = QA0.childDevices[event.deviceId] end
+  if quickApp.id ~= event.deviceId then QA0 = QA0.childDevices[event.deviceId] end
   if QuickApp._uiTranslate[QA0.type] then
       if QuickApp._uiTranslate[QA0.type](QA0,id,event) then return end
   end
@@ -396,7 +396,7 @@ function onUIEvent(id, event)
     return
   end
   local QA = quickApp
-  if id ~= event.deviceId then
+  if quickApp.id ~= event.deviceId then
     QA = QA.childDevices[event.deviceId]
     if QA == nil then
       quickApp:warning(string.format("Child with id:%s not found", id))
