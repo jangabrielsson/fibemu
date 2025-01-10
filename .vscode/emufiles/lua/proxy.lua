@@ -82,7 +82,7 @@ function QuickApp:createProxy(id,name)
     end
   
     --setTimeout(function() fibaro.call(self.id,"foo",4,5,6) end,2000)
-    local IGNORE={updateView=true,setVariable=true,updateProperty=true,MEMORYWATCH=true,PROXY=true,APIPOST=true,APIPUT=true,APIGET=true,_addInterfaces=true,_deleteInterfaces=true} -- Rewrite!!!!
+    local IGNORE={updateView=true,setVariable=true,updateProperty=true,MEMORYWATCH=true,PROXY=true,APIPOST=true,APIPUT=true,APIGET=true,_addInterfaces=true,_deleteInterfaces=true,_publishEvent} -- Rewrite!!!!
   
     local function CALLIDE(path,payload)
       local url = ip..path
@@ -117,7 +117,10 @@ function QuickApp:createProxy(id,name)
           action="delete",deviceId=id,interfaces=ifs
         })
      end
-  
+     function QuickApp:_publishEvent(data)
+        api.post("/plugins/publishEvent",data)
+     end
+     
     function QuickApp:initChildDevices() end
 
     local function loop()
@@ -240,7 +243,17 @@ function QuickApp:launchProxy(name)
     end
     return false
   end)
-  
+
+  api._intercept("POST","/plugins/publishEvent",function(m,path,data,hc3)
+    if data.source == self.id or self.childDevices[data.source] then
+      data = copy(data)
+      if data.source == self.id then data.source = self._proxyId end
+      local data2,res = fibaro.callHC3(self._proxyId,"_publishEvent",data)
+      return true,data2,res
+    end
+    return false
+  end)
+
   api._intercept("POST","/plugins/interfaces",function(m,path,data,hc3)
     if data.deviceId == self.id or self.childDevices[data.deviceId] then
       data = copy(data)

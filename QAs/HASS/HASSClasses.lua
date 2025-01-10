@@ -20,12 +20,6 @@ Supported devices:
 ---@diagnostic disable: undefined-global
 HASS = HASS or {} -- Table to stire "global" HASS functions and data
 local fmt = string.format
-local function member(t,v)
-  for _,m in ipairs(t) do if m == v then return true end end
-end
-local function copy(t) -- shallow copy
-  local r = {} for k,v in pairs(t) do r[k] = v end return r
-end
 local function round(v) return math.floor(v+0.5) end
 local function to100(v) return math.floor((v/255.0)*100+0.5) end
 local function to255(v) return math.floor((v/100.0)*255+0.5) end
@@ -55,7 +49,7 @@ function deviceTypes.light(d,e)
     d.type = "com.fibaro.binarySwitch"
     d.className = "BinarySwitch"
   else
-    fibaro.warning(__TAG,"Unsupported attributes.supported_color_modes for ",
+    WARNINGF("Unsupported attributes.supported_color_modes for %s %s",
     e.entity_id,
     table.concat(attr.supported_color_modes or {},",")
     )
@@ -84,9 +78,26 @@ function deviceTypes.illuminance(d,e)
   return d
 end
 
+local buttonEvs = {'initial_press','repeat','short_release','long_press','long_release'}
+local rotaryEvs = {'clock_wise','counter_clock_wise'}
 function deviceTypes.button(d,e)
-  d.type = "com.fibaro.remoteController"
-  d.className = "Button"
+  local attr = e.attributes
+  if table.equal(attr.event_types,rotaryEvs) then
+    d.type = "com.fibaro.multilevelSensor"
+    d.className = "Rotary"
+  elseif table.equal(attr.event_types,buttonEvs) then
+    d.type = "com.fibaro.remoteController"
+    d.className = "Button"
+    d.properties = {
+      centralSceneSupport = {
+        { keyAttributes = {"Pressed","Released","HeldDown","Pressed2","Pressed3"},keyId = 1 },
+      }
+    }
+    d.interfaces={"zwaveCentralScene"}
+  else
+    WARNINGF("Unsupported event_types for %s %s",e.entity_id,table.concat(attr.event_types or {},","))
+    return nil
+  end
   return d
 end
 
@@ -196,26 +207,38 @@ function AddOn:subscriber(uid)
 end
 function AddOn:update(new)
   self.state = new.state
-  for c,_ in pairs(self.subscribers) do c:updateAddOn(self.prop,self.state) end
+  for c,_ in pairs(self.subscribers) do c:updateAddOn(self.prop,self.state,new.attributes) end
 end
 function AddOn:__tostring()
   return fmt("%s %s %s",self.prop,self.entity_id,self.state)
 end
+class 'Favo'(AddOn)
+function Favo:__init(e,prop) AddOn.__init(self,e,prop) end
+function Favo:update(new)
+  for c,_ in pairs(self.subscribers) do 
+    if c.setFavorites then c:setFavorites(new.attributes.items) end
+  end
+end
+
 local AD = {}
 function AD.battery(e) addons[e.entity_id] = AddOn(e,"batteryLevel") end
 function AD.power(e) addons[e.entity_id] = AddOn(e,"power") end
 function AD.energy(e) addons[e.entity_id] = AddOn(e,"energy") end
 function AD.current(e) addons[e.entity_id] = AddOn(e,"current") end
 function AD.voltage(e) addons[e.entity_id] = AddOn(e,"voltage") end
+AD['sensor.sonos_favorites'] = function(e) addons[e.entity_id] = Favo(e,"sonos_favorites") end
 HASS.deviceAddons = AD
 
+local addonsNames = {'battery','power','energy','current','voltage','favorites'}
 function HASS.resolveAddons()
   for _,c in pairs(quickApp.childDevices) do
-    if c.battery then   -- ToDo, make it generic for all addOns...
-      if not addons[c.battery] then
-        fibaro.warning(__TAG,fmt("Battery %s not found for %s",c.battery,c.uid))
-      else
-        addons[c.battery]:subscriber(c)
+    for _,addon in ipairs(addonsNames) do
+      if c[addon] then
+        if not addons[c[addon]] then
+          WARNINGF("AddOn %s not found for %s",c[addon],c.uid)
+        else
+          addons[c[addon]]:subscriber(c)
+        end
       end
     end
   end
@@ -253,7 +276,6 @@ end
 Alt. if my_entity_id is a light but not recognized by domain/device_category
 HASS.customEntity = {[my_entity_id] = "light"}
 --]]
-
 ------------------------------------------------------
 --- QuickApp classes for HASS devices ----------------
 ------------------------------------------------------
@@ -293,13 +315,15 @@ end
 function HASSChild:send(cmd,data,cb) -- send command
   self.parent.WS:serviceCall(self.domain,cmd,data,cb)
 end
-function HASSChild:updateAddOn(prop,value)
+function HASSChild:updateAddOn(prop,value,attr)
   if tonumber(value) then value = math.floor(tonumber(value)+0.5) end
   self:updateProperty(prop,value) 
 end
 function HASSChild:change(new,old)
   self:updateProperty('dead',new.state == 'unavailable') -- Update dead property
-  if self.update then self:update(new,old) end
+  if new.state~='unavailable' then -- Don't update if dead, some values may be missing
+    if self.update then self:update(new,old) end
+  end
 end
 
 class 'DimLight'(HASSChild) 
@@ -309,6 +333,7 @@ function DimLight:__init(device)
 end
 function DimLight:update(new,old)
   local state,br = new.state=='on',new.attributes.brightness
+  self.state = state
   self:updateProperty('state',state)
   self:updateProperty('value',state and to100(br) or 0)
 end
@@ -346,6 +371,7 @@ end
 function ColorRGBLight:update(new,old)
   DimLight.update(self,new,old)
   local rgb = new.attributes.rgb_color
+  if not self.state then return end
   if rgb == nil then
     print("ToDo convert xy to rgb")
     return 
@@ -404,43 +430,101 @@ function Switch:turnOn() self:send("turn_on", {entity_id=self.entity_id}) end
 function Switch:turnOff() self:send("turn_off", {entity_id=self.entity_id}) end
 function Switch:toggle() self:send("toggle", {entity_id=self.entity_id}) end
 
+local function toOsTime(str)
+  local y,m,day,h,min,s,offs = str:match("(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)(.*)")
+  local t = os.time({year=y,month=m,day=day,hour=h,min=min,sec=s})
+  return os.utc2time(t)
+end 
+
+local btnMap = {initial_press="Pressed",['repeat']="HeldDown",short_release="Released",long_press="HeldDown",long_release="Released"}
+
 class 'Button'(HASSChild)
 function Button:__init(device)
   HASSChild.__init(self, device)
   self:update(self._initData.hass)
 end
+function Button:logState(d)
+  local eventType = d.attributes.event_type
+  local date = os.date("%Y-%m-%d %H:%M:%S",self.last)
+  printf("Button %s (%s) ev:%s",date,os.time()-self.last,eventType or "")
+end
 function Button:update(new,old)
-  printf(self._uid,json.encode(new)) -- TBD
+  self.last = toOsTime(new.state)
+  local t = os.time()-self.last
+  self:logState(new)
+  if t <= 1 then self:emitEvent(new.attributes) end
+end
+function Button:emitEvent(attr)
+  print("Btn Emit event...")
+  local key = 1
+  local modifier = btnMap[attr.event_type]
+  local data = {
+    type =  "centralSceneEvent",
+    source = self.id,
+    data = { keyAttribute = modifier, keyId = key }
+  }
+  local a,b = api.post("/plugins/publishEvent", data)
+end
+
+class 'Rotary'(Button)
+function Rotary:__init(device)
+  HASSChild.__init(self, device)
+  self:update(self._initData.hass)
+end
+function Rotary:logState(d)
+  local a = d.attributes
+  local date = os.date("%Y-%m-%d %H:%M:%S",self.last)
+  printf("Rotary %s (%s) ev:%s ac:%s dur:%s st:%s",
+    date, os.time()-self.last, a.event_type or "", a.action or "", a.duration or "", a.steps or "")
+end
+function Rotary:emitEvent(attr)
+  print("Rotary Emit event...")
 end
 
 class 'Speaker'(HASSChild)
 function Speaker:__init(device)
   HASSChild.__init(self, device)
+  self.favorites = self.qvar.favorites or "sensor.sonos_favorites"
   self:update(self._initData.hass)
 end
-function Speaker:play() self:send("play",{entity_id=self._uid}) end
-function Speaker:pause() self:send("pause",{entity_id=self._uid}) end
-function Speaker:stop() self:send("stop",{entity_id=self._uid}) end
-function Speaker:next() self:send("next",{entity_id=self._uid}) end
-function Speaker:prev() self:send("prev",{entity_id=self._uid}) end
+function Speaker:play()
+  self:send("media_play",{entity_id=self._uid}) 
+end
+function Speaker:pause() self:send("media_pause",{entity_id=self._uid}) end
+function Speaker:stop() self:send("media_stop",{entity_id=self._uid}) end
+function Speaker:next() self:send("media_next_track",{entity_id=self._uid}) end
+function Speaker:prev() self:send("media_previous_track",{entity_id=self._uid}) end
 function Speaker:setVolume(volume) 
-  print("VOLUME",volume)
   self:send("volume_set",{entity_id=self._uid, volume_level = volume/100})
 end
 function Speaker:setMute(mute)
-  self:send("volume_mute",{entity_id=self._uid, is_volume_muted = mute})
+  self:send("volume_mute",{entity_id=self._uid, is_volume_muted = mute==1})
 end
 function Speaker:logState(d)
   local a = d.attributes
+  -- media_album_name, media_artist, media_title, media_content_type
+  -- media_channel
   printf("Speaker %s vol:%s muted:%s",d.state,a.volume_level,a.is_volume_muted)
+end
+function Speaker:setFavorites(favorites)
+  self.favoriteList = favorites
 end
 function Speaker:update(new,old)
   self:logState(new)
   local state = new.state
   local a = new.attributes
+  if a.media_position and a.media_position > 0 then
+    self:updateView('position_Label', "text",tostring(a.media_position))
+    self:updateView('title_Label', "text", state)
+  else
+    self:updateView('creator_Label', "Online radio")
+    self:updateView('title_Label', "")
+  end
+  self:updateView('creator_Label', "text", a.media_artist or "")
+  self:updateView('mute_Switch', "value", a.is_volume_muted)
   self:updateProperty("state", state)
-  self:updateProperty("muted", a.is_volume_muted)
-  self:updateProperty("volume", round(a.volume_level*100))
+  self:updateProperty("mute", a.is_volume_muted)
+  self:updateProperty("volume", round((a.volume_level or 0)*100))
 end
 
 class 'Motion'(HASSChild)

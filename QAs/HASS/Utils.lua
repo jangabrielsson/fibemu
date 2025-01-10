@@ -1,9 +1,33 @@
 ---@diagnostic disable: undefined-global
 local fmt = string.format
 function printf(fmt,...) print(fmt:format(...)) end
+function color(col,fm,...)
+  str = fmt(fm,...)
+  return fmt('<font color="%s">%s</font>',col,str)
+end
+function printc(col,fm,...) print(color(col,fm,...)) end
 fibaro.debugFlags = fibaro.debugFlags or {}
 function DEBUGF(flag,fmt,...) if fibaro.debugFlags[flag] then printf(fmt,...) end end
-function ERRORF(f,...) fibaro.error(fmt(f,...)) end
+function ERRORF(f,...) fibaro.error(__TAG,color('red',f,...)) end
+function WARNINGF(f,...) fibaro.warning(__TAG,color('orange',f,...)) end
+
+function table.member(t,v)
+  for _,m in ipairs(t) do if m == v then return true end end
+end
+function table.copyShallow(t) -- shallow copy
+  local r = {} for k,v in pairs(t) do r[k] = v end return r
+end
+function table.equal(e1,e2)
+  if e1==e2 then return true
+  else
+    if type(e1) ~= 'table' or type(e2) ~= 'table' then return false
+    else
+      for k1,v1 in pairs(e1) do if e2[k1] == nil or not table.equal(v1,e2[k1]) then return false end end
+      for k2,_  in pairs(e2) do if e1[k2] == nil then return false end end
+      return true
+    end
+  end
+end
 
 class 'WSConnection'
 function WSConnection:__init(url,token)
@@ -36,7 +60,7 @@ function WSConnection:connect()
   end
   local function handleDisconnected(a,b)
     DEBUGF('wsc',"Disconnected")
-    fibaro.warning(__TAG,"Disconnected - will restart in 5s")
+    WARNINGF("Disconnected - will restart in 5s")
     setTimeout(function()
       plugin.restart()
     end,5000)
@@ -88,4 +112,18 @@ function string.buff(b)
     buff = {}
   end
   return self
+end
+
+local tmp_time = os.time()
+local d1 = os.date("*t",  tmp_time)
+local d2 = os.date("!*t", tmp_time)
+d1.isdst = false
+local zone_diff = os.difftime(os.time(d1), os.time(d2))
+-- zone_diff value may be calculated only once (at the beginning of your program)
+
+-- now we can perform the conversion (dt -> ux_time):
+function os.utc2time(t)
+  local dt = os.date("*t", t)
+  dt.sec = dt.sec + zone_diff
+  return os.time(dt)
 end

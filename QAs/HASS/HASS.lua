@@ -4,6 +4,7 @@
 --%%proxy="HASSProxy"
 --%%var=token:config.HASS_token
 --%%var=url:config.HASS_url
+--%%var=debug:"wsc,child,color"
 
 --%%file=lib/QwikChild.lua,QC;
 --%%file=QAs/HASS/Utils.lua,utils;
@@ -13,7 +14,7 @@
 --%%u={label="title",text="Label (Title)"}
 --%%u={label="label_ID_2",text="HASS devices:"}
 --%%u={multi="deviceSelect",text="Devices",visible=true,onToggled="deviceSelect",options={}}
---%%debug=refresh:false
+-- %%debug=refresh:false
 --%%remote=devices:2009
 
 HASS = HASS or {}
@@ -21,7 +22,7 @@ HASS = HASS or {}
 local VERSION = "0.52"
 local fmt = string.format
 local token,URL
-
+local dfltDebugFlags = "child"
 local MessageHandler = {}
 function MessageHandler.auth_required(data,ws)
   DEBUGF('test',"Websocket auth reqired")
@@ -42,12 +43,14 @@ function MessageHandler.event(data,ws)
 end
 
 function QuickApp:onInit()
-  print(self.name,"v:"..VERSION)
-  fibaro.debugFlags.test = true
-  fibaro.debugFlags.wsc = true  -- websocket states
-  fibaro.debugFlags.child = true  -- Child qa
-  fibaro.debugFlags.color = true  -- Child qa
-  fibaro.debugFlags.event = true  -- Child qa
+  printc("yellow","%s v:%s",self.name,VERSION)
+  local dflags = self.qvar.debug or dfltDebugFlags
+  for _,f in ipairs(dflags:split(",")) do fibaro.debugFlags[f] = true end
+  -- fibaro.debugFlags.test = true
+  -- fibaro.debugFlags.wsc = true    -- websocket states
+  -- fibaro.debugFlags.child = true  -- Child qa
+  -- fibaro.debugFlags.color = true  -- Child qa
+  -- fibaro.debugFlags.event = true  -- Child qa
   self:updateView("title","text",self.name.." v:"..VERSION)
 
   token,URL = self.qvar.token,self.qvar.url
@@ -66,7 +69,7 @@ function QuickApp:onInit()
   WS:connect()
 end
 
-local skipUnknowns = {scene=true,batterys=true,timestamp=true,update=true}
+local skipUnknowns = {scene=true,battery=true,timestamp=true,update=true}
 function QuickApp:authenticated() -- Called when websocket is authenticated
   DEBUGF('test',"Fetching HASS devices")
   self.WS:send({type= "get_states"},function(data)
@@ -79,23 +82,22 @@ function QuickApp:authenticated() -- Called when websocket is authenticated
     for _,e in ipairs(data) do
       local domain = e.entity_id:match("^(.-)%.")
       local category = e.attributes.device_class or false
-      if category == 'button' then 
-        print("fjarr",e.entity_id)
-      end
       --print("entity",e.entity_id)
       -- Mapping HASS entity to QA class is done
       -- 0. by custom mapping
       -- 1. by attributes.device_class
       -- 2. by domain
       if HASS.customEntity[e.entity_id] then
+        -- return {type=<type>,data=e} or nil if skipping
         allDevices[e.entity_id] = {type=HASS.customEntity[e.entity_id],data=e}
       elseif HASS.deviceTypes[category] then
         allDevices[e.entity_id] = {type=category,data=e}
       elseif HASS.deviceTypes[domain] then
-        --print("domain",domain,e.entity_id)
         allDevices[e.entity_id] = {type=domain,data=e}
       elseif HASS.deviceAddons[category or domain] then
         HASS.deviceAddons[category or domain](e)
+      elseif HASS.deviceAddons[e.entity_id] then
+        HASS.deviceAddons[e.entity_id](e)
       else
         -- Report unknown devices, (skipping battery/timestamp)
         if not skipUnknowns[category or domain] then
@@ -107,7 +109,7 @@ function QuickApp:authenticated() -- Called when websocket is authenticated
         children[e.entity_id] =  HASS.childData(allDevices[e.entity_id])
       else
         if allDevices[e.entity_id] then
-          HASS.childData(allDevices[e.entity_id]) -- for debugging
+          --HASS.childData(allDevices[e.entity_id]) -- for debugging
         end
       end
     end
