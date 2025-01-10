@@ -10,11 +10,12 @@
 --%%file=QAs/HASS/Utils.lua,utils;
 --%%file=QAs/HASS/HASSClasses.lua,classes;
 --%%file=lib/BetterQA.lua,BQA;
+--%%file=lib/uiLib.lua,uiLib;
 
 --%%u={label="title",text="Label (Title)"}
 --%%u={label="label_ID_2",text="HASS devices:"}
 --%%u={multi="deviceSelect",text="Devices",visible=true,onToggled="deviceSelect",options={}}
--- %%debug=refresh:false
+--%%debug=refresh:false
 --%%remote=devices:2009
 
 HASS = HASS or {}
@@ -24,6 +25,7 @@ local fmt = string.format
 local token,URL
 local dfltDebugFlags = "child"
 local MessageHandler = {}
+
 function MessageHandler.auth_required(data,ws)
   DEBUGF('test',"Websocket auth reqired")
   ws:sendRaw({type= "auth",access_token = token})
@@ -44,14 +46,15 @@ end
 
 function QuickApp:onInit()
   printc("yellow","%s v:%s",self.name,VERSION)
+  self:updateView("title","text",self.name.." v:"..VERSION)
+  
   local dflags = self.qvar.debug or dfltDebugFlags
   for _,f in ipairs(dflags:split(",")) do fibaro.debugFlags[f] = true end
   -- fibaro.debugFlags.test = true
   -- fibaro.debugFlags.wsc = true    -- websocket states
-  -- fibaro.debugFlags.child = true  -- Child qa
-  -- fibaro.debugFlags.color = true  -- Child qa
-  -- fibaro.debugFlags.event = true  -- Child qa
-  self:updateView("title","text",self.name.." v:"..VERSION)
+  -- fibaro.debugFlags.child = true  -- Generic Child qa debug
+  -- fibaro.debugFlags.color = true  -- Color light debugging
+  -- fibaro.debugFlags.event = true  -- Logs all events from HASS
 
   token,URL = self.qvar.token,self.qvar.url
   if not(token and URL) then

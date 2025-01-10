@@ -101,9 +101,19 @@ function deviceTypes.button(d,e)
   return d
 end
 
+local SpeakerUI = {
+  --{button="button_ID_10_1",text="Shuffle",onReleased="doShuffle"},
+  --{label="modesLabel",text="Modes:"},
+  --{button="btnSay",text="Speak time",onReleased="speakTime"},
+  {label="statusLabel",text="Status:"},
+  {label="artistLabel",text="Artist"},
+  {label="trackLabel",text="Track"},
+  {select="favoriteSelector",text="Favorite",onToggled="favoriteSelected",options={}},
+}
 function deviceTypes.speaker(d,e)
-  d.type = "com.fibaro.sonosSpeaker"
+  d.type = "com.fibaro.player"
   d.className = "Speaker"
+  d.properties = { uiView = fibaro.ui.UI2NewUiView(SpeakerUI) }
   return d
 end
 
@@ -446,7 +456,7 @@ end
 function Button:logState(d)
   local eventType = d.attributes.event_type
   local date = os.date("%Y-%m-%d %H:%M:%S",self.last)
-  printf("Button %s (%s) ev:%s",date,os.time()-self.last,eventType or "")
+  printf("Button %s (%ss) ev:%s",date,os.time()-self.last,eventType or "")
 end
 function Button:update(new,old)
   self.last = toOsTime(new.state)
@@ -474,7 +484,7 @@ end
 function Rotary:logState(d)
   local a = d.attributes
   local date = os.date("%Y-%m-%d %H:%M:%S",self.last)
-  printf("Rotary %s (%s) ev:%s ac:%s dur:%s st:%s",
+  printf("Rotary %s (%ss) ev:%s ac:%s dur:%s st:%s",
     date, os.time()-self.last, a.event_type or "", a.action or "", a.duration or "", a.steps or "")
 end
 function Rotary:emitEvent(attr)
@@ -485,6 +495,7 @@ class 'Speaker'(HASSChild)
 function Speaker:__init(device)
   HASSChild.__init(self, device)
   self.favorites = self.qvar.favorites or "sensor.sonos_favorites"
+  self:registerUICallback("favoriteSelector", "onToggled", "favoriteSelected")
   self:update(self._initData.hass)
 end
 function Speaker:play()
@@ -506,25 +517,31 @@ function Speaker:logState(d)
   -- media_channel
   printf("Speaker %s vol:%s muted:%s",d.state,a.volume_level,a.is_volume_muted)
 end
-function Speaker:setFavorites(favorites)
-  self.favoriteList = favorites
-end
 function Speaker:update(new,old)
   self:logState(new)
   local state = new.state
   local a = new.attributes
-  if a.media_position and a.media_position > 0 then
-    self:updateView('position_Label', "text",tostring(a.media_position))
-    self:updateView('title_Label', "text", state)
-  else
-    self:updateView('creator_Label', "Online radio")
-    self:updateView('title_Label', "")
-  end
-  self:updateView('creator_Label', "text", a.media_artist or "")
-  self:updateView('mute_Switch', "value", a.is_volume_muted)
+  print("ATTR",json.encode(a))
+  self:updateView('artistLabel', "text", a.media_artist or "")
+  self:updateView('trackLabel', "text", a.media_title or "")
+  self:updateView('statusLabel', "text", state)
+  --self:updateView('mute_Switch', "value", a.is_volume_muted)
   self:updateProperty("state", state)
   self:updateProperty("mute", a.is_volume_muted)
   self:updateProperty("volume", round((a.volume_level or 0)*100))
+end
+function Speaker:setFavorites(favorites)
+  self.favoriteList = favorites
+  local opts = {}
+  for i,f in pairs(favorites) do opts[#opts+1]={text=f,type='option', value=i} end
+  self:updateView('favoriteSelector', "options", opts)
+end
+function Speaker:favoriteSelected(ev)
+  local sel = ev.values[1]
+  print("Fav:",self)
+  self:send("play_media",{
+    entity_id=self._uid, media_content_id = sel, media_content_type='favorite_item_id'
+  })
 end
 
 class 'Motion'(HASSChild)
