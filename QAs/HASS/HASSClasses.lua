@@ -462,7 +462,7 @@ function Button:update(new,old)
   self.last = toOsTime(new.state)
   local t = os.time()-self.last
   self:logState(new)
-  if t <= 1 then self:emitEvent(new.attributes) end
+  if t <= 1 then self:emitEvent(new.attributes) end -- ignore older events
 end
 function Button:emitEvent(attr)
   print("Btn Emit event...")
@@ -479,6 +479,9 @@ end
 class 'Rotary'(Button)
 function Rotary:__init(device)
   HASSChild.__init(self, device)
+  self.min = self.qvar.min or 0
+  self.max = self.qvar.max or 255
+  self.step = self.qvar.step or 1
   self:update(self._initData.hass)
 end
 function Rotary:logState(d)
@@ -488,7 +491,13 @@ function Rotary:logState(d)
     date, os.time()-self.last, a.event_type or "", a.action or "", a.duration or "", a.steps or "")
 end
 function Rotary:emitEvent(attr)
-  print("Rotary Emit event...")
+  local steps = tonumber(attr.steps)
+  --local action = attr.action
+  local duration = tonumber(attr.duration)
+  local dir = attr.event_type == "clock_wise" and 1 or -1
+  local val = fibaro.getValue(self.id,"value")
+  val = val + dir*steps
+  self:updateProperty('value',round(val))
 end
 
 class 'Speaker'(HASSChild)
@@ -521,7 +530,6 @@ function Speaker:update(new,old)
   self:logState(new)
   local state = new.state
   local a = new.attributes
-  print("ATTR",json.encode(a))
   self:updateView('artistLabel', "text", a.media_artist or "")
   self:updateView('trackLabel', "text", a.media_title or "")
   self:updateView('statusLabel', "text", state)
