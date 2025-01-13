@@ -297,6 +297,15 @@ function QuickApp:launchProxy(name)
     return false
   end)
 
+  api._interceptpattern("GET","/devices/(%d+)",function(m,path,data,hc3,id)
+    id = tonumber(id)
+    if id == self.id then id = self._proxyId end
+    if id == self._proxyId or isChild(id) then
+      local data2,res = api.get("/devices/"..id,"hc3")
+      return true,data2,res
+    end
+  end)
+
   api._intercept("GET","/devices?parentId="..self.id,function(m,path,data,hc3)
     local data2,res = api.get("/devices?parentId="..self._proxyId,"hc3")
     return true,data2,res

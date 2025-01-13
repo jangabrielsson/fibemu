@@ -1,4 +1,5 @@
 ---@diagnostic disable: undefined-global
+HASS = HASS or {}
 local fmt = string.format
 function printf(fmt,...) print(fmt:format(...)) end
 function color(col,fm,...)
@@ -7,9 +8,23 @@ function color(col,fm,...)
 end
 function printc(col,fm,...) print(color(col,fm,...)) end
 fibaro.debugFlags = fibaro.debugFlags or {}
-function DEBUGF(flag,fmt,...) if fibaro.debugFlags[flag] then printf(fmt,...) end end
-function ERRORF(f,...) fibaro.error(__TAG,color('red',f,...)) end
-function WARNINGF(f,...) fibaro.warning(__TAG,color('orange',f,...)) end
+function DEBUGF(flag,fmt,...) 
+  if fibaro.debugFlags[flag] then
+    local str = fmt:format(...)
+    quickApp:log(str)
+    printf(str)
+  end
+end
+function ERRORF(f,...) 
+  local str = fmt(f,...)
+  quickApp:log("Error:"..str)
+  fibaro.error(__TAG,color('red',"%s",str)) 
+end
+function WARNINGF(f,...) 
+  local str = fmt(f,...)
+  quickApp:log("Warning:"..str)
+  fibaro.warning(__TAG,color('orange',"%s",str))
+end
 
 function table.member(t,v)
   for _,m in ipairs(t) do if m == v then return true end end
@@ -27,6 +42,22 @@ function table.equal(e1,e2)
       return true
     end
   end
+end
+
+function math.round(v) return math.floor((tonumber(v) or 0)+0.5) end
+function math.to100(v) return math.floor((v/255.0)*100+0.5) end
+function math.to255(v) return math.floor((v/100.0)*255+0.5) end
+
+if fibaro.fibemu then
+  function PCALL(f,...) 
+    return xpcall(f,function(err)
+      ERRORF("%s",err) 
+      print(os.debug.traceback())
+      end,
+    ...) 
+  end
+else
+  function PCALL(f,...) return pcall(f,...) end
 end
 
 class 'WSConnection'
@@ -50,7 +81,7 @@ function WSConnection:send(data,cb)
 end
 
 function WSConnection:serviceCall(domain, service, data, cb)
-  self:send({type="call_service", domain=domain, service=service, service_data=data})
+  self:send({type="call_service", domain=domain, service=service, service_data=data}, cb)
 end
 
 function WSConnection:connect()
@@ -79,7 +110,7 @@ function WSConnection:connect()
       mcbs[data.id] = nil
       if timeout then clearTimeout(timeout) end
       if cb then 
-        local stat,err = pcall(cb,data) 
+        local stat,err = PCALL(cb,data) 
         if not stat then ERRORF("Callback error: %s",err) end
       else print(json.encode(data)) end
       return
@@ -106,10 +137,11 @@ function string.buff(b)
   function self.printf(fmt,...) table.insert(buff,fmt:format(...)) end
   function self.tostring()
     local str = table.concat(buff)
-    str = str:gsub("\n","<br>")
-    str = str:gsub("  ","&nbsp;&nbsp;")
-    print(table.concat(buff))
+    local str2 = str:gsub("\n","<br>")
+    str2 = str2:gsub("  ","&nbsp;&nbsp;")
+    print(str2)
     buff = {}
+    return str
   end
   return self
 end
@@ -126,4 +158,34 @@ function os.utc2time(t)
   local dt = os.date("*t", t)
   dt.sec = dt.sec + zone_diff
   return os.time(dt)
+end
+
+function HASS.createEntityFilter()
+  local self = {}
+  local nodes = {}
+  function self:add(path,val)
+    local parts = path:split(".")
+    local f
+    if type(val)=='function' then 
+      f = function(entity) return val(entity) end
+    elseif type(val) == 'string' then 
+      f = function(entity) return tostring(entity):match(val) end
+    else f = function(entity) return val end end
+    nodes[#nodes+1] = {path=parts,val=f}
+  end
+  local function skip0(entity,node,val)
+    local ep = nil
+    for _,part in ipairs(node) do
+      entity = entity[part]
+      if entity == nil then break end
+    end
+    if entity ~= nil then return val(entity) end 
+  end
+  function self:skip(entity)
+    for _,node in ipairs(nodes) do
+      if skip0(entity,node.path,node.val) then return true end
+    end
+    return false
+  end
+  return self
 end
