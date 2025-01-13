@@ -18,7 +18,7 @@
 --%%u={button="groupBtn",text="Apply group",onReleased="applyGrouping"}
 
 --%%debug=refresh:false
---%%file=lib/SonosLib.lua,SonosLib;
+--%%file=lib/Sonos/SonosLib.lua,SonosLib;
 
 local player,sonos
 -- UI buttons - send command to Sonos

@@ -214,8 +214,12 @@ function Sonos:__init(IP,initcb,debugFlags)
   
   function eventMap.metadataStatus(header,obj,color)
     local g = SELF.groups[header.groupId] if not g then return end
-    g.currentTrack = obj.currentItem.track.name
-    g.currentArtist = (obj.currentItem.track.artist or {}).name or ""
+    g.currentTrack = ""
+    g.currentArtist = ""
+    if obj.currentItem then
+      g.currentTrack =  obj.currentItem.track.name or ""
+      g.currentArtist = obj.currentItem.track.artist.name or ""
+    end
     g.currentMetadata = obj
     g.metadata = obj post("metadata",g.id,{track=g.currentTrack,artist=g.currentArtist},color)
   end
@@ -338,11 +342,11 @@ end
 
 local _init = QuickApp.__init
 function QuickApp:__init(...)
-  if QuickApp.preloadSonos then 
+  if self.preloadSonos then 
     local _onInit = self.onInit
     function self:onInit()
       quickApp = self
-      local ip = QuickApp.preloadSonos.ip or ""
+      local ip = self.preloadSonos.ip or ""
       local var = ip:match("qvar:(.*)")
       if var then
         for _,v in ipairs(self.properties.quickAppVariables) do
@@ -353,7 +357,7 @@ function QuickApp:__init(...)
       Sonos(ip,function(sonos)
         self.sonos = sonos
         if _onInit then _onInit(self) end
-      end,QuickApp.preloadSonos.debug)
+      end,self.preloadSonos.debug)
     end
   end
   _init(self,...)

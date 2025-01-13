@@ -1,6 +1,6 @@
 --%%name=SonosTest
 --%%var=ip:"192.168.1.6"
---%%file=lib/SonosLib.lua,SonosLib;
+--%%file=lib/Sonos/SonosLib.lua,SonosLib;
 
 QuickApp.preloadSonos={ip="qvar:ip",debug={socket=true}}
 
