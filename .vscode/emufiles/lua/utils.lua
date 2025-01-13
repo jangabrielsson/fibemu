@@ -1,11 +1,12 @@
 local util = {}
 
 local format = string.format
-local config = nil 
+local config = {colors={}}
 
 function util.init(conf, libs)
   QA.prettyJson = util.prettyJson
   config = conf
+  config.colors = conf.colors or {}
 end
 
 function util.timerQueue()
@@ -141,7 +142,7 @@ local COLORMAP = {
   darkorange = "\027[38;5;208m",
   darkorange3 = "\027[38;5;166m",
   darkred = "\027[38;5;88m",
-  darkseagreen = "\027[38;5;108m",
+  --darkseagreen = "\027[38;5;108m",
   darkseagreen1 = "\027[38;5;193m",
   darkseagreen2 = "\027[38;5;157m",
   darkseagreen3 = "\027[38;5;150m",
@@ -317,6 +318,19 @@ local COLORMAP = {
   yellow2 = "\027[38;5;190m",
   yellow3 = "\027[38;5;184m",
   yellow4 = "\027[38;5;106m",
+  floralwhite = "\033[38;5;230m", 
+  darkseagreen = "\033[38;5;108m", 
+  darkslateblue = "\033[38;5;60m", 
+  gainsboro = "\033[38;5;188m", 
+  slategray = "\033[38;5;102m", 
+  darkslategray = "\033[38;5;58m", 
+  lemonchiffon = "\033[38;5;187m", 
+  khaki = "\033[38;5;143m", 
+  lightgoldenrodyellow = "\033[38;5;186m", 
+  lavenderblush = "\033[38;5;225m", 
+  lavender = "\033[38;5;189m", 
+  slateblue = "\033[38;5;62m", 
+  deepskyblue = "\033[38;5;39m",
 }
 COLORMAP.brown = COLORMAP.sandybrown
 COLORMAP.lightred = COLORMAP.red
@@ -334,7 +348,7 @@ local fibColors = {
   ["WARNING"] = 'red',
   ["ERROR"] = 'red',
   ['TEXT'] = 'black',
-  ['DARKTEXT'] = 'grey82'
+  ['DARKTEXT'] = 'grey82',
 }
 
 local function html2color(str, startColor, dflTxt)

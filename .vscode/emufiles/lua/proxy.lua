@@ -234,6 +234,8 @@ function QuickApp:launchProxy(name)
     return false
   end)
   
+
+
   api._intercept("POST","/plugins/updateProperty",function(m,path,data,hc3)
     if data.deviceId == self.id or self.childDevices[data.deviceId] then
       data = copy(data)
@@ -279,16 +281,16 @@ function QuickApp:launchProxy(name)
     return false
   end)
   
-  api._interceptpattern("DELETE","/plugins/removeChildDevice/(%d+)",function(m,path,data,hc3,id)
-    local chs = api.get("/devices?parentId="..self.id)
-    local isChild = false
+  local function isChild(id)
+    id = tonumber(id)
+    local chs = api.get("/devices?parentId="..self._proxyId,"hc3")
     for _,ch in ipairs(chs) do
-      if ch.id == tonumber(id) then
-        isChild = true
-        break
-      end
+      if ch.id == id then return true end
     end
-    if isChild then
+  end
+
+  api._interceptpattern("DELETE","/plugins/removeChildDevice/(%d+)",function(m,path,data,hc3,id)
+    if isChild(id) then
       local data2,res = api.delete("/plugins/removeChildDevice/"..id,{},"hc3")
       return true,data2,res
     end
@@ -300,6 +302,31 @@ function QuickApp:launchProxy(name)
     return true,data2,res
   end)
   
+  -- api._interceptpattern("GET","/plugins/(%d+)/variables/(.*)",function(m,path,data,hc3,id,key)
+  --   id = tonumber(id)
+  --   if id == self.id then id = self._proxyId end
+  --   if id == self._proxyId or isChild(id) then
+  --     local data2,res = api.get("/plugins/"..id.."/variables/"..key,"hc3")
+  --     return true,data2,res
+  --   end
+  -- end)
+  -- api._interceptpattern("PUT","/plugins/(%d+)/variables/(.*)",function(m,path,data,hc3,id,key)
+  --   id = tonumber(id)
+  --   if id == self.id then id = self._proxyId end
+  --   if id == self._proxyId or isChild(id) then
+  --     local data2,res = api.get("/plugins/"..id.."/variables/"..key,data,"hc3")
+  --     return true,data2,res
+  --   end
+  -- end)
+  -- api._interceptpattern("POST","/plugins/(%d+)/variables",function(m,path,data,hc3,id,key)
+  --   id = tonumber(id)
+  --   if id == self.id then id = self._proxyId end
+  --   if id == self._proxyId or isChild(id) then
+  --     local data2,res = api.get("/plugins/"..id.."/variables",data,"hc3")
+  --     return true,data2,res
+  --   end
+  -- end)
+
 end
 
 function QuickApp:_ProxyOnAction(action)

@@ -568,6 +568,7 @@ async def internal_storage_set(id: int,response: Response):
 @app.get("/api/plugins/{id}/variables/{name}", tags=["Plugins methods"])
 async def internal_storage_set(id: int, name: str, response: Response):
     var,code = fibenv.get('fe').luaCall("getQAKey",id,name)
+    #print(f"GET {code} {var}",file=sys.stderr)
     response.status_code = code
     if code < 300:
         #print(f"{type(var)} {var}",file=sys.stderr)
@@ -583,6 +584,7 @@ class InternalStorageParams(BaseModel):
 @app.post("/api/plugins/{id}/variables", tags=["Plugins methods"])
 async def internal_storage_create(id: int, args: InternalStorageParams, response: Response):
     var,code = fibenv.get('fe').luaCall("createQAKey",id,args.json())
+    #print(f"POST {code} {var}",file=sys.stderr)
     response.status_code = code
     if code < 300:
         var = {'name':args.name,'value':args.value}
@@ -591,6 +593,7 @@ async def internal_storage_create(id: int, args: InternalStorageParams, response
 @app.put("/api/plugins/{id}/variables/{name}", tags=["Plugins methods"])
 async def internal_storage_set(id: int, name: str, args: InternalStorageParams, response: Response):
     var,code = fibenv.get('fe').luaCall("setQAKey",id,name,args.json())
+    #print(f"PUT {code} {var}",file=sys.stderr)
     response.status_code = code
     if code < 300:
         var = {'name':args.name,'value':args.value}

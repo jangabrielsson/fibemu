@@ -642,7 +642,13 @@ rsrcs.keys = {}
 
 function r.getQAKey(id, name)
     rsrcs.keys[id] = rsrcs.keys[id] or {}
-    return name and rsrcs.keys[id][name] or rsrcs.keys[id], 200
+    local val
+    if name then
+        val = rsrcs.keys[id][name]
+    else 
+        val = rsrcs.keys[id]
+    end
+    if val==nil then return nil,400 else return val,200 end
 end
 
 function r.deleteQAKey(id, name)
