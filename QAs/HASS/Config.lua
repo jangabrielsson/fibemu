@@ -25,10 +25,12 @@ function MODULE_configs()
   --  return val < 10 
   --end
   
-  HASS.classes.Temperature.auto='sensor_temperature'
-  HASS.classes.Lux.auto='sensor_illuminance'
-    HASS.classes.Speaker.auto='media_player_speaker'
-  -- HASS.classes.RGBLight.qa = {
+  -- Automatically define QA classes based on enity type 
+  HASS.classes.Temperature.auto='sensor_temperature' -- Define all temperature sensors as Tmperature
+  HASS.classes.Lux.auto='sensor_illuminance'         -- Define all illuminance sensors as Lux
+  HASS.classes.Speaker.auto='media_player_speaker'   -- Define all media player speakers as Speaker
+  HASS.classes.TV.auto='media_player_tv'              -- Define all media player tv as TV
+  -- HASS.classes.RGBLight.qa = { -- Predefined QAs for RGB lights
   --   ['myQA_1'] = {
   --     entities = {
   --       "light.kitchen1",

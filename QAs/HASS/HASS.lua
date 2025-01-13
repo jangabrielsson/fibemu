@@ -1,3 +1,15 @@
+--[[
+HASS integration QA for the Fibaro Home Center 3
+Copyright (c) 2025 Jan Gabrielsson
+Email: jan@gabrielsson.com
+GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
+
+Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+Everyone is permitted to copy and distribute verbatim copies
+of this license document, but changing it is not allowed.
+--]]
+
 ---@diagnostic disable: undefined-field
 --%%name=HASS
 --%%type=com.fibaro.deviceController
@@ -24,9 +36,8 @@
 --%%u={label="logLabel",text=""}
 
 --%%debug=refresh:false
---%%remote=devices:2009
 
-local VERSION = "0.60"
+local VERSION = "0.61"
 local fmt = string.format
 local token,URL
 local dfltDebugFlags = "child"
@@ -38,6 +49,11 @@ HASS.entities = HASS.entities or {}
 HASS.customTypes = HASS.customTypes or {}
 HASS.entityFilter = HASS.entityFilter or {}
 
+--[[---------------------------------------------------------
+MessageHandler.
+Receives incoming messages from the websocket and dispatches
+to Entity objects that sends the state changes on to subscribing child QAs
+--------------------------------------------------------------]]
 function MessageHandler.auth_required(data,ws)
   DEBUGF('test',"Websocket auth reqired")
   ws:sendRaw({type= "auth",access_token = token})
@@ -56,6 +72,11 @@ function MessageHandler.event(data,ws)
   else WARNINGF("Unknown entity %s",entity) end
 end
 
+--[[---------------------------------------------------------
+Main QuickApp.
+Sets up variables and creates the websocket connection.
+Flow continues in authenticated() when the websocket is authenticated.
+--------------------------------------------------------------]]
 function QuickApp:onInit()
   printc("yellow","%s v:%s",self.name,VERSION)
   self:updateView("title","text",self.name.." v:"..VERSION)

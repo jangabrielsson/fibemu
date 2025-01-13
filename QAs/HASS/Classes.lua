@@ -33,7 +33,7 @@ Class types and initial properties and interfaces.
 Used when creating a QA of specific class
 --------------------------------------------------------------]]
 function MODULE_0classes() -- named to be loaded first...
-
+  
   HASS.classes.DimLight = { type = "com.fibaro.multilevelSwitch",}
   HASS.classes.RGBLight = {
     type = "com.fibaro.colorController",
@@ -52,10 +52,8 @@ function MODULE_0classes() -- named to be loaded first...
     type = "com.fibaro.remoteController",
     properties = {
       centralSceneSupport = {
-        { 
-          keyAttributes = {"Pressed","Released","HeldDown","Pressed2","Pressed3"},
-          keyId = 1 
-        }
+        { keyAttributes = {"Pressed","Released","HeldDown","Pressed2","Pressed3"},
+          keyId = 1 }
       }
     },
     interfaces = {"zwaveCentralScene"},
@@ -70,6 +68,13 @@ function MODULE_0classes() -- named to be loaded first...
   HASS.classes.Speaker = {
     type = "com.fibaro.player",
     properties = { uiView = fibaro.ui.UI2NewUiView(SpeakerUI) }
+  }
+  local TV_UI = {
+    {select="inputSelector",text="Input",onToggled="inputSelected",options={}},
+  }
+  HASS.classes.TV = {
+    type = "com.fibaro.avController",
+    properties = { uiView = fibaro.ui.UI2NewUiView(TV_UI) }
   }
   HASS.classes.Motion = { type = "com.fibaro.motionSensor",}
   HASS.classes.Lux = { type = "com.fibaro.lightSensor", }
@@ -86,7 +91,7 @@ function MODULE_0classes() -- named to be loaded first...
   HASS.classes.DeviceTracker = { type = "com.fibaro.binarySensor",}
   HASS.classes.Calendar = { type = "com.fibaro.binarySensor",}
   HASS.classes.Thermostat = { type = "com.fibaro.hvacSystemAuto",}
-end
+end -- end module
 
 -------------------------------------------------------------
 -- Entities are the HASS entities read in at startup.
@@ -226,9 +231,9 @@ function HASSChild:send(entity,cmd,data,cb) -- send command
     if not r.success then
       ERRORF("send:%s %s %s",json.encode(data),r.error.code or "",r.error.message or "")
     end
-    end
   end
-  self.parent.WS:serviceCall(entity.domain,cmd,data,cb)
+end
+self.parent.WS:serviceCall(entity.domain,cmd,data,cb)
 end
 
 function HASSChild:change(entity)
@@ -465,6 +470,51 @@ function Speaker:favoriteSelected(ev)
   self:send(self.meid,"play_media",{
     media_content_id = sel, media_content_type='favorite_item_id'
   })
+end
+
+class 'TV'(HASSChild) -- TBD, not all buttons mapped
+function TV:__init(device)
+  HASSChild.__init(self, device)
+  self:registerUICallback('inputSelector', 'onToggled', 'inputSelected')
+  self.meid = self:firstEntityId('media_player_tv')
+end
+function TV:play() self:send(self.meid,"media_play") end
+function TV:pause() self:send(self.meid,"media_pause") end
+function TV:stop() self:send(self.meid,"media_stop") end
+function TV:next() self:send(self.meid,"media_next_track") end
+function TV:prev() self:send(self.meid,"media_previous_track") end
+function TV:setVolume(volume) self:send(self.meid,"volume_set",{volume_level = volume/100}) end
+function TV:setMute(mute)
+  self:send(self.meid,"volume_mute",{is_volume_muted = mute==1})
+end
+function TV:logState(entity)
+  local a = entity.attributes
+  -- media_album_name, media_artist, media_title, media_content_type
+  -- media_channel
+  printf("TV %s vol:%s muted:%s",entity.state,a.volume_level or 0,a.is_volume_muted or false)
+end
+function TV:update_media_player_tv(entity)
+  self.meid = entity
+  self:logState(entity)
+  self:source_list(entity.attributes.source_list or {})
+  local state = entity.state
+  local a = entity.attributes
+  self:updateProperty("state", state or "off")
+  self:updateProperty("mute", a.is_volume_muted or false)
+  self:updateProperty("volume", round((a.volume_level or 0)*100))
+end
+function TV:source_list(list)
+  DEBUGF('speaker',"TV inputs %s",json.encode(list))
+  self.inputList = list
+  local opts = {}
+  for i,f in ipairs(self.inputList) do opts[#opts+1]={text=f,type='option', value=tostring(i)} end
+  self:updateView('inputSelector', "options", opts)
+end
+function TV:inputSelected(ev)
+  local sel = ev.values[1]
+  local input = self.inputList[sel] or ""
+  DEBUGF('speaker',"TV inputSelected '%s'",input)
+  self:send(self.meid,"select_source",{ source=input })
 end
 
 class 'Motion'(HASSChild)
