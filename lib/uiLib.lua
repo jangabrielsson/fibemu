@@ -63,6 +63,10 @@ local function mkRow(elms,weight)
   return {components=comp,style={weight=weight or "1.2"},type="vertical"}
 end
 
+local function arrayify(t)
+  if type(t)=='table' then json.util.InitArray(t) end
+end
+
 local function UI2NewUiView(UI)
   local uiView = {}
   for _,row in ipairs(UI) do
@@ -111,6 +115,8 @@ local function UI2NewUiView(UI)
         text = el.text,
         visible = true,
       }
+      arrayify(uel.options)
+      arrayify(uel.values)
       if not next(uel.eventBinding) then 
         uel.eventBinding = nil 
       end

@@ -61,10 +61,10 @@ function QuickApp:onInit()
   self:updateView("title","text",self.name.." v:"..VERSION)
 
   local modules = {} -- Load user modules alphabetically...
-  for name,fun in pairs(_G) do 
+  for name,fun in pairs(_G) do
     if name:match("^MODULE_") and type(fun) == 'function' then
       modules[#modules+1] = {fun=fun,name=name}
-    end 
+    end
   end
   table.sort(modules,function(a,b) return a.name < b.name end)
   for _,mod in ipairs(modules) do
@@ -164,11 +164,11 @@ end
 
 function QuickApp:loadDefinedQAs()
   for className,cls in pairs(HASS.classes) do
-    if cls.qa then 
+    if cls.qa then
       for uid,qa in pairs(cls.qa) do
         if not self.children[uid] then
           local entities = qa.entities or {}
-          if not HASS.isEntity(entities) then 
+          if not HASS.isEntity(entities) then
             ERRORF("Entity(s) %s not found for defined QA %s",json.encode(entities),uid)
           elseif #entities==0 then
             ERRORF("No entities for defined QA %s",uid)
@@ -268,7 +268,7 @@ end
 function QuickApp:entitySelected(data)
   selectedEntities = data.values[1]
   if #selectedEntities == 0 then firstEntity = nil
-  elseif #selectedEntities == 1 then 
+  elseif #selectedEntities == 1 then
     firstEntity = HASS.entities[selectedEntities[1]]
   end
   self:updateQAinfo()

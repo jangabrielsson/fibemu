@@ -162,7 +162,9 @@ HASS update to verify that. At the moment we don't.
 -- Base class for HASS devices
 class 'HASSChild'(QwikAppChild)
 function HASSChild:__init(device)
+  self.uiCallbacks = {}
   QwikAppChild.__init(self, device)
+  --self:registerUICallbacks()
   quickApp.childDevices[self.id] = self -- Hack to get the child devices reged.
   self.uid = self._uid
   local entities = self:internalStorageGet("entities") or {}
