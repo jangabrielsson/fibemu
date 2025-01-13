@@ -318,19 +318,19 @@ local COLORMAP = {
   yellow2 = "\027[38;5;190m",
   yellow3 = "\027[38;5;184m",
   yellow4 = "\027[38;5;106m",
-  floralwhite = "\033[38;5;230m", 
-  darkseagreen = "\033[38;5;108m", 
-  darkslateblue = "\033[38;5;60m", 
-  gainsboro = "\033[38;5;188m", 
-  slategray = "\033[38;5;102m", 
-  darkslategray = "\033[38;5;58m", 
-  lemonchiffon = "\033[38;5;187m", 
-  khaki = "\033[38;5;143m", 
-  lightgoldenrodyellow = "\033[38;5;186m", 
-  lavenderblush = "\033[38;5;225m", 
-  lavender = "\033[38;5;189m", 
-  slateblue = "\033[38;5;62m", 
-  deepskyblue = "\033[38;5;39m",
+  floralwhite = "\027[38;5;230m", 
+  darkseagreen = "\027[38;5;108m", 
+  darkslateblue = "\027[38;5;60m", 
+  gainsboro = "\027[38;5;188m", 
+  slategray = "\027[38;5;102m", 
+  darkslategray = "\027[38;5;58m", 
+  lemonchiffon = "\027[38;5;187m", 
+  khaki = "\027[38;5;143m", 
+  lightgoldenrodyellow = "\027[38;5;186m", 
+  lavenderblush = "\027[38;5;225m", 
+  lavender = "\027[38;5;189m", 
+  slateblue = "\027[38;5;62m", 
+  deepskyblue = "\027[38;5;39m",
 }
 COLORMAP.brown = COLORMAP.sandybrown
 COLORMAP.lightred = COLORMAP.red
@@ -358,7 +358,7 @@ local function html2color(str, startColor, dflTxt)
     if s == "</font>" then
       p = p - 1; return st[p]
     else
-      local color = s:match("color=\"?([#%w]+)\"?")
+      local color = s:match("color=\"?([#%w]+)\"?") or s:match("color='([#%w]+)'")
       if color then color = color:lower() end
       color = COLORMAP[color] or (config.colors[color] and COLORMAP[config.colors[color] or txt]) or
           COLORMAP[txt]
