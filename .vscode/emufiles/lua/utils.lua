@@ -352,13 +352,14 @@ local fibColors = {
 }
 
 local function html2color(str, startColor, dflTxt)
-  local txt = dflTxt or config.dark and 'DARKTEXT' or 'TEXT'
-  local st, p = { startColor or COLORMAP[dflTxt or 'TEXT'] }, 1
+  local txt = dflTxt or config.dark and fibColors['DARKTEXT'] or fibColors['TEXT']
+  local st, p = { startColor or COLORMAP[dflTxt] }, 1
   return str:gsub("(</?font.->)", function(s)
     if s == "</font>" then
       p = p - 1; return st[p]
     else
       local color = s:match("color=\"?([#%w]+)\"?")
+      if color then color = color:lower() end
       color = COLORMAP[color] or (config.colors[color] and COLORMAP[config.colors[color] or txt]) or
           COLORMAP[txt]
       p = p + 1; st[p] = color
