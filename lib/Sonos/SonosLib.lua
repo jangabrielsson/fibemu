@@ -38,7 +38,7 @@ of this license document, but changing it is not allowed.
 local TEST = false
 
 class 'Sonos'
-Sonos.VERSION = "0.87"
+Sonos.VERSION = "0.88"
 function Sonos:__init(IP,initcb,debugFlags)
   self.TIMEOUT = 30
   local colors = {'lightgreen','lightblue','yellow','orange','purple','pink','cyan','magenta','lime','red'}
