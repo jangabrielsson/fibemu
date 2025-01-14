@@ -91,6 +91,13 @@ function MODULE_0classes() -- named to be loaded first...
   HASS.classes.DeviceTracker = { type = "com.fibaro.binarySensor",}
   HASS.classes.Calendar = { type = "com.fibaro.binarySensor",}
   HASS.classes.Thermostat = { type = "com.fibaro.hvacSystemAuto",}
+  local InputTextUI = {
+    {label="textLabel",text="<Text>"},
+  }
+  HASS.classes.InputText = {
+    type = "com.fibaro.genericDevice",
+    properties = { uiView = fibaro.ui.UI2NewUiView(InputTextUI) }
+  }
 end -- end module
 
 -------------------------------------------------------------
@@ -183,6 +190,7 @@ function HASSChild:__init(device)
       local typ = e.type
       self.entityTypes[typ] = self.entityTypes[typ] or {}
       table.insert(self.entityTypes[typ],e)
+      table.sort(self.entityTypes[typ],function(a,b) return a.id < b.id end)
       setTimeout(function() e:subscribe(self) end,0) -- QA gets update after initialized
     else
       WARNINGF("Entity %s for QA %s not found",entity,self.id)
@@ -219,21 +227,25 @@ function HASSChild:checkInterfaces()
   end
 end
 
-function HASSChild:firstEntityId(typ)
+function HASSChild:firstEntityType(typ)
   return self.entityTypes[typ] and self.entityTypes[typ][1] or nil
 end
 
 function HASSChild:send(entity,cmd,data,cb) -- send command
   if not entity then return WARNINGF("QA %s has no entity",self.id) end
   data = data or {}
+  local domain = entity.domain
   data.entity_id = entity.id
-  if not cb then cb = function(r) 
-    if not r.success then
-      ERRORF("send:%s %s %s",json.encode(data),r.error.code or "",r.error.message or "")
+  if not cb then 
+    cb = function(r) 
+      if not r.success then
+        ERRORF("send:%s:%s %s %s",domain,cmd,r.error.code or "",r.error.message or "")
+      elseif r.success==true then
+        DEBUGF('send',"%s",color('green',"%s:%s OK",domain,cmd))
+      end
     end
   end
-end
-self.parent.WS:serviceCall(entity.domain,cmd,data,cb)
+  self.parent.WS:serviceCall(domain,cmd,data,cb)
 end
 
 function HASSChild:change(entity)
@@ -245,9 +257,13 @@ function HASSChild:change(entity)
   end
 end
 
-function HASSChild:update_sensor_battery(entity)
-  DEBUGF('battery',"'%s' battery:%s%%",self.name,entity.state)
-  self:updateProperty('batteryLevel',round(entity.state))
+local logTimer = nil
+function HASSChild:log(str,time) 
+  if logTimer then clearTimeout(logTimer) logTimer=nil end
+  self:updateProperty('log',str or "")
+  if type(time)=='number' then
+    logTimer = setTimeout(function() self:updateProperty('log',"") end,time*1000)
+  end
 end
 
 function HASSChild:update_sensor_energy(entity)
@@ -258,7 +274,7 @@ end
 class 'DimLight'(HASSChild) 
 function DimLight:__init(device)
   HASSChild.__init(self, device)
-  self.meid = self:firstEntityId('light')
+  self.meid = self:firstEntityType('light')
 end
 function DimLight:update(entity)
   self.meid = entity
@@ -275,7 +291,7 @@ function DimLight:toggle() self:send(self.meid,"toggle") end
 class 'RGBLight'(DimLight)
 function RGBLight:__init(device)
   DimLight.__init(self, device)
-  self.meid = self:firstEntityId('light')
+  self.meid = self:firstEntityType('light')
 end
 function RGBLight:setColor(r,g,b,w)
   -- send to HASS and wait for update coming back
@@ -317,7 +333,7 @@ end
 class 'XYLight'(RGBLight)
 function XYLight:__init(device)
   RGBLight.__init(self, device)
-  self.meid = self:firstEntityId('light')
+  self.meid = self:firstEntityType('light')
 end
 function XYLight:setColor(r,g,b,w)
   print("ToDo convert xy to rgb")
@@ -328,7 +344,7 @@ end
 class 'BinarySwitch'(HASSChild) -- Plug looking like light
 function BinarySwitch:__init(device)
   HASSChild.__init(self, device)
-  self.meid = self:firstEntityId('switch')
+  self.meid = self:firstEntityType('switch') -- Entity we should send cmds to
 end
 function BinarySwitch:update(entity)
   self.meid = entity
@@ -352,7 +368,7 @@ end
 class 'Switch'(HASSChild)
 function Switch:__init(device)
   HASSChild.__init(self, device)
-  self.meid = self:firstEntityId('switch')
+  self.meid = self:firstEntityType('switch')
 end
 function Switch:update(entity)
   self.meid = entity
@@ -428,7 +444,7 @@ class 'Speaker'(HASSChild)
 function Speaker:__init(device)
   HASSChild.__init(self, device)
   self:registerUICallback('favoriteSelector', 'onToggled', 'favoriteSelected')
-  self.meid = self:firstEntityId('media_player_speaker')
+  self.meid = self:firstEntityType('media_player_speaker')
 end
 function Speaker:play() self:send(self.meid,"media_play") end
 function Speaker:pause() self:send(self.meid,"media_pause") end
@@ -476,7 +492,7 @@ class 'TV'(HASSChild) -- TBD, not all buttons mapped
 function TV:__init(device)
   HASSChild.__init(self, device)
   self:registerUICallback('inputSelector', 'onToggled', 'inputSelected')
-  self.meid = self:firstEntityId('media_player_tv')
+  self.meid = self:firstEntityType('media_player_tv')
 end
 function TV:play() self:send(self.meid,"media_play") end
 function TV:pause() self:send(self.meid,"media_pause") end
@@ -504,7 +520,7 @@ function TV:update_media_player_tv(entity)
   self:updateProperty("volume", round((a.volume_level or 0)*100))
 end
 function TV:source_list(list)
-  DEBUGF('speaker',"TV inputs %s",json.encode(list))
+  --DEBUGF('speaker',"TV inputs %s",json.encode(list))
   self.inputList = list
   local opts = {}
   for i,f in ipairs(self.inputList) do opts[#opts+1]={text=f,type='option', value=tostring(i)} end
@@ -545,7 +561,7 @@ end
 class 'DoorLock'(HASSChild)
 function DoorLock:__init(device)
   HASSChild.__init(self, device)
-  self.meid = self:firstEntityId('lock')
+  self.meid = self:firstEntityType('lock')
 end
 function DoorLock:update(entity)
   self.meid = entity
@@ -581,7 +597,7 @@ end
 class 'Fan'(HASSChild) --TBD
 function Fan:__init(device)
   HASSChild.__init(self, device)
-  self.meid = self:firstEntityId('fan')
+  self.meid = self:firstEntityType('fan')
 end
 function Fan:logState(entity)
   local a = entity.attributes
@@ -610,7 +626,7 @@ end
 class 'Cover'(HASSChild) --TBD
 function Cover:__init(device)
   HASSChild.__init(self, device)
-  self.meid = self:firstEntityId('cover')
+  self.meid = self:firstEntityType('cover')
 end
 function Cover:open() self:send(self.meid,"open_cover") end
 function Cover:close() self:send(self.meid,"close_cover") end
@@ -638,7 +654,7 @@ end
 class 'Thermostat'(HASSChild) --TBD
 function Thermostat:__init(device)
   HASSChild.__init(self, device)
-  self.meid = self:firstEntityId('climate')
+  self.meid = self:firstEntityType('climate')
 end
 function Thermostat:logState(entity)
   local a = entity.attributes
@@ -724,4 +740,14 @@ end
 function Calendar:publishEvent(name,descr)
   api.post("/customEvent",{name=name,descr=descr})
   api.post("/customEvent/"..name)
+end
+
+class 'InputText'(HASSChild)
+function InputText:__init(device)
+  HASSChild.__init(self, device)
+end
+function InputText:update(entity)
+  local fmt = self.qvar.format or "%s"
+  local str = fmt:format(entity.state)
+  self:updateView('textLabel', "text", str)
 end

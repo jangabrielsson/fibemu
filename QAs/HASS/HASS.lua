@@ -16,7 +16,7 @@ of this license document, but changing it is not allowed.
 --%%proxy="HASSProxy2"
 --%%var=token:config.HASS_token
 --%%var=url:config.HASS_url
---%%var=debug:"main,wsc,child,color,battery,speaker"
+--%%var=debug:"main,wsc,child,color,battery,speaker,send"
 
 --%%file=lib/QwikChild.lua,QC;
 --%%file=QAs/HASS/Utils.lua,utils;
@@ -37,7 +37,7 @@ of this license document, but changing it is not allowed.
 
 --%%debug=refresh:false
 
-local VERSION = "0.61"
+local VERSION = "0.62"
 local fmt = string.format
 local token,URL
 local dfltDebugFlags = "child"
@@ -132,10 +132,14 @@ function QuickApp:authenticated() -- Called when websocket is authenticated
       if not entityFilter:skip(e) then
         local entity = Entity(e)
         entities[e.entity_id] = entity
+        -- if e.entity_id:match("sensor.jans_14_pro_geocoded_location") then
+        --   DEBUGF('main',"entity %s",e.entity_id)
+        -- end
       else DEBUGF('main',"Skipping %s",e.entity_id) end
     end
     local children = self:getChildrenUidMap()
     self:loadExistingChildren(children)
+    self.WS:send({type= "subscribe_events",event_type= "state_changed"})
     self:populatePopup(children)
     self:loadDefinedQAs()
     self:loadAuto()

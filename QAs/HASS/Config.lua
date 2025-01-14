@@ -10,9 +10,12 @@ function MODULE_configs()
   -- recognize as a sensor. This remaps it to sensor_favorites
   HASS.customTypes['sensor%.sonos_favorites'] = 'sensor_favorites'
   -- Detecting type of light and remapping type to light_rgb or light_dim
-  HASS.customTypes['^light'] = function(e) 
+  HASS.customTypes['^light%.'] = function(e) 
     if e.attributes.rgb_color then return 'light_rgb'
     elseif e.attributes.brightness then return 'light_dim' end
+  end
+  HASS.customTypes['^sensor%.'] = function(e) 
+    if e.attributes.Location then return 'sensor_location' end
   end
   
   -- Skip entities with specific attributes
@@ -30,6 +33,7 @@ function MODULE_configs()
   HASS.classes.Lux.auto='sensor_illuminance'         -- Define all illuminance sensors as Lux
   HASS.classes.Speaker.auto='media_player_speaker'   -- Define all media player speakers as Speaker
   HASS.classes.TV.auto='media_player_tv'              -- Define all media player tv as TV
+  HASS.classes.InputText.auto='input_text'              -- Define all input texts
   -- HASS.classes.RGBLight.qa = { -- Predefined QAs for RGB lights
   --   ['myQA_1'] = {
   --     entities = {
