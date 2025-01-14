@@ -4,6 +4,11 @@ local copy, merge, append
 local QA, DIR
 local customUI = {}
 
+local function arrayify(t)
+    if type(t)=='table' then json.util.InitArray(t) end 
+    return t
+end
+
 local function base64encode(data)
     local bC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
     return ((data:gsub('.', function(x)
@@ -502,7 +507,12 @@ local function createChildDevice(pID, cdev)
     dev.parentId = pID
     local tag = "QUICKAPP" .. dev.id
 
-    local UI =  ui.view2UI(dev.properties.viewLayout or {}, dev.properties.uiCallbacks or {})
+    local UI = nil
+    if dev.properties.uiView then
+        UI = ui.uiView2UI(dev.properties.uiView)
+    else
+        UI =  ui.view2UI(dev.properties.viewLayout or {}, dev.properties.uiCallbacks or {})
+    end
     local uiStruct, uiMap = nil, nil
 
     if not QA.debugFlags.noStock then UI = addStockUI(dev, UI) end
@@ -652,7 +662,7 @@ local function createFQA(id)
 
     local props = {
         apiVersion = "1.3",
-        quickAppVariables = p.quickAppVariables or {},
+        quickAppVariables = p.quickAppVariables or arrayify({}),
         uiCallbacks = #p.uiCallbacks > 0 and p.uiCallbacks or nil,
         viewLayout = p.viewLayout,
         uiView = p.uiView,
@@ -701,7 +711,7 @@ local function file2fqa(fname)
 
     local props = {
         apiVersion = "1.3",
-        quickAppVariables = p.quickAppVariables or {},
+        quickAppVariables = p.quickAppVariables or arrayify({}),
         uiCallbacks = #p.uiCallbacks > 0 and p.uiCallbacks or nil,
         viewLayout = p.viewLayout,
         uiView = p.uiView,
@@ -709,7 +719,7 @@ local function file2fqa(fname)
         typeTemplateInitialized = true,
     }
     local fqa = {
-        apiVersion = "1.2",
+        apiVersion = "1.3",
         name = dev.name,
         type = dev.type,
         files = files,

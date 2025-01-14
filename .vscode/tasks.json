@@ -65,6 +65,25 @@
         ]
       },
       {
+        "label": "QA, save FQA to disk",
+        "type": "shell",
+        "command": "${config:fibpython}", 
+        "args": [
+          "${workspaceFolder}/.vscode/emufiles/__init__.py",
+          "-nw",
+          "-l",
+          "-ng",
+          "-i",
+          "${workspaceFolder}/.vscode/emufiles/lua/tool.lua",
+          "-extra",
+          "${relativeFile}",
+          "qa", 
+          "saveFQA", 
+          "${input:QA_name}",
+          "${input:path_id}"
+        ]
+      },
+      {
         "label": "QA, update QA",
         "type": "shell",
         "command": "${config:fibpython}", 

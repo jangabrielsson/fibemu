@@ -79,13 +79,28 @@ function MODULE_0classes() -- named to be loaded first...
   HASS.classes.Motion = { type = "com.fibaro.motionSensor",}
   HASS.classes.Lux = { type = "com.fibaro.lightSensor", }
   HASS.classes.DoorSensor = { type = "com.fibaro.doorSensor",}
+  HASS.classes.WindowSensor = { type = "com.fibaro.windowSensor",}
   HASS.classes.DoorLock = { type = "com.fibaro.doorLock",}
   HASS.classes.Temperature = { type = "com.fibaro.temperatureSensor",}
   HASS.classes.Humidity = { type = "com.fibaro.humiditySensor",}
+  HASS.classes.SmokeSensor = { type = "com.fibaro.smokeSensor",}
   HASS.classes.Pm25 = {
     type = "com.fibaro.multilevelSensor",
     properties = {unit = "µg/m³"}
   }
+  HASS.classes.Pm10 = {
+    type = "com.fibaro.multilevelSensor",
+    properties = {unit = "µg/m³"}
+  }
+  HASS.classes.Pm1 = {
+    type = "com.fibaro.multilevelSensor",
+    properties = {unit = "µg/m³"}
+  }
+  HASS.classes.Co2 = {
+    type = "com.fibaro.multilevelSensor",
+    properties = {unit = "µg/m³"}
+  }
+  HASS.classes.Co = {type = "com.fibaro.coDetector",}
   HASS.classes.Fan = { type = "com.fibaro.genericDevice",}
   HASS.classes.Cover = { type = "com.fibaro.rollerShutter",}
   HASS.classes.DeviceTracker = { type = "com.fibaro.binarySensor",}
@@ -147,12 +162,35 @@ function Entity:unsubscribe(subscriber)
   self.subscribers[subscriber] = nil
 end
 
-function HASS.isEntity(entity_id)
+local function match(s1,s2)
+  s2 = s2:match("(.*)_battery$") or s2
+  s2 = s2:match("(.*)_battery_percentage$") or s2
+  local s11 = s1:match("(.*)_")
+  if s11 and s11 == s2 then return true end
+  return s1 == s2
+end
+
+function Entity:proposeBattery() -- Try to find battery matching entity
+  for _,e in ipairs(HASS.getEntitiesOfType('sensor_battery')) do
+    if match(self.entityName,e.entityName) then
+      DEBUGF('main',"BATT: %s <= %s",self.id,e.id)
+      return e
+    end
+  end
+end
+
+function HASS.isEntity(entity_id) -- Check if entity_id(s) exists
   if type(entity_id) ~= 'table' then entity_id = {entity_id} end
   for _,e in ipairs(entity_id) do
     if not HASS.entities[e] then return false end
   end
   return true
+end
+
+function HASS.getEntitiesOfType(typ) -- Get entity object(s)
+  local r = {}
+  for _,e in pairs(HASS.entities) do if e.type == typ then r[#r+1] = e end end
+  return r
 end
 
 --[[---------------------------------------------------------
@@ -183,24 +221,45 @@ function HASSChild:__init(device)
   self._rawEntities = entities
   self.entities = {}
   self.entityTypes = {}
-  for _,entity in ipairs(entities) do
-    local e = HASS.entities[entity]
-    if e then
-      self.entities[entity] = e
-      local typ = e.type
-      self.entityTypes[typ] = self.entityTypes[typ] or {}
-      table.insert(self.entityTypes[typ],e)
-      table.sort(self.entityTypes[typ],function(a,b) return a.id < b.id end)
-      setTimeout(function() e:subscribe(self) end,0) -- QA gets update after initialized
-    else
-      WARNINGF("Entity %s for QA %s not found",entity,self.id)
-    end
+  for _,entity_id in ipairs(entities) do
+    self:_addEntity(entity_id)
+  end
+  if HASS.proposeBattery then self:tryToAddBattery() end
+  for typ,d in pairs(self.entityTypes) do
+    table.sort(d,function(a,b) return a.id < b.id end)
   end
   self:checkInterfaces()
 end
 
-function HASSChild:setEntities(entities)
-  self:internalStorageSet("entities",entities)
+function HASSChild:tryToAddBattery()
+  local b = self.entityTypes.sensor_battery
+  if b and #b > 0 then return end -- Already have battery
+  local fe = HASS.entities[self._rawEntities[1] or ""] -- first entity_id
+  if fe then
+    local batt = fe:proposeBattery()       -- found candidate battery
+    if batt and not self.entities[batt.id] then -- that we donät already have
+      table.insert(self._rawEntities,batt.id) -- update stored antities for QA
+      self:internalStorageSet("entities",self._rawEntities)
+      self:_addEntity(batt) -- and add batter to QA
+    end
+  end
+end
+
+function HASSChild:_addEntity(entity_id)
+  local e = HASS.entities[entity_id]
+  if e then
+    self.entities[entity_id] = e
+    local typ = e.type
+    self.entityTypes[typ] = self.entityTypes[typ] or {}
+    table.insert(self.entityTypes[typ],e)
+    setTimeout(function() e:subscribe(self) end,0) -- QA gets update after initialized
+  else
+    WARNINGF("Entity %s for QA %s not found",entity,self.id)
+  end
+end
+
+function HASSChild:setEntities(entity_ids)
+  self:internalStorageSet("entities",entity_ids)
 end
 
 HASS.IFmap.sensor_battery='battery'
@@ -264,6 +323,11 @@ function HASSChild:log(str,time)
   if type(time)=='number' then
     logTimer = setTimeout(function() self:updateProperty('log',"") end,time*1000)
   end
+end
+
+function HASSChild:update_sensor_battery(entity)
+  DEBUGF('battery',"'%s' battery:%s%%",self.name,entity.state)
+  self:updateProperty('batteryLevel',round(entity.state))
 end
 
 function HASSChild:update_sensor_energy(entity)
@@ -551,12 +615,13 @@ function Lux:update(entity)
 end
 
 class 'DoorSensor'(HASSChild)
-function DoorSensor:__init(device)
-  HASSChild.__init(self, device)
-end
-function DoorSensor:update(entity)
-  self:updateProperty('value',entity.state=='on')
-end
+function DoorSensor:__init(device) HASSChild.__init(self, device) end
+function DoorSensor:update(entity) self:updateProperty('value',entity.state=='on') end
+
+class 'WindowSensor'(HASSChild)
+function WindowSensor:__init(device) HASSChild.__init(self, device) end
+function WindowSensor:update(entity) self:updateProperty('value',entity.state=='on') end
+
 
 class 'DoorLock'(HASSChild)
 function DoorLock:__init(device)
@@ -578,6 +643,14 @@ function Temperature:update(entity)
   self:updateProperty('value',tonumber(entity.state) or 0)
 end
 
+class 'SmokeSensor'(HASSChild)
+function SmokeSensor:__init(device)
+  HASSChild.__init(self, device)
+end
+function SmokeSensor:update(entity)
+  self:updateProperty('value',entity.state=='on')
+end
+
 class 'Humidity'(HASSChild)
 function Humidity:__init(device)
   HASSChild.__init(self, device)
@@ -587,18 +660,37 @@ function Humidity:update(entity)
 end
 
 class 'Pm25'(HASSChild)
-function Pm25:__init(device)
-  HASSChild.__init(self, device)
-end
-function Pm25:update(entity)
-  self:updateProperty('value',tonumber(entity.state) or 0)
-end
+function Pm25:__init(device) HASSChild.__init(self, device) end
+function Pm25:update(entity) self:updateProperty('value',tonumber(entity.state) or 0) end
+
+class 'Pm10'(HASSChild)
+function Pm10:__init(device) HASSChild.__init(self, device) end
+function Pm10:update(entity) self:updateProperty('value',tonumber(entity.state) or 0) end
+
+class 'Pm1'(HASSChild)
+function Pm1:__init(device) HASSChild.__init(self, device) end
+function Pm1:update(entity) self:updateProperty('value',tonumber(entity.state) or 0) end
+
+class 'Co2'(HASSChild)
+function Co2:__init(device) HASSChild.__init(self, device) end
+function Co2:update(entity) self:updateProperty('value',tonumber(entity.state) or 0) end
+
+class 'Co'(HASSChild)
+function Co:__init(device) HASSChild.__init(self, device) end
+function Co:update(entity) self:updateProperty('value',entity.state=='on') end
 
 class 'Fan'(HASSChild) --TBD
 function Fan:__init(device)
   HASSChild.__init(self, device)
   self.meid = self:firstEntityType('fan')
 end
+function Fan:turnOn() self:send(self.meid,"turn_on") end
+function Fan:turnOff() self:send(self.meid,"turn_off") end
+function Fan:toggle() self:send(self.meid,"toggle") end
+function Fan:setSpeed(speed) self:send(self.meid,"set_percentage",{percentage = speed}) end
+function Fan:setDirection(direction) self:send(self.meid,"set_direction",{direction = direction}) end
+function Fan:setOscillating(osc) self:send(self.meid,"oscillate",{oscillating = osc}) end
+function Fan:setPresetMode(mode) self:send(self.meid,"set_preset_mode",{preset_mode = mode}) end
 function Fan:logState(entity)
   local a = entity.attributes
   printf("Fan %s %s%% dir:%s osc:%s",d.state,a.percentage or 0,a.direction or 0,a.oscillating or 0)
@@ -606,7 +698,7 @@ end
 function Fan:update(entity)
   self.meid = entity
   self:logState(entity)
-  --self:updateProperty('value',tonumber(entity.state))
+  self:updateProperty('value',entity.state)
 end
 
 class 'DeviceTracker'(HASSChild) --Binary sensor, ON when home

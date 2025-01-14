@@ -12,7 +12,7 @@ function DEBUGF(flag,fmt,...)
   if fibaro.debugFlags[flag] then
     local str = fmt:format(...)
     quickApp:log(str)
-    printf(str)
+    print(str)
   end
 end
 function ERRORF(f,...) 
@@ -43,6 +43,8 @@ function table.equal(e1,e2)
     end
   end
 end
+local function copy(t) if type(t) ~= 'table' then return t end local r = {} for k,v in pairs(t) do r[k] = copy(v) end return r end
+table.copy = copy
 
 function math.round(v) return math.floor((tonumber(v) or 0)+0.5) end
 function math.to100(v) return math.floor((v/255.0)*100+0.5) end

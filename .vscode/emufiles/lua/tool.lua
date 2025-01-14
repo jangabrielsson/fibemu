@@ -138,6 +138,36 @@ function tool.upload(file, rsrc, name, path)
     end
 end
 
+function tool.saveFQA(file, rsrc, name, path)
+    if name == '.' then name = file end
+    local flib = fibemu.libs.files
+    local fname = name:match("^(.*)%.lua")
+    local saveName = path
+    if not saveName:match(".fqa$") then
+        saveName = path .. "/" .. fname .. ".fqa"
+    end
+    printf("Saving QA %s to %s", name, saveName)
+    local fqa,err = pcall(flib.file2FQA,name)
+    if not fqa then
+        printerrf("Error parsing %s: %s", name, err)
+        return true
+    end
+    fqa = err
+    fqa.apiVersion = "1.2"
+    fqa.initialProperties.uiView = nil
+    fqa.initialProperties.apiVersion = "1.2"
+    fqa.initialProperties.useUiView=nil
+    fqa = json.encode2(fqa)
+    local f = io.open(saveName, "w")
+    if not f then
+        printerrf("Error opening %s", saveName)
+        return true
+    end
+    f:write(fqa)
+    f:close()
+    printf("Saved QA %s", saveName)
+end
+
 function tool.update(file, rsrc, name, path) -- move logic to files?
     local updateQvs,updateUI,id = true,true,nil
     if name == '.' then name = file end

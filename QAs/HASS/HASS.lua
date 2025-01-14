@@ -37,7 +37,7 @@ of this license document, but changing it is not allowed.
 
 --%%debug=refresh:false
 
-local VERSION = "0.62"
+local VERSION = "0.66"
 local fmt = string.format
 local token,URL
 local dfltDebugFlags = "child"
@@ -140,9 +140,10 @@ function QuickApp:authenticated() -- Called when websocket is authenticated
     local children = self:getChildrenUidMap()
     self:loadExistingChildren(children)
     self.WS:send({type= "subscribe_events",event_type= "state_changed"})
-    self:populatePopup(children)
     self:loadDefinedQAs()
     self:loadAuto()
+    children = self:getChildrenUidMap()
+    self:populatePopup(children)
   end)
 end
 
@@ -160,29 +161,23 @@ function QuickApp:loadAuto()
   for className,d in pairs(HASS.classes) do
     if d.auto then
       local types = type(d.auto) == 'string' and {d.auto} or d.auto
-      self:loadAutoAux(className,types)
+      for _,typ in ipairs(types) do
+        self:loadAutoAux(className,typ)
+      end
     end
   end
 end
 
-function QuickApp:loadAutoAux(className,types)
-  __assert_type(types,'table')
-  for _,typ in ipairs(types) do
-    for _,entity in pairs(HASS.entities) do
-      if entity.type == typ then
-        local found = false
-        for _,qa in pairs(self.childDevices) do
-          if qa.entities[entity.id] then found = true break end
-        end
-        if not found then
-          DEBUGF('main',"Auto creating %s QA for %s",className,entity.id)
-          local name = HASS.nameNewQA(entity.name)
-          local uid = self:newUID()
-          local entities = {entity.id}
-          local room = HASS.defaultRoom
-          self:newChildQA(uid,name,room,entities,className)
-        end
-      end
+function QuickApp:loadAutoAux(className,typ)
+  for _,entity in ipairs(HASS.getEntitiesOfType(typ)) do
+    local auid = "auto_"..entity.id
+    if not self.children[auid] then
+      DEBUGF('main',"Auto creating %s QA for %s",className,entity.id)
+      local name = HASS.nameNewQA(entity.name)
+      local uid = auid
+      local entities = {entity.id}
+      local room = HASS.defaultRoom
+      self:newChildQA(uid,name,room,entities,className)
     end
   end
 end
@@ -327,20 +322,32 @@ for _,room in ipairs(api.get("/rooms") or {}) do
   rooms[room.id] = true
 end
 
-function QuickApp:newChildQA(uid,name,room,entities,className)
+function QuickApp:newChildQA(uid,name,room,entity_ids,className)
   local cls = HASS.classes[className]
   if room and not rooms[room] then
     WARNINGF("Room %s not found",room)
     room = nil
   end
+  local found = false
+  for _,id in ipairs(entity_ids) do
+    local entity = HASS.entities[id]
+    if entity and entity.type == 'sensor_battery' then found=true break end
+  end
+  --if not found and entity_ids[1] then self:proposeBattery(entity_ids[1]) end
+
   local props = {
     name = name,
     type = cls.type,
     initialProperties = cls.properties or {},
-    store = { entities = entities },
+    store = { entities = entity_ids },
     room = room,
   }
   local interfaces = cls.interfaces or {}
+  if cls.modify then 
+    -- Custom modification of properties and interfaces
+    -- Ex. to add a custom UI depending on the entities
+    props,interfaces = cls.modify(Table.copy(props),Table.copy(interfaces)) 
+  end
   return self:createChildDevice0(uid,props,interfaces,className)
 end
 
@@ -363,6 +370,9 @@ function QuickApp:showEntities()
   for _,id in ipairs(selectedEntities or {}) do
     local entity = HASS.entities[id]
     printf("%s",tostring(entity))
+    for k,v in pairs(entity.attributes) do
+      printf("- %s: %s",k,json.encode(v))
+    end
   end
 end
 

@@ -46,23 +46,28 @@ local function keyCompare(a, b)
 end
 
 local function toLua(t)
-  if type(t) == 'table' and t[1] then
-    local res = {}
-    for _, v in ipairs(t) do
-      res[#res + 1] = toLua(v)
-    end
-    return "{" .. table.concat(res, ",") .. "}"
-  else
-    local res, keys = {}, {}
-    for k, _ in pairs(t) do keys[#keys + 1] = k end
-    table.sort(keys, keyCompare)
-    for _, k in ipairs(keys) do
-      local tk = type(t[k]) == 'table' and toLua(t[k]) 
+  if type(t) == 'table' then
+    if t[1] or next(t)==nil then
+      local res = {}
+      for _, v in ipairs(t) do
+        res[#res + 1] = toLua(v)
+      end
+      return "{" .. table.concat(res, ",") .. "}"
+    else
+      local res, keys = {}, {}
+      for k, _ in pairs(t) do keys[#keys + 1] = k end
+      table.sort(keys, keyCompare)
+      for _, k in ipairs(keys) do
+        local tk = type(t[k]) == 'table' and toLua(t[k]) 
         or (type(t[k]) == 'boolean' or type(t[k])=='number') and tostring(t[k])
         or '"'..t[k]..'"'
-      res[#res + 1] = string.format('%s=%s', k, tk)
+        res[#res + 1] = string.format('%s=%s', k, tk)
+      end
+      return "{" .. table.concat(res, ",") .. "}"
     end
-    return "{" .. table.concat(res, ",") .. "}"
+  else
+    if type(t) == 'string' then return '"' .. t .. '"' 
+    else return tostring(t) end
   end
 end
 
@@ -167,16 +172,21 @@ local function dumpUI(UI)
   local lines = {}
   for _, row in ipairs(UI or {}) do
     for _,l in ipairs(row) do l.type=nil end
-    if not row[2] then row = row[1] end
+    if row[1] and not row[2] then row = row[1] end
     lines[#lines+1]="--%%u="..toLua(row)
   end
   print("Proxy UI:\n"..table.concat(lines,"\n"))
 end
+fibaro.fibemu.dumpUI = dumpUI
 
 function fibaro.fibemu.dumpUIfromQA(id)
-  local dev = api.get("/devices/"..id)
+  local dev = id
+  if type(dev)=='number' then 
+    dev = (api.get("/devices/"..id) or {}).properties
+    id = dev and dev.id
+  end
   if dev then 
-    local p = dev.properties
+    local p = dev
     local uiStruct = ui.view2UI(p.viewLayout, p.uiCallbacks)
     dumpUI(uiStruct)
   else fibaro.error(__TAG,"Device not found:",id) end

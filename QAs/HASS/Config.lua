@@ -4,9 +4,10 @@ function MODULE_configs()
   -- Customizing QA names, usually entities' names are used
   function HASS.nameNewQA(name) return name.." (HASS)" end
   HASS.defaultRoom = "Default Room" -- Default room for QAs created (name or id)
+  HASS.proposeBattery = true -- Try to match battery entities with QAs
 
-  -- Remapping of entity_id to types (<domain>_<device_category>)
-  -- Ex. sensor.sonos_favorites has no device_category and is difficult to
+  -- Remapping of entity_id to types (<domain>_<device_class>)
+  -- Ex. sensor.sonos_favorites has no device_class and is difficult to
   -- recognize as a sensor. This remaps it to sensor_favorites
   HASS.customTypes['sensor%.sonos_favorites'] = 'sensor_favorites'
   -- Detecting type of light and remapping type to light_rgb or light_dim
@@ -29,11 +30,30 @@ function MODULE_configs()
   --end
   
   -- Automatically define QA classes based on enity type 
-  HASS.classes.Temperature.auto='sensor_temperature' -- Define all temperature sensors as Tmperature
-  HASS.classes.Lux.auto='sensor_illuminance'         -- Define all illuminance sensors as Lux
-  HASS.classes.Speaker.auto='media_player_speaker'   -- Define all media player speakers as Speaker
-  HASS.classes.TV.auto='media_player_tv'              -- Define all media player tv as TV
-  HASS.classes.InputText.auto='input_text'              -- Define all input texts
+  local AUTO = false
+  if AUTO then
+    HASS.classes.Temperature.auto='sensor_temperature' -- Define all temperature sensors as Tmperature
+    HASS.classes.Lux.auto='sensor_illuminance'         -- Define all illuminance sensors as Lux
+    HASS.classes.Speaker.auto='media_player_speaker'   -- Define all media player speakers as Speaker
+    HASS.classes.TV.auto='media_player_tv'             -- Define all media player tv as TV
+    --HASS.classes.InputText.auto='input_text'         -- Define all input texts
+    HASS.classes.DoorSensor.auto = {                   -- Define all door sensors as DoorSensor
+    'binary_sensor_door',
+    'binary_sensor_garage_door',
+    'binary_sensor_opening'
+  }
+  HASS.classes.SmokeSensor.auto='binary_sensor_smoke'   -- Define all smoke sensors as Smoke
+  HASS.classes.WindowSensor.auto='binary_sensor_window' -- Define all window sensors as WindowSensor
+  HASS.classes.Motion.auto={                            -- Define all motion sensors as MotionSensor
+  'binary_sensor_motion',
+  'binary_sensor_occupancy',
+  'binary_sensor_presence',
+  'binary_sensor_moving'}
+  HASS.classes.Humidity.auto='sensor_humidity'            -- Define all humidity sensors as Humidity
+  HASS.classes.Pm25.auto='sensor_pm25'                    -- Define all PM25 sensors as PM25
+  HASS.classes.Pm10.auto='sensor_pm10'                    -- Define all PM10 sensors as PM10
+  HASS.classes.Pm1.auto='sensor_pm1'                      -- Define all PM1 sensors as PM1
+  HASS.classes.Co.auto='sensor_carbon_monoxide'           -- Define all CO sensors as CO
   -- HASS.classes.RGBLight.qa = { -- Predefined QAs for RGB lights
   --   ['myQA_1'] = {
   --     entities = {
@@ -53,4 +73,5 @@ function MODULE_configs()
   --   },
   -- }
   
+  end
 end
