@@ -38,7 +38,7 @@ of this license document, but changing it is not allowed.
 local TEST = false
 
 class 'Sonos'
-Sonos.VERSION = "0.88"
+Sonos.VERSION = "0.89"
 function Sonos:__init(IP,initcb,debugFlags)
   self.TIMEOUT = 30
   local colors = {'lightgreen','lightblue','yellow','orange','purple','pink','cyan','magenta','lime','red'}
@@ -133,7 +133,10 @@ function Sonos:__init(IP,initcb,debugFlags)
       if header.cmdId then
         local rcb = cbs:pop(header.cmdId)
         if rcb then rcb(header,obj) end
-      elseif eventMap[header.type] then return eventMap[header.type](header,obj,color,self)
+      elseif eventMap[header.type] then 
+        local stat,err = pcall(eventMap[header.type],header,obj,color,self)
+        if not stat then log("socket","Error in event handler %s: %s",header.type,err) end
+        return
       else log("socket","Unknown event: %s",header.type) end
     end)
 
