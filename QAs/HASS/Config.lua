@@ -31,7 +31,8 @@ function MODULE_configs()
   
   -- Automatically define QA classes based on enity type 
   local AUTO = false
-  if AUTO then
+  if AUTO or quickApp.qvar.auto=='true' then
+    
     HASS.classes.Temperature.auto='sensor_temperature' -- Define all temperature sensors as Tmperature
     HASS.classes.Lux.auto='sensor_illuminance'         -- Define all illuminance sensors as Lux
     HASS.classes.Speaker.auto='media_player_speaker'   -- Define all media player speakers as Speaker

@@ -15,6 +15,7 @@ of this license document, but changing it is not allowed.
 --%%type=com.fibaro.deviceController
 --%%proxy="HASSProxy2"
 --%%var=token:config.HASS_token
+--%%var=auto:"true"
 --%%clobber=token
 --%%var=url:config.HASS_url
 --%%var=debug:"main,wsc,child,color,battery,speaker,send"
@@ -38,7 +39,7 @@ of this license document, but changing it is not allowed.
 
 --%%debug=refresh:false
 
-local VERSION = "0.66"
+local VERSION = "0.68"
 local fmt = string.format
 local token,URL
 local dfltDebugFlags = "child"
@@ -273,8 +274,8 @@ function QuickApp:updateQAinfo()
   buff.printf("Type: %s\n",selectedClass and HASS.classes[selectedClass].type or "[None]")
   buff.printf("Class: %s\n",selectedClass or "[None]")
   if selectedEntities then
-    for i,entity in ipairs(selectedEntities) do
-      local entity = HASS.entities[entity]
+    for i,entity_id in ipairs(selectedEntities) do
+      local entity = HASS.entities[entity_id] or entity_id
       buff.printf("Entity%s:  %s\n",i,tostring(entity))
     end
   end
@@ -342,6 +343,12 @@ function QuickApp:newChildQA(uid,name,room,entity_ids,className)
     store = { entities = entity_ids },
     room = room,
   }
+
+  if cls.uiView then
+    local uiView = fibaro.ui.UI2NewUiView(cls.uiView)
+    props.initialProperties.uiView = uiView
+  end
+
   local interfaces = cls.interfaces or {}
   if cls.modify then 
     -- Custom modification of properties and interfaces
@@ -368,10 +375,12 @@ end
 function QuickApp:showEntities()
   printf("Entities:")
   for _,id in ipairs(selectedEntities or {}) do
-    local entity = HASS.entities[id]
+    local entity = HASS.entities[id] or id
     printf("%s",tostring(entity))
-    for k,v in pairs(entity.attributes) do
-      printf("- %s: %s",k,json.encode(v))
+    if type(id) ~= 'string' then
+      for k,v in pairs(entity.attributes) do
+        printf("- %s: %s",k,json.encode(v))
+      end
     end
   end
 end
@@ -392,13 +401,8 @@ function QuickApp:syncStates()
     local entities = HASS.entities
     DEBUGF('main',"...fetched %d entities",#data)
     for _,e in ipairs(data) do
-      if not entityFilter:skip(e) then
-        local entity = entities[e.entity_id]
-        if entity then entity:change(e,e)
-        else
-          local entity = Entity(e)
-          entities[e.entity_id] = entity
-        end
+      if HASS.entities[e.entity_id] then
+        HASS.entities[e.entity_id]:change(e,e)
       end
     end
     DEBUGF('main',"...synched",#data)

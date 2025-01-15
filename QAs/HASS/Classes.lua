@@ -67,14 +67,14 @@ function MODULE_0classes() -- named to be loaded first...
   }
   HASS.classes.Speaker = {
     type = "com.fibaro.player",
-    properties = { uiView = fibaro.ui.UI2NewUiView(SpeakerUI) }
+    properties = { uiView = SpeakerUI }
   }
   local TV_UI = {
     {select="inputSelector",text="Input",onToggled="inputSelected",options={}},
   }
   HASS.classes.TV = {
     type = "com.fibaro.avController",
-    properties = { uiView = fibaro.ui.UI2NewUiView(TV_UI) }
+    uiView = TV_UI,
   }
   HASS.classes.Motion = { type = "com.fibaro.motionSensor",}
   HASS.classes.Lux = { type = "com.fibaro.lightSensor", }
@@ -111,7 +111,7 @@ function MODULE_0classes() -- named to be loaded first...
   }
   HASS.classes.InputText = {
     type = "com.fibaro.genericDevice",
-    properties = { uiView = fibaro.ui.UI2NewUiView(InputTextUI) }
+    uiView = InputTextUI,
   }
 end -- end module
 
@@ -173,7 +173,7 @@ end
 function Entity:proposeBattery() -- Try to find battery matching entity
   for _,e in ipairs(HASS.getEntitiesOfType('sensor_battery')) do
     if match(self.entityName,e.entityName) then
-      DEBUGF('main',"BATT: %s <= %s",self.id,e.id)
+      DEBUGF('main',"Battery found: %s <= %s",self.id,e.id)
       return e
     end
   end
@@ -218,6 +218,17 @@ function HASSChild:__init(device)
   quickApp.childDevices[self.id] = self -- Hack to get the child devices reged.
   self.uid = self._uid
   local entity_ids = self:internalStorageGet("entities") or {}
+  local hasToSave,NL = false,{}            -- Remove entitys that donät exist anymore
+  for i,entity_id in ipairs(entity_ids) do
+    if not HASS.entities[entity_id] then
+      WARNINGF("Entity %s for QA %s not found - removed",entity_id,self.id)
+      hasToSave = true
+    else NL[#NL+1] = entity_id end
+  end
+  if hasToSave then
+    entity_ids = NL
+    self:internalStorageSet("entities",entity_ids) 
+  end
   self._rawEntities = entity_ids
   -- So, the first entity_id is the "main" entity_id and is used for sending commands to
   -- Override this in the QA class if needed
@@ -243,7 +254,7 @@ function HASSChild:tryToAddBattery(entity_id)
     if batt and not self.entities[batt.id] then -- that we don't already have.
       table.insert(self._rawEntities,batt.id) -- update stored antities for QA
       self:internalStorageSet("entities",self._rawEntities)
-      self:_addEntity(batt) -- and add batter to QA
+      self:_addEntity(batt.id) -- and add batter to QA
     end
   end
 end
