@@ -3,45 +3,77 @@ do
   print("QwikAppChild library v"..VERSION)
   local childID = 'ChildID'
   local classID = 'ClassName'
-
+  
   local children = {}
   local createChild = QuickApp.createChildDevice
   function QuickApp:initChildDevices() end
   QuickApp.debugQwikAppChild = true
-
+  
   class 'QwikAppChild'(QuickAppChild)
-
+  
   local fmt = string.format
-
+  
   local function getVar(deviceId,key)
     local res, stat = api.get("/plugins/" .. deviceId .. "/variables/" .. key)
     if stat ~= 200 then return nil end
     return res.value
   end
-
+  local function setVar(deviceId,key,val,hidden)
+    local data = { name = key, value = val, isHidden = hidden }
+    local _, stat = api.put("/plugins/" .. deviceId .. "/variables/" .. key, data)
+    if stat > 206 then
+      local _, stat = api.post("/plugins/" .. deviceId .. "/variables", data)
+      return stat
+    end
+  end
+  
   local UID = nil
   function QwikAppChild:__init(device)
     QuickAppChild.__init(self, device)
     local uid = UID or self:internalStorageGet(childID) or ""
     self._uid = uid
+    self._className = self:internalStorageGet(classID) or ""
     children[uid]=self
     self._sid = tonumber(uid:match("(%d+)$"))
   end
-
+  
+  function QuickApp:createChildDevice1(uid, props, className)
+    __assert_type(props, 'table')
+    local deviceClass = _G[className]
+    local store = props.store or {}
+    local room = props.room
+    props.room = nil
+    props.store = nil
+    props.parentId = self.id
+    props.initialInterfaces = props.initialInterfaces or {}
+    table.insert(props.initialInterfaces, 'quickAppChild')
+    local device, res = api.post("/plugins/createChildDevice", props)
+    assert(res == 200, "Can't create child device " .. tostring(res) .. " - " .. json.encode(props))
+    for k,v in pairs(store) do
+      setVar(device.id,k,v,true)
+    end
+    setVar(device.id,childID,uid,true)
+    setVar(device.id,classID,className,true)
+    if room then api.put("/devices/"..device.id,{roomID=room}) end
+    deviceClass = deviceClass or QuickAppChild
+    local child = deviceClass(device)
+    child.parent = self
+    self.childDevices[device.id] = child
+    return child
+  end
+  
   function QuickApp:createChildDevice0(uid,props,interfaces,className)
     __assert_type(uid,'string')
     __assert_type(className,'string')
     props.initialProperties = props.initialProperties or {}
     props.initialInterfaces = interfaces
     UID = uid
-    local c = createChild(self,props,_G[className])
+    local c = self:createChildDevice1(uid,props,className)
     UID = nil
     if not c then return end
-    c:internalStorageSet(childID,uid,true)
-    c:internalStorageSet(classID,className,true)
     return c
   end
-
+  
   function QuickApp:getChildrenUidMap()
     local cdevs,map = api.get("/devices?parentId="..self.id) or {},{}
     for _,child in ipairs(cdevs) do
@@ -51,7 +83,7 @@ do
     end
     return map
   end
-
+  
   function QuickApp:loadExistingChildren(chs)
     __assert_type(chs,'table')
     local rerr = false
@@ -81,7 +113,7 @@ do
     if not stat then rerr=true self:error("loadExistingChildren:"..err) end
     return rerr
   end
-
+  
   function QuickApp:createMissingChildren(children)
     local stat,err = pcall(function()
       local chs,k = {},0
@@ -107,7 +139,7 @@ do
     end)
     if not stat then self:error("createMissingChildren:"..err) end
   end
-
+  
   function QuickApp:removeUndefinedChildren(children)
     local cdevs = api.get("/devices?parentId="..self.id)
     for _,child in ipairs(cdevs) do
@@ -119,7 +151,7 @@ do
       end
     end
   end
-
+  
   function QuickApp:initChildren(children)
     if self:loadExistingChildren(children) then return end
     self:createMissingChildren(children)

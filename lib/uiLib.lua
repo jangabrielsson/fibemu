@@ -1,4 +1,8 @@
 local format = string.format
+local function arrayify(t)
+  if type(t)=='table' then json.util.InitArray(t) end 
+  return t
+end
 
 local function map(f,l) for _,v in ipairs(l) do f(v) end end
 local function traverse(o,f)
@@ -12,17 +16,19 @@ local ELMS = {
     return {name=d.name,visible=true,style={weight=d.weight or w or "0.50"},text=d.text,type="button"}
   end,
   select = function(d,w)
+    arrayify(d.options)
     if d.options then map(function(e) e.type='option' end,d.options) end
     return {name=d.name,style={weight=d.weight or w or "0.50"},text=d.text,type="select", visible=true, selectionType='single',
       options = d.options or {{value="1", type="option", text="option1"}, {value = "2", type="option", text="option2"}},
-      values = d.values or { "option1" }
+      values = arrayify(d.values) or { "option1" }
     }
   end,
   multi = function(d,w)
+    arrayify(d.options)
     if d.options then map(function(e) e.type='option' end,d.options) end
     return {name=d.name,style={weight=d.weight or w or "0.50"},text=d.text,type="select",visible=true, selectionType='multi',
       options = d.options or {{value="1", type="option", text="option2"}, {value = "2", type="option", text="option3"}},
-      values = d.values or { "option3" }
+      values = arrayify(d.values) or { "option3" }
     }
   end,
   image = function(d,_)
@@ -63,10 +69,6 @@ local function mkRow(elms,weight)
   return {components=comp,style={weight=weight or "1.2"},type="vertical"}
 end
 
-local function arrayify(t)
-  if type(t)=='table' then json.util.InitArray(t) end
-end
-
 local function UI2NewUiView(UI)
   local uiView = {}
   for _,row in ipairs(UI) do
@@ -84,30 +86,30 @@ local function UI2NewUiView(UI)
       if typ == "select" then
         --print(json.encode(el))
       end
-      local function mkBinding(name,action,fun)
+      local function mkBinding(name,action,fun,actionName)
         local r = {
           params = {
-            actionName = "UIAction",
-            args = {action,name,fun}
+            actionName = actionName or "UIAction",
+            args = actionName and {} or {action,name,fun}
           },
           type = "deviceAction"
         }
-        return {r}
+        return r.params.actionName ~= 'UIAction' and {r} or nil
       end 
       local uel = {
         eventBinding = {
-          onReleased = (typ=='button' or typ=='switch') and mkBinding(name,"onReleased",typ=='switch' and "$event.value" or nil) or nil,
-          onLongPressDown = (typ=='button' or typ=='switch') and mkBinding(name,"onLongPressDown",typ=='switch' and "$event.value" or nil) or nil,
-          onLongPressReleased = (typ=='button' or typ=='switch') and mkBinding(name,"onLongPressReleased",typ=='switch' and "$event.value" or nil) or nil,
-          onToggled = (typ=='select' or typ=='multi') and mkBinding(name,"onToggled","$event.value") or nil,
-          onChanged = typ=='slider' and mkBinding(name,"onChanged","$event.value") or nil,
+          onReleased = (typ=='button' or typ=='switch') and mkBinding(name,"onReleased",typ=='switch' and "$event.value" or nil,el.onReleased) or nil,
+          onLongPressDown = (typ=='button' or typ=='switch') and mkBinding(name,"onLongPressDown",typ=='switch' and "$event.value" or nil,el.onLongPressDown) or nil,
+          onLongPressReleased = (typ=='button' or typ=='switch') and mkBinding(name,"onLongPressReleased",typ=='switch' and "$event.value" or nil,el.onLongPressReleased) or nil,
+          onToggled = (typ=='select' or typ=='multi') and mkBinding(name,"onToggled","$event.value",el.onToggled) or nil,
+          onChanged = typ=='slider' and mkBinding(name,"onChanged","$event.value",el.onChanged) or nil,
         },
         max = el.max,
         min = el.min,
         step = el.step,
         name = el[typ],
-        options = el.options,
-        values = el.values or ((typ=='select' or typ=='multi') and {}) or nil,
+        options = arrayify(el.options),
+        values = arrayify(el.values) or ((typ=='select' or typ=='multi') and arrayify({})) or nil,
         value = el.value,
         style = { weight = weight},
         type = typ=='multi' and 'select' or typ,
@@ -230,7 +232,7 @@ local function collectViewLayoutRow(u,map)
             row[#row+1]={
               [u.selectionType=='multi' and 'multi' or 'select']=u.name, 
               text=u.text, 
-              options=u.options,
+              options=arrayify(u.options),
               visible = u.visible==nil and true or u.visible,
               onToggled=(map[u.name] or {}).onToggled,
             }
@@ -370,12 +372,43 @@ local function pruneStock(prop)
   return viewLayout,uiView,uiCallbacks
 end
 
+local function uiView2UI(ui)
+  local UI = {}
+  for _,r in ipairs(ui) do
+    local row = {}
+    for _,c in ipairs(r.components) do
+      if c.type == 'label' then
+        row[#row+1] = { label = c.name, text = c.text, visible = c.visible }
+      elseif c.type == 'button' or c.type == 'switch' then
+        local r1 = { [c.type] = c.name, text = c.text, visible = c.visible, }
+        for f,e in pairs(c.eventBinding or {}) do
+          if e[1].type == 'deviceAction' then
+            r1[f] = e[1].params.actionName
+          end
+        end
+        row[#row+1] = r1
+      elseif c.type == 'slider' then
+        local e = c.eventBinding.onChanged[1]
+        row[#row+1] = { slider = c.name, text = c.text, value = c.value, visible = c.visible, onChanged = e.params.actionName }
+      elseif c.type == 'select' then
+        local e = c.eventBinding.onToggled[1]
+        local typ = c.selectionType == 'single' and 'select' or 'multi'
+        -- arrayify options...
+        row[#row+1] = { [typ] = c.name, text = c.text, values = arrayify(c.values or {}), options = arrayify(c.options), visible = c.visible, onToggled = e.params.actionName }
+      end
+    end
+    UI[#UI+1] = row
+  end
+  return UI
+end
+
 fibaro.ui = {
   uiStruct2uiCallbacks = uiStruct2uiCallbacks,
   transformUI = transformUI,
   mkViewLayout = mkViewLayout,
   view2UI = view2UI,
   UI2NewUiView = UI2NewUiView,
+  uiView2UI = uiView2UI,
   updateUI =  updateUI,
   pruneStock = pruneStock,
 }

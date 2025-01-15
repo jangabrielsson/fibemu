@@ -217,27 +217,30 @@ function HASSChild:__init(device)
   --self:registerUICallbacks()
   quickApp.childDevices[self.id] = self -- Hack to get the child devices reged.
   self.uid = self._uid
-  local entities = self:internalStorageGet("entities") or {}
-  self._rawEntities = entities
+  local entity_ids = self:internalStorageGet("entities") or {}
+  self._rawEntities = entity_ids
+  -- So, the first entity_id is the "main" entity_id and is used for sending commands to
+  -- Override this in the QA class if needed
+  self.mainId = entity_ids and entity_ids[1]
   self.entities = {}
   self.entityTypes = {}
-  for _,entity_id in ipairs(entities) do
+  for _,entity_id in ipairs(entity_ids) do
     self:_addEntity(entity_id)
   end
-  if HASS.proposeBattery then self:tryToAddBattery() end
-  for typ,d in pairs(self.entityTypes) do
+  if HASS.proposeBattery and self.mainId then self:tryToAddBattery(self.mainId) end
+  for typ,d in pairs(self.entityTypes) do -- sort entities by id, to have a stable order
     table.sort(d,function(a,b) return a.id < b.id end)
   end
   self:checkInterfaces()
 end
 
-function HASSChild:tryToAddBattery()
+function HASSChild:tryToAddBattery(entity_id)
   local b = self.entityTypes.sensor_battery
   if b and #b > 0 then return end -- Already have battery
-  local fe = HASS.entities[self._rawEntities[1] or ""] -- first entity_id
+  local fe = HASS.entities[entity_id] 
   if fe then
     local batt = fe:proposeBattery()       -- found candidate battery
-    if batt and not self.entities[batt.id] then -- that we donät already have
+    if batt and not self.entities[batt.id] then -- that we don't already have.
       table.insert(self._rawEntities,batt.id) -- update stored antities for QA
       self:internalStorageSet("entities",self._rawEntities)
       self:_addEntity(batt) -- and add batter to QA

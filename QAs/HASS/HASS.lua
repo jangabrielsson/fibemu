@@ -15,6 +15,7 @@ of this license document, but changing it is not allowed.
 --%%type=com.fibaro.deviceController
 --%%proxy="HASSProxy2"
 --%%var=token:config.HASS_token
+--%%clobber=token
 --%%var=url:config.HASS_url
 --%%var=debug:"main,wsc,child,color,battery,speaker,send"
 
@@ -333,7 +334,6 @@ function QuickApp:newChildQA(uid,name,room,entity_ids,className)
     local entity = HASS.entities[id]
     if entity and entity.type == 'sensor_battery' then found=true break end
   end
-  --if not found and entity_ids[1] then self:proposeBattery(entity_ids[1]) end
 
   local props = {
     name = name,

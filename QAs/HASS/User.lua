@@ -9,4 +9,5 @@ function MODULE_1classes()
   HASS.classes.MyButton = {
     type = 'com.fibaro.Button',
   }
+  
 end
