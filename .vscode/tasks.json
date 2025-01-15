@@ -79,8 +79,7 @@
           "${relativeFile}",
           "qa", 
           "saveFQA", 
-          "${input:QA_name}",
-          "${input:path_id}"
+          "${input:QA_name}"
         ]
       },
       {

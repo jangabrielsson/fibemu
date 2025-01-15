@@ -138,34 +138,47 @@ function tool.upload(file, rsrc, name, path)
     end
 end
 
+local function scramble(str)
+    local res = {}
+    for i = 1, #str do
+        res[#res+1] = string.char(string.byte(str, i) + math.random(-10, 10))
+    end
+    return table.concat(res)
+end
 function tool.saveFQA(file, rsrc, name, path)
     if name == '.' then name = file end
     local flib = fibemu.libs.files
-    local fname = name:match("^(.*)%.lua")
-    local saveName = path
-    if not saveName:match(".fqa$") then
-        saveName = path .. "/" .. fname .. ".fqa"
-    end
-    printf("Saving QA %s to %s", name, saveName)
-    local fqa,err = pcall(flib.file2FQA,name)
+    local fname = name:match("^(.*)%.lua")..".fqa"
+    printf("Saving QA %s", fname)
+    local fqa,err,dev = pcall(flib.file2FQA,name)
     if not fqa then
         printerrf("Error parsing %s: %s", name, err)
         return true
     end
     fqa = err
+    local clobber = fibaro.fibemu.DIR[dev.dev.id].clobber
+    if clobber then
+        local clv = {} for _,v in pairs(clobber) do clv[v] = true end
+        for _,v in ipairs(fqa.initialProperties.quickAppVariables or {}) do
+            if clv[v.name] then
+                printf("Clobbering %s", v.name)
+                v.value = scramble(v.value)
+            end
+        end
+    end
     fqa.apiVersion = "1.2"
     fqa.initialProperties.uiView = nil
     fqa.initialProperties.apiVersion = "1.2"
     fqa.initialProperties.useUiView=nil
     fqa = json.encode2(fqa)
-    local f = io.open(saveName, "w")
+    local f = io.open(fname, "w")
     if not f then
-        printerrf("Error opening %s", saveName)
+        printerrf("Error opening %s", fname)
         return true
     end
     f:write(fqa)
     f:close()
-    printf("Saved QA %s", saveName)
+    printf("Saved QA %s", fname)
 end
 
 function tool.update(file, rsrc, name, path) -- move logic to files?

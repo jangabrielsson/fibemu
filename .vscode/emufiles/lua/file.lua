@@ -228,6 +228,9 @@ local function installQA(fname, conf)
 
     function chandler.proxy(var, val, vars) vars.proxy = eval(val) end
 
+    function chandler.clobber(var, val, vars) 
+        vars.clobber = vars.clobber or {}; table.insert(vars.clobber,val)
+    end
     function chandler.noStock(var, val, vars) vars.noStock = eval(val) end
     function chandler.fullLua(var, val, vars) vars.fullLua = eval(val) end
     function chandler.passThrough(var, val, vars)
@@ -395,6 +398,7 @@ local function installQA(fname, conf)
         definedId = definedId,
         images = vars.images,
         proxy = vars.proxy,
+        clobber = vars.clobber,
     }
 
     for k, v in pairs(vars.debug) do emu.debug[k] = v end
@@ -726,7 +730,7 @@ local function file2fqa(fname)
         initialProperties = props,
         initialInterfaces = dev.interfaces,
     }
-    return fqa
+    return fqa,qa
 end
 
 local function deleteQAfile(id, name)
