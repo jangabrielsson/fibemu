@@ -19,9 +19,10 @@ function MODULE_configs()
     if e.attributes.Location then return 'sensor_location' end
   end
   
-  -- Skip entities with specific attributes
-  HASS.entityFilter['.attributes.fibaro_id'] = false -- Skip entities with fibaro_id
-  HASS.entityFilter['.entity_id'] = "^update" -- Skip entities with entity_id starting with update
+  -- Skip entities with specific attributes.
+  -- Return true if entity should be skipped/filtered
+  HASS.entityFilter['.attributes.fibaro_id'] = true -- Skip entities with fibaro_id
+  HASS.entityFilter['.entity_id'] = "^update%." -- Skip entities with entity_id starting with update
   --HASS.entityFilter['.state'] = "unavailable" -- Ex. Skip unavailale entities
   --HASS.entityFilter['.state'] = function(val) -- Ex. skip entities with state < 10
   --  val = tonumber(val)
@@ -32,7 +33,7 @@ function MODULE_configs()
   -- Automatically define QA classes based on enity type 
   local AUTO = false
   if AUTO or quickApp.qvar.auto=='true' then
-    
+
     HASS.classes.Temperature.auto='sensor_temperature' -- Define all temperature sensors as Tmperature
     HASS.classes.Lux.auto='sensor_illuminance'         -- Define all illuminance sensors as Lux
     HASS.classes.Speaker.auto='media_player_speaker'   -- Define all media player speakers as Speaker

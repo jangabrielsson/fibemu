@@ -19,16 +19,16 @@ local ELMS = {
     arrayify(d.options)
     if d.options then map(function(e) e.type='option' end,d.options) end
     return {name=d.name,style={weight=d.weight or w or "0.50"},text=d.text,type="select", visible=true, selectionType='single',
-      options = d.options or {{value="1", type="option", text="option1"}, {value = "2", type="option", text="option2"}},
-      values = arrayify(d.values) or { "option1" }
+      options = d.options or arrayify({}),
+      values = arrayify(d.values) or arrayify({})
     }
   end,
   multi = function(d,w)
     arrayify(d.options)
     if d.options then map(function(e) e.type='option' end,d.options) end
     return {name=d.name,style={weight=d.weight or w or "0.50"},text=d.text,type="select",visible=true, selectionType='multi',
-      options = d.options or {{value="1", type="option", text="option2"}, {value = "2", type="option", text="option3"}},
-      values = arrayify(d.values) or { "option3" }
+      options = d.options or arrayify({}),
+      values = arrayify(d.values) or arrayify({})
     }
   end,
   image = function(d,_)

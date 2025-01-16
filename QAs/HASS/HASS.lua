@@ -39,17 +39,17 @@ of this license document, but changing it is not allowed.
 
 --%%debug=refresh:false
 
-local VERSION = "0.68"
+local VERSION = "0.70"
 local fmt = string.format
 local token,URL
 local dfltDebugFlags = "child"
 local MessageHandler = {}
-local entityFilter
+local entityFilter = HASS.createEntityFilter()
 HASS = HASS or {}
 HASS.classes = HASS.classes or {}
 HASS.entities = HASS.entities or {}
 HASS.customTypes = HASS.customTypes or {}
-HASS.entityFilter = HASS.entityFilter or {}
+HASS.entityFilter = entityFilter
 
 --[[---------------------------------------------------------
 MessageHandler.
@@ -95,11 +95,6 @@ function QuickApp:onInit()
     if not stat then ERRORF("Error in module %s: %s",mod.name,err) end
    end
 
-  entityFilter = HASS.createEntityFilter()
-  for path,val in pairs(HASS.entityFilter) do
-    entityFilter:add(path,val)
-  end
-
   local dflags = self.qvar.debug or dfltDebugFlags
   for _,f in ipairs(dflags:split(",")) do fibaro.debugFlags[f] = true end
   -- fibaro.debugFlags.main = true
@@ -132,13 +127,17 @@ function QuickApp:authenticated() -- Called when websocket is authenticated
     DEBUGF('main',"...fetched %d entities",#data)
     for _,e in ipairs(data) do
       if not entityFilter:skip(e) then
+---@diagnostic disable-next-line: undefined-global
         local entity = Entity(e)
         entities[e.entity_id] = entity
         -- if e.entity_id:match("sensor.jans_14_pro_geocoded_location") then
         --   DEBUGF('main',"entity %s",e.entity_id)
         -- end
-      else DEBUGF('main',"Skipping %s",e.entity_id) end
+      else 
+        DEBUGF('main',"Skipping %s",e.entity_id)
+      end
     end
+    self._initialized = true
     local children = self:getChildrenUidMap()
     self:loadExistingChildren(children)
     self.WS:send({type= "subscribe_events",event_type= "state_changed"})
@@ -146,18 +145,24 @@ function QuickApp:authenticated() -- Called when websocket is authenticated
     self:loadAuto()
     children = self:getChildrenUidMap()
     self:populatePopup(children)
+    --self:notify("HASS QA","Connected")
   end)
 end
 
 local logTimer = nil
 function QuickApp:log(str)
-  if logTimer then clearTimer(logTimer) end
+  if logTimer then clearTimeout(logTimer) end
   logTimer = self:updateView("logLabel","text",str)
   setTimeout(function() self:updateView("logLabel","text","") end,5000)
 end
 
 local n = 0
 function QuickApp:newUID() n=n+1 return "uuid"..os.time().."_"..n end
+
+function QuickApp:notify(title,msg)
+  if not self._initialized then return end
+  self.WS:serviceCall('notify','notify',{title=title,message=msg})
+end
 
 function QuickApp:loadAuto()
   for className,d in pairs(HASS.classes) do
@@ -353,7 +358,7 @@ function QuickApp:newChildQA(uid,name,room,entity_ids,className)
   if cls.modify then 
     -- Custom modification of properties and interfaces
     -- Ex. to add a custom UI depending on the entities
-    props,interfaces = cls.modify(Table.copy(props),Table.copy(interfaces)) 
+    props,interfaces = cls.modify(table.copy(props),table.copy(interfaces)) 
   end
   return self:createChildDevice0(uid,props,interfaces,className)
 end
