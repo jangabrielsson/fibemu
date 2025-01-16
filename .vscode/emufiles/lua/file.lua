@@ -261,7 +261,7 @@ local function installQA(fname, conf)
         if stat == false or not var then
             QA.syslogerr("install", "Bad quickvar expr '%s'", val2)
         else
-            vars.qvars[var] = val
+            table.insert(vars.qvars,{name=var,value=val})
             if emu.debug.quickVars then
                 QA.syslog("install", "QuickVar %s=%s", var, val)
             end
@@ -358,9 +358,9 @@ local function installQA(fname, conf)
     dev = copy(dev)
     dev.name = conf.name or vars.name or name
     dev.id = vars.id
-    for n,v in pairs(conf.qvars or {}) do vars.qvars[n]=v end
+    for n,v in pairs(conf.qvars or {}) do table.insert(vars.qvars,{name=n,value=v}) end
     local qvars = {}
-    for k, v in pairs(vars.qvars or {}) do qvars[#qvars + 1] = { name = k, value = v } end
+    for _,v in pairs(vars.qvars or {}) do qvars[#qvars + 1] = v end
     dev.properties.quickAppVariables = qvars
     vars.interfaces['quickApp'] = true
     for _,i in ipairs(conf.interfaces or {}) do vars.interfaces[i] = true end
