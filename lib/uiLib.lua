@@ -19,16 +19,16 @@ local ELMS = {
     arrayify(d.options)
     if d.options then map(function(e) e.type='option' end,d.options) end
     return {name=d.name,style={weight=d.weight or w or "0.50"},text=d.text,type="select", visible=true, selectionType='single',
-      options = d.options or {{value="1", type="option", text="option1"}, {value = "2", type="option", text="option2"}},
-      values = arrayify(d.values) or { "option1" }
+      options = d.options or arrayify({}),
+      values = arrayify(d.values) or arrayify({})
     }
   end,
   multi = function(d,w)
     arrayify(d.options)
     if d.options then map(function(e) e.type='option' end,d.options) end
     return {name=d.name,style={weight=d.weight or w or "0.50"},text=d.text,type="select",visible=true, selectionType='multi',
-      options = d.options or {{value="1", type="option", text="option2"}, {value = "2", type="option", text="option3"}},
-      values = arrayify(d.values) or { "option3" }
+      options = d.options or arrayify({}),
+      values = arrayify(d.values) or arrayify({})
     }
   end,
   image = function(d,_)
@@ -69,7 +69,7 @@ local function mkRow(elms,weight)
   return {components=comp,style={weight=weight or "1.2"},type="vertical"}
 end
 
-local function UI2NewUiView(UI)
+local function UI2NewUiView(UI,child)
   local uiView = {}
   for _,row in ipairs(UI) do
     local urow = {
@@ -89,12 +89,12 @@ local function UI2NewUiView(UI)
       local function mkBinding(name,action,fun,actionName)
         local r = {
           params = {
-            actionName = actionName or "UIAction",
-            args = actionName and {} or {action,name,fun}
+            actionName = (not child) and actionName or "UIAction",
+            args = (not child) and actionName and {} or {action,name,fun}
           },
           type = "deviceAction"
         }
-        return r.params.actionName ~= 'UIAction' and {r} or nil
+        return (r.params.actionName ~= 'UIAction' or child) and {r} or nil
       end 
       local uel = {
         eventBinding = {
@@ -177,6 +177,233 @@ local function transformUI(UI) -- { button=<text> } => {type="button", name=<tex
     end)
   return UI
 end
+
+--[[
+[
+  {
+    "components": [
+      {
+        "eventBinding": {
+          "onLongPressDown": [
+            {
+              "params": {
+                "actionName": "UIAction",
+                "args": [
+                  "onLongPressDown",
+                  "B1"
+                ]
+              },
+              "type": "deviceAction"
+            }
+          ],
+          "onLongPressReleased": [
+            {
+              "params": {
+                "actionName": "UIAction",
+                "args": [
+                  "onLongPressReleased",
+                  "B1"
+                ]
+              },
+              "type": "deviceAction"
+            }
+          ],
+          "onReleased": [
+            {
+              "params": {
+                "actionName": "UIAction",
+                "args": [
+                  "onReleased",
+                  "B1"
+                ]
+              },
+              "type": "deviceAction"
+            }
+          ]
+        },
+        "name": "B1",
+        "style": {
+          "weight": "1.0"
+        },
+        "text": "Button1",
+        "type": "button",
+        "visible": true
+      }
+    ],
+    "style": {
+      "weight": "1.0"
+    },
+    "type": "horizontal"
+  },
+  {
+    "components": [
+      {
+        "eventBinding": {
+          "onLongPressDown": [
+            {
+              "params": {
+                "actionName": "UIAction",
+                "args": [
+                  "onLongPressDown",
+                  "B2"
+                ]
+              },
+              "type": "deviceAction"
+            }
+          ],
+          "onLongPressReleased": [
+            {
+              "params": {
+                "actionName": "UIAction",
+                "args": [
+                  "onLongPressReleased",
+                  "B2"
+                ]
+              },
+              "type": "deviceAction"
+            }
+          ],
+          "onReleased": [
+            {
+              "params": {
+                "actionName": "UIAction",
+                "args": [
+                  "onReleased",
+                  "B2"
+                ]
+              },
+              "type": "deviceAction"
+            }
+          ]
+        },
+        "name": "B2",
+        "style": {
+          "weight": "1.0"
+        },
+        "text": "Button2",
+        "type": "button",
+        "visible": true
+      }
+    ],
+    "style": {
+      "weight": "1.0"
+    },
+    "type": "horizontal"
+  },
+  {
+    "components": [
+      {
+        "eventBinding": {
+          "onChanged": [
+            {
+              "params": {
+                "actionName": "UIAction",
+                "args": [
+                  "onChanged",
+                  "Slider1",
+                  "$event.value"
+                ]
+              },
+              "type": "deviceAction"
+            }
+          ]
+        },
+        "max": "100",
+        "min": "0",
+        "name": "Slider1",
+        "style": {
+          "weight": "1.0"
+        },
+        "text": "",
+        "type": "slider",
+        "visible": true
+      }
+    ],
+    "style": {
+      "weight": "1.0"
+    },
+    "type": "horizontal"
+  },
+  {
+    "components": [
+      {
+        "eventBinding": {
+          "onToggled": [
+            {
+              "params": {
+                "actionName": "UIAction",
+                "args": [
+                  "onToggled",
+                  "S1",
+                  "$event.value"
+                ]
+              },
+              "type": "deviceAction"
+            }
+          ]
+        },
+        "name": "S1",
+        "options": [
+          
+        ],
+        "selectionType": "single",
+        "style": {
+          "weight": "1.0"
+        },
+        "text": "Select1",
+        "type": "select",
+        "values": [
+          
+        ],
+        "visible": true
+      }
+    ],
+    "style": {
+      "weight": "1.0"
+    },
+    "type": "horizontal"
+  },
+  {
+    "components": [
+      {
+        "eventBinding": {
+          "onToggled": [
+            {
+              "params": {
+                "actionName": "UIAction",
+                "args": [
+                  "onToggled",
+                  "S2",
+                  "$event.value"
+                ]
+              },
+              "type": "deviceAction"
+            }
+          ]
+        },
+        "name": "S2",
+        "options": [
+          
+        ],
+        "selectionType": "multi",
+        "style": {
+          "weight": "1.0"
+        },
+        "text": "Select2",
+        "type": "select",
+        "values": [
+          
+        ],
+        "visible": true
+      }
+    ],
+    "style": {
+      "weight": "1.0"
+    },
+    "type": "horizontal"
+  }
+]
+--]]
 
 local function uiStruct2uiCallbacks(UI)
   local cbs = {}

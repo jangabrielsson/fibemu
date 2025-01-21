@@ -91,19 +91,20 @@ function WSConnection:connect()
   local function handleConnected()
     DEBUGF('wsc',"Connected")
   end
+
+  local function connect()
+    DEBUGF('wsc',"Connect: %s",self.url)
+    self.sock:connect(self.url)
+  end
+
   local function handleDisconnected(a,b)
-    DEBUGF('wsc',"Disconnected")
-    WARNINGF("Disconnected - will restart in 5s")
-    setTimeout(function()
-      plugin.restart()
-    end,5000)
+    WARNINGF("Disconnected - will reconnect in 5s")
+    setTimeout(function() connect() end,5000)
   end
   local function handleError(err)
     ERRORF("Error: %s", err)
   end
   local nEvents = 0
-  setInterval(function()
-  end,60*60*1000)
   local function handleDataReceived(data)
     nEvents = nEvents+1
     data = json.decode(data)
@@ -128,11 +129,15 @@ function WSConnection:connect()
   self.sock:addEventListener("error", handleError)
   self.sock:addEventListener("dataReceived", handleDataReceived)
 
-  DEBUGF('wsc',"Connect: %s",self.url)
-  self.sock:connect(self.url)
+  connect()
 end
 
 getmetatable("").__idiv = function(str,len) return (#str < len or #str < 4) and str or str:sub(1,len-2)..".." end -- truncate strings
+
+function string:capitalize()
+  if self == "" then return self end
+  return self:sub(1,1):upper()..self:sub(2)
+end
 
 function string.buff(b)
   local self,buff = {},b or {}
@@ -141,7 +146,6 @@ function string.buff(b)
     local str = table.concat(buff)
     local str2 = str:gsub("\n","<br>")
     str2 = str2:gsub("  ","&nbsp;&nbsp;")
-    print(str2)
     buff = {}
     return str
   end
@@ -189,5 +193,14 @@ function HASS.createEntityFilter()
     end
     return false
   end
+  setmetatable(self,{
+    __newindex = function(t,k,v) self:add(k,v) end})
   return self
+end
+
+function HASS.createKeyList()
+  local values = {}
+  local self = { values = values}
+  return setmetatable(self,{
+    __newindex = function(t,k,v) values[#values+1]={key=k,value=v} end})
 end

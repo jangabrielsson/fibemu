@@ -47,7 +47,7 @@ function QuickApp:setupStorage()
   function storage:__index(key) return qa:internalStorageGet(key) end
   function storage:__newindex(key,val)
      if val == nil then qa:internalStorageRemove(key)
-     else qa:internalStorageSet(key,val) end
+     else qa:internalStorageSet(key,val,true) end
    end
   return setmetatable({},storage)
 end

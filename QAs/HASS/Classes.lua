@@ -67,14 +67,14 @@ function MODULE_0classes() -- named to be loaded first...
   }
   HASS.classes.Speaker = {
     type = "com.fibaro.player",
-    properties = { uiView = SpeakerUI }
+    UI = SpeakerUI,
   }
   local TV_UI = {
     {select="inputSelector",text="Input",onToggled="inputSelected",options={}},
   }
   HASS.classes.TV = {
     type = "com.fibaro.avController",
-    uiView = TV_UI,
+    UI = TV_UI,
   }
   HASS.classes.Motion = { type = "com.fibaro.motionSensor",}
   HASS.classes.Lux = { type = "com.fibaro.lightSensor", }
@@ -84,6 +84,8 @@ function MODULE_0classes() -- named to be loaded first...
   HASS.classes.Temperature = { type = "com.fibaro.temperatureSensor",}
   HASS.classes.Humidity = { type = "com.fibaro.humiditySensor",}
   HASS.classes.SmokeSensor = { type = "com.fibaro.smokeSensor",}
+  HASS.classes.Measurement = { type = "com.fibaro.multilevelSensor",}
+  HASS.classes.Problem = { type = "com.fibaro.binarySensor",}
   HASS.classes.Pm25 = {
     type = "com.fibaro.multilevelSensor",
     properties = {unit = "µg/m³"}
@@ -105,13 +107,20 @@ function MODULE_0classes() -- named to be loaded first...
   HASS.classes.Cover = { type = "com.fibaro.rollerShutter",}
   HASS.classes.DeviceTracker = { type = "com.fibaro.binarySensor",}
   HASS.classes.Calendar = { type = "com.fibaro.binarySensor",}
-  HASS.classes.Thermostat = { type = "com.fibaro.hvacSystemAuto",}
+  HASS.classes.Zone = { type = "com.fibaro.binarySensor",}
+  HASS.classes.Thermostat = { 
+    type = "com.fibaro.hvacSystemAuto",
+    UI = {
+      {label='preset',text='Preset:'},
+      {select='presetSelector',text='Preset',options={},values={},onToggled='presetSelected'},
+    },
+  }
   local InputTextUI = {
     {label="textLabel",text="<Text>"},
   }
   HASS.classes.InputText = {
     type = "com.fibaro.genericDevice",
-    uiView = InputTextUI,
+    UI = InputTextUI,
   }
 end -- end module
 
@@ -120,7 +129,7 @@ end -- end module
 -- Incoming entity state changes are sent to the Entity object
 -- that then sends the change to all subscribing QA children. 
 -------------------------------------------------------------
-class 'Entity'
+class 'Entity' Entity=Entity
 function Entity:__init(e)
   self.id = e.entity_id
   self.name = e.attributes.friendly_name or self.id
@@ -131,8 +140,9 @@ function Entity:__init(e)
   self.subscribers = {}
   self.entityName = self.id:match("^.-%.(.-)$") or "<noname>"
   self.type = self.domain..(e.attributes.device_class and ("_"..self.deviceClass) or "")
-  for pattern,typ in pairs(HASS.customTypes) do
-    if self.id:match(pattern) then
+  for _,v in pairs(HASS.customTypes.values) do
+    if self.id:match(v.key) then
+      local typ = v.value
       if type(typ) == "function" then typ = typ(e) end
       if typ then self.type = typ break end
     end
@@ -218,7 +228,7 @@ function HASSChild:__init(device)
   quickApp.childDevices[self.id] = self -- Hack to get the child devices reged.
   self.uid = self._uid
   local entity_ids = self:internalStorageGet("entities") or {}
-  local hasToSave,NL = false,{}            -- Remove entitys that donät exist anymore
+  local hasToSave,NL = false,{}            -- Remove entitys that don't exist anymore
   for i,entity_id in ipairs(entity_ids) do
     if not HASS.entities[entity_id] then
       WARNINGF("Entity %s for QA %s not found - removed",entity_id,self.id)
@@ -233,6 +243,7 @@ function HASSChild:__init(device)
   -- So, the first entity_id is the "main" entity_id and is used for sending commands to
   -- Override this in the QA class if needed
   self.mainId = entity_ids and entity_ids[1]
+  self.main = HASS.entities[self.mainId]
   self.entities = {}
   self.entityTypes = {}
   for _,entity_id in ipairs(entity_ids) do
@@ -241,6 +252,9 @@ function HASSChild:__init(device)
   if HASS.proposeBattery and self.mainId then self:tryToAddBattery(self.mainId) end
   for typ,d in pairs(self.entityTypes) do -- sort entities by id, to have a stable order
     table.sort(d,function(a,b) return a.id < b.id end)
+  end
+  if self.main and self.main.attributes.unit_of_measurement then
+    self:updateProperty('unit',self.main.attributes.unit_of_measurement)
   end
   self:checkInterfaces()
 end
@@ -339,8 +353,13 @@ function HASSChild:log(str,time)
   end
 end
 
+function HASSChild:debugf(fmt,...)
+  local name = self.name:match("(.-)%s*%(HASS%)$") or self.name
+  printf("%s:'%s' %s",self._className,name,color('yellow',fmt,...))
+end
+
 function HASSChild:update_sensor_battery(entity)
-  DEBUGF('battery',"'%s' battery:%s%%",self.name,entity.state)
+  self:debugf("battery:%s%%",entity.state)
   self:updateProperty('batteryLevel',round(entity.state))
 end
 
@@ -352,28 +371,28 @@ end
 class 'DimLight'(HASSChild) 
 function DimLight:__init(device)
   HASSChild.__init(self, device)
-  self.meid = self:firstEntityType('light')
+  self.mainId = self:firstEntityType('light')
 end
 function DimLight:update(entity)
-  self.meid = entity
+  self.mainId = entity
   local state,br = entity.state=='on',entity.attributes.brightness
   self.state = state
   self:updateProperty('state',state)
   self:updateProperty('value',state and to100(br) or 0)
 end
-function DimLight:setValue(v) self:send(self.meid,"turn_on",{brightness = to255(v)}) end
-function DimLight:turnOn() self:send(self.meid,"turn_on") end
-function DimLight:turnOff() self:send(self.meid,"turn_off") end
-function DimLight:toggle() self:send(self.meid,"toggle") end
+function DimLight:setValue(v) self:send(self.mainId,"turn_on",{brightness = to255(v)}) end
+function DimLight:turnOn() self:send(self.mainId,"turn_on") end
+function DimLight:turnOff() self:send(self.mainId,"turn_off") end
+function DimLight:toggle() self:send(self.mainId,"toggle") end
 
 class 'RGBLight'(DimLight)
 function RGBLight:__init(device)
   DimLight.__init(self, device)
-  self.meid = self:firstEntityType('light')
+  self.mainId = self:firstEntityType('light')
 end
 function RGBLight:setColor(r,g,b,w)
   -- send to HASS and wait for update coming back
-  self:send(self.meid,"turn_on",{rgb_color = {r, g, b, w}})
+  self:send(self.mainId,"turn_on",{rgb_color = {r, g, b, w}})
 end
 function RGBLight:setColorComponents(colorComponents) -- Called by HC3 UI
   DEBUGF('color',"setColorComponents called %s",json.encode(colorComponents))
@@ -391,7 +410,7 @@ function RGBLight:setColorComponents(colorComponents) -- Called by HC3 UI
   end
 end
 function RGBLight:update(entity)
-  self.meid = entity
+  self.mainId = entity
   DimLight.update(self,entity)
   local rgb = entity.attributes.rgb_color
   if not self.state then return end
@@ -411,7 +430,7 @@ end
 class 'XYLight'(RGBLight)
 function XYLight:__init(device)
   RGBLight.__init(self, device)
-  self.meid = self:firstEntityType('light')
+  self.mainId = self:firstEntityType('light')
 end
 function XYLight:setColor(r,g,b,w)
   print("ToDo convert xy to rgb")
@@ -422,23 +441,23 @@ end
 class 'BinarySwitch'(HASSChild) -- Plug looking like light
 function BinarySwitch:__init(device)
   HASSChild.__init(self, device)
-  self.meid = self:firstEntityType('switch') -- Entity we should send cmds to
+  self.mainId = self:firstEntityType('switch') -- Entity we should send cmds to
 end
 function BinarySwitch:update(entity)
-  self.meid = entity
+  self.mainId = entity
   self:updateProperty('state',entity.state=='on')
   self:updateProperty('value',entity.state=='on')
 end
-function BinarySwitch:turnOn() self:send(self.meid,'turn_on') end
-function BinarySwitch:turnOff() self:send(self.meid,'turn_off') end
-function BinarySwitch:toggle() self:send(self.meid,'toggle') end
+function BinarySwitch:turnOn() self:send(self.mainId,'turn_on') end
+function BinarySwitch:turnOff() self:send(self.mainId,'turn_off') end
+function BinarySwitch:toggle() self:send(self.mainId,'toggle') end
 
 class 'BinarySensor'(HASSChild) 
 function BinarySensor:__init(device)
   HASSChild.__init(self, device)
 end
 function BinarySensor:update(entity)
-  self.meid = entity
+  self.mainId = entity
   self:updateProperty('state',entity.state=='on')
   self:updateProperty('value',entity.state=='on')
 end
@@ -446,15 +465,15 @@ end
 class 'Switch'(HASSChild)
 function Switch:__init(device)
   HASSChild.__init(self, device)
-  self.meid = self:firstEntityType('switch')
+  self.mainId = self:firstEntityType('switch')
 end
 function Switch:update(entity)
-  self.meid = entity
+  self.mainId = entity
   self:updateProperty('value',entity.state=='on')
 end
-function Switch:turnOn() self:send(self.meid,"turn_on") end
-function Switch:turnOff() self:send(self.meid,"turn_off") end
-function Switch:toggle() self:send(self.meid,"toggle") end
+function Switch:turnOn() self:send(self.mainId,"turn_on") end
+function Switch:turnOff() self:send(self.mainId,"turn_off") end
+function Switch:toggle() self:send(self.mainId,"toggle") end
 
 local function toOsTime(str)
   local y,m,day,h,min,s,offs = str:match("(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)(.*)")
@@ -474,17 +493,17 @@ end
 function Button:logState(entity)
   local eventType = entity.attributes.event_type
   local date = os.date("%Y-%m-%d %H:%M:%S",self.last)
-  printf("Button %s (%ss) ev:%s",date,os.time()-self.last,eventType or "")
+  self:debugf("%s (%ss) ev:%s",date,os.time()-self.last,eventType or "")
 end
 function Button:update(entity)
-  self.meid = entity
+  self.mainId = entity
   self.last = toOsTime(entity.state)
   local t = os.time()-self.last
   self:logState(entity)
-  if t <= 1 then self:emitEvent(entity.attributes) end -- ignore older events
+  if t <= 1 then self:emitEvent(entity.attributes) end -- ignore old events
 end
 function Button:emitEvent(attr)
-  print("Btn Emit event...")
+  self:debugf("Emit event...")
   local key = 1
   local modifier = btnMap[attr.event_type]
   local data = {
@@ -505,7 +524,7 @@ end
 function Rotary:logState(entity)
   local a = entity.attributes
   local date = os.date("%Y-%m-%d %H:%M:%S",self.last)
-  printf("Rotary %s (%ss) ev:%s ac:%s dur:%s st:%s",
+  self:debugf("%s (%ss) ev:%s ac:%s dur:%s st:%s",
   date, os.time()-self.last, a.event_type or "", a.action or "", a.duration or "", a.steps or "")
 end
 function Rotary:emitEvent(attr)
@@ -522,25 +541,25 @@ class 'Speaker'(HASSChild)
 function Speaker:__init(device)
   HASSChild.__init(self, device)
   self:registerUICallback('favoriteSelector', 'onToggled', 'favoriteSelected')
-  self.meid = self:firstEntityType('media_player_speaker')
+  self.mainId = self:firstEntityType('media_player_speaker')
 end
-function Speaker:play() self:send(self.meid,"media_play") end
-function Speaker:pause() self:send(self.meid,"media_pause") end
-function Speaker:stop() self:send(self.meid,"media_stop") end
-function Speaker:next() self:send(self.meid,"media_next_track") end
-function Speaker:prev() self:send(self.meid,"media_previous_track") end
-function Speaker:setVolume(volume) self:send(self.meid,"volume_set",{volume_level = volume/100}) end
+function Speaker:play() self:send(self.mainId,"media_play") end
+function Speaker:pause() self:send(self.mainId,"media_pause") end
+function Speaker:stop() self:send(self.mainId,"media_stop") end
+function Speaker:next() self:send(self.mainId,"media_next_track") end
+function Speaker:prev() self:send(self.mainId,"media_previous_track") end
+function Speaker:setVolume(volume) self:send(self.mainId,"volume_set",{volume_level = volume/100}) end
 function Speaker:setMute(mute)
-  self:send(self.meid,"volume_mute",{is_volume_muted = mute==1})
+  self:send(self.mainId,"volume_mute",{is_volume_muted = mute==1})
 end
 function Speaker:logState(entity)
   local a = entity.attributes
   -- media_album_name, media_artist, media_title, media_content_type
   -- media_channel
-  printf("Speaker %s vol:%s muted:%s",entity.state,a.volume_level or 0,a.is_volume_muted or false)
+  self:debugf("%s vol:%s muted:%s",entity.state,a.volume_level or 0,a.is_volume_muted or false)
 end
 function Speaker:update_media_player_speaker(entity)
-  self.meid = entity
+  self.mainId = entity
   self:logState(entity)
   local state = entity.state
   local a = entity.attributes
@@ -561,7 +580,7 @@ function Speaker:update_sensor_favorites(entity)
 end
 function Speaker:favoriteSelected(ev)
   local sel = ev.values[1]
-  self:send(self.meid,"play_media",{
+  self:send(self.mainId,"play_media",{
     media_content_id = sel, media_content_type='favorite_item_id'
   })
 end
@@ -570,25 +589,28 @@ class 'TV'(HASSChild) -- TBD, not all buttons mapped
 function TV:__init(device)
   HASSChild.__init(self, device)
   self:registerUICallback('inputSelector', 'onToggled', 'inputSelected')
-  self.meid = self:firstEntityType('media_player_tv')
+  self.mainId = self:firstEntityType('media_player_tv')
 end
-function TV:play() self:send(self.meid,"media_play") end
-function TV:pause() self:send(self.meid,"media_pause") end
-function TV:stop() self:send(self.meid,"media_stop") end
-function TV:next() self:send(self.meid,"media_next_track") end
-function TV:prev() self:send(self.meid,"media_previous_track") end
-function TV:setVolume(volume) self:send(self.meid,"volume_set",{volume_level = volume/100}) end
+function TV:play() self:send(self.mainId,"media_play") end
+function TV:pause() self:send(self.mainId,"media_pause") end
+function TV:stop() self:send(self.mainId,"media_stop") end
+function TV:next() self:send(self.mainId,"media_next_track") end
+function TV:prev() self:send(self.mainId,"media_previous_track") end
+function TV:setVolume(volume) self:send(self.mainId,"volume_set",{volume_level = volume/100}) end
 function TV:setMute(mute)
-  self:send(self.meid,"volume_mute",{is_volume_muted = mute==1})
+  self:send(self.mainId,"volume_mute",{is_volume_muted = mute==1})
+end
+function TV:sendAVControl(cmd,btn)
+  print("ToDo sendAVControl",cmd,btn)
 end
 function TV:logState(entity)
   local a = entity.attributes
   -- media_album_name, media_artist, media_title, media_content_type
   -- media_channel
-  printf("TV %s vol:%s muted:%s",entity.state,a.volume_level or 0,a.is_volume_muted or false)
+  self:debugf("%s vol:%s muted:%s",entity.state,a.volume_level or 0,a.is_volume_muted or false)
 end
 function TV:update_media_player_tv(entity)
-  self.meid = entity
+  self.mainId = entity
   self:logState(entity)
   self:source_list(entity.attributes.source_list or {})
   local state = entity.state
@@ -608,7 +630,7 @@ function TV:inputSelected(ev)
   local sel = ev.values[1]
   local input = self.inputList[sel] or ""
   DEBUGF('speaker',"TV inputSelected '%s'",input)
-  self:send(self.meid,"select_source",{ source=input })
+  self:send(self.mainId,"select_source",{ source=input })
 end
 
 class 'Motion'(HASSChild)
@@ -640,14 +662,14 @@ function WindowSensor:update(entity) self:updateProperty('value',entity.state=='
 class 'DoorLock'(HASSChild)
 function DoorLock:__init(device)
   HASSChild.__init(self, device)
-  self.meid = self:firstEntityType('lock')
+  self.mainId = self:firstEntityType('lock')
 end
 function DoorLock:update(entity)
-  self.meid = entity
+  self.mainId = entity
   self:updateProperty('secured',entity.state=='locked' and 255 or 0)
 end
-function DoorLock:secure() self:send(self.meid,"lock") end
-function DoorLock:unsecure() self:send(self.meid,"unlock") end
+function DoorLock:secure() self:send(self.mainId,"lock") end
+function DoorLock:unsecure() self:send(self.mainId,"unlock") end
 
 class 'Temperature'(HASSChild)
 function Temperature:__init(device)
@@ -675,42 +697,58 @@ end
 
 class 'Pm25'(HASSChild)
 function Pm25:__init(device) HASSChild.__init(self, device) end
-function Pm25:update(entity) self:updateProperty('value',tonumber(entity.state) or 0) end
+function Pm25:logState(entity)
+  self:debugf("%s",entity.state)
+end
+function Pm25:update(entity) self:logState(entity) self:updateProperty('value',tonumber(entity.state) or 0) end
 
-class 'Pm10'(HASSChild)
+class 'Pm10'(Pm25)
 function Pm10:__init(device) HASSChild.__init(self, device) end
-function Pm10:update(entity) self:updateProperty('value',tonumber(entity.state) or 0) end
 
-class 'Pm1'(HASSChild)
+class 'Pm1'(Pm25)
 function Pm1:__init(device) HASSChild.__init(self, device) end
-function Pm1:update(entity) self:updateProperty('value',tonumber(entity.state) or 0) end
 
-class 'Co2'(HASSChild)
+class 'Co2'(Pm25)
 function Co2:__init(device) HASSChild.__init(self, device) end
-function Co2:update(entity) self:updateProperty('value',tonumber(entity.state) or 0) end
 
 class 'Co'(HASSChild)
 function Co:__init(device) HASSChild.__init(self, device) end
 function Co:update(entity) self:updateProperty('value',entity.state=='on') end
 
+class 'Measurement'(HASSChild)
+function Measurement:__init(device)
+  HASSChild.__init(self, device)
+end
+function Measurement:update(entity)
+  self:updateProperty('value',tonumber(entity.state) or 0)
+end
+
+class 'Problem'(HASSChild)
+function Problem:__init(device)
+  HASSChild.__init(self, device)
+end
+function Problem:update(entity)
+  self:updateProperty('value',entity.state=='on')
+end
+
 class 'Fan'(HASSChild) --TBD
 function Fan:__init(device)
   HASSChild.__init(self, device)
-  self.meid = self:firstEntityType('fan')
+  self.mainId = self:firstEntityType('fan')
 end
-function Fan:turnOn() self:send(self.meid,"turn_on") end
-function Fan:turnOff() self:send(self.meid,"turn_off") end
-function Fan:toggle() self:send(self.meid,"toggle") end
-function Fan:setSpeed(speed) self:send(self.meid,"set_percentage",{percentage = speed}) end
-function Fan:setDirection(direction) self:send(self.meid,"set_direction",{direction = direction}) end
-function Fan:setOscillating(osc) self:send(self.meid,"oscillate",{oscillating = osc}) end
-function Fan:setPresetMode(mode) self:send(self.meid,"set_preset_mode",{preset_mode = mode}) end
+function Fan:turnOn() self:send(self.mainId,"turn_on") end
+function Fan:turnOff() self:send(self.mainId,"turn_off") end
+function Fan:toggle() self:send(self.mainId,"toggle") end
+function Fan:setSpeed(speed) self:send(self.mainId,"set_percentage",{percentage = speed}) end
+function Fan:setDirection(direction) self:send(self.mainId,"set_direction",{direction = direction}) end
+function Fan:setOscillating(osc) self:send(self.mainId,"oscillate",{oscillating = osc}) end
+function Fan:setPresetMode(mode) self:send(self.mainId,"set_preset_mode",{preset_mode = mode}) end
 function Fan:logState(entity)
   local a = entity.attributes
-  printf("Fan %s %s%% dir:%s osc:%s",d.state,a.percentage or 0,a.direction or 0,a.oscillating or 0)
+  self:debugf("%s %s%% dir:%s osc:%s",d.state,a.percentage or 0,a.direction or 0,a.oscillating or 0)
 end
 function Fan:update(entity)
-  self.meid = entity
+  self.mainId = entity
   self:logState(entity)
   self:updateProperty('value',entity.state)
 end
@@ -719,37 +757,39 @@ class 'DeviceTracker'(HASSChild) --Binary sensor, ON when home
 function DeviceTracker:__init(device) -- Location displayed in log property
   HASSChild.__init(self, device)
 end
-function DeviceTracker:logState(entity)
-  local a = entity.attributes
-  printf("DeviceTracker %s",entity.state)
-end
+function DeviceTracker:logState(entity) self:debugf("%s",entity.state) end
 function DeviceTracker:update(entity)
-  --self:logState(entity)
+  self:logState(entity)
   self:updateProperty('value',entity.state=='home')
-  self:updateProperty('log',entity.state)
+  for _,key in ipairs({'latitude','longitude','altitude'}) do
+    local val = entity.attributes[key]
+    if val then self:setVariable(key,tostring(val)) end
+  end
+  self:setVariable('location',entity.state)
+  self:log(entity.state)
 end
 
 class 'Cover'(HASSChild) --TBD
 function Cover:__init(device)
   HASSChild.__init(self, device)
-  self.meid = self:firstEntityType('cover')
+  self.mainId = self:firstEntityType('cover')
 end
-function Cover:open() self:send(self.meid,"open_cover") end
-function Cover:close() self:send(self.meid,"close_cover") end
+function Cover:open() self:send(self.mainId,"open_cover") end
+function Cover:close() self:send(self.mainId,"close_cover") end
 function Cover:stop()
   local val = fibaro.getValue(self.id,'value')
-  self:send(self.meid,"stop_cover")
+  self:send(self.mainId,"stop_cover")
   self:updateProperty('value',val) -- after stop the QA reports 100% opened??? why?
 end
 function Cover:setValue(value) -- Value is type of integer (0-99)
-  self:send(self.meid,"set_cover_position",{position = value})  
+  self:send(self.mainId,"set_cover_position",{position = value})  
 end
 function Cover:logState(entity)
   local a = entity.attributes
-  printf("Cover %s %s%%",entity.state,a.current_position or 0)
+  self:debugf("%s %s%%",entity.state,a.current_position or 0)
 end
 function Cover:update(entity)
-  self.meid = entity
+  self.mainId = entity
   self:logState(entity)
   local state = entity.state
   local percentage = entity.attributes.current_position or 0
@@ -760,7 +800,20 @@ end
 class 'Thermostat'(HASSChild) --TBD
 function Thermostat:__init(device)
   HASSChild.__init(self, device)
-  self.meid = self:firstEntityType('climate')
+  self:registerUICallback('presetSelector', 'onToggled', 'presetSelected')
+  self.mainId = self:firstEntityType('climate_hvac')
+  local a = self.mainId.attributes
+  local modes = {}
+  if table.member(a.hvac_modes,'heat') then modes[#modes+1] = 'Heat' end
+  if table.member(a.hvac_modes,'cool') then modes[#modes+1] = 'Cool' end
+  if table.member(a.hvac_modes,'auto') then modes[#modes+1] = 'Auto' end
+  if table.member(a.hvac_modes,'off') then modes[#modes+1] = 'Off' end
+  self:updateProperty('supportedThermostatModes', modes)
+  local presetModes = {}
+  for _,p in ipairs(a.preset_modes or {}) do
+    presetModes[#presetModes+1] = {text=p,type='option',value=p}
+  end
+  self:updateView('presetSelector', "options", presetModes)
 end
 function Thermostat:logState(entity)
   local a = entity.attributes
@@ -774,27 +827,66 @@ function Thermostat:logState(entity)
   pr.printf("  hvac modes %s\n",json.encode(a.hvac_modes or {}))
   pr.printf("  preset mode %s\n",a.preset_mode or 0)
   pr.printf("  preset modes %s\n",json.encode(a.preset_modes or {}))
-  print(pr.tostring())
+  self:debugf(pr.tostring())
 end
 function Thermostat:update(entity)
-  self.meid = entity
+  self.mainId = entity
   self:logState(entity)
   local state = entity.state
   local a = entity.attributes
-  self:updateProperty("supportedThermostatModes", a.preset_modes or {})
-  self:updateProperty('thermostatMode',state)
+  self:updateProperty('thermostatMode',state:capitalize())
+  local value,min,max = a.temperature,a.min_temp,a.max_temp 
+  if state == 'heat' then
+    self:updateProperty('heatingThermostatSetpoint', { value= a.temperature, unit= unit or "C" })
+  elseif state == 'cool' then
+    self:updateProperty('coolingThermostatSetpoint', { value= value, unit= unit or "C" })
+  elseif state == 'auto' then
+    self:updateProperty('heatingThermostatSetpoint', { value= value, unit= unit or "C" })
+    self:updateProperty('coolingThermostatSetpoint', { value= value, unit= unit or "C" })
+  end
+  self:updateView('presetSelector','selectedItem',a.preset_mode)
 end
-function Thermostat:setThermostatMode(mode)
-  self:updateProperty("thermostatMode", mode)
-end
--- handle action for setting set point for cooling
-function Thermostat:setCoolingThermostatSetpoint(value, unit)
-  --self:updateProperty("coolingThermostatSetpoint", { value= value, unit= unit or "C" })
-end
--- handle action for setting set point for heating
+--------------- Fibaro functions -------------------
+function Thermostat:setThermostatMode(mode) self:setHvacMode(mode) end
 function Thermostat:setHeatingThermostatSetpoint(value, unit)
-  --self:updateProperty("heatingThermostatSetpoint", { value= value, unit= unit or "C" })
+  self:setTemperature(value)
 end
+function Thermostat:setCoolingThermostatSetpoint(value, unit)
+  self:setTemperature(value)
+end
+function Thermostat:presetSelected(e,v)
+  local p = e.values[1]
+  self:setPresetMode(p)
+end
+------------- HASS functions ----------
+function Thermostat:setTemperature(value,high,low,hvac_mode)
+  self:send(self.mainId,"set_temperature",{
+    temperature = value, 
+    target_temp_high = high, target_temp_low = low, 
+    hvac_mode = hvac_mode
+  })
+end
+function Thermostat:setHumidity(value)
+  self:send(self.mainId,"set_humidity",{humidity = value})
+end
+function Thermostat:setFanMode(mode)
+  self:send(self.mainId,"set_fan_mode",{fan_mode = mode})
+end
+function Thermostat:setPresetMode(mode)
+  self:send(self.mainId,"set_preset_mode",{preset_mode = mode:lower()})
+end
+function Thermostat:setHvacMode(mode)
+  self:send(self.mainId,"set_hvac_mode",{hvac_mode = mode:lower()})
+end
+function Thermostat:setSwingMode(value)
+  self:send(self.mainId,"set_swing_mode",{swing_mode = value})
+end
+function Thermostat:setSwingHorizontalMode(mode)
+  self:send(self.mainId,"set_swing_horizontal_mode",{swing_horizontal_mode = mode})
+end
+function Thermostat:turnOn(mode) self:send(self.mainId,"turn_on") end
+function Thermostat:turnOff(mode) self:send(self.mainId,"turn_off") end
+function Thermostat:toggle(mode) self:send(self.mainId,"toggle") end
 
 class 'Calendar'(HASSChild)
 function Calendar:__init(device)
@@ -807,10 +899,10 @@ function Calendar:logState(entity)
   pr.printf("  all day: %s\n",a.all_day)
   pr.printf("  start: %s\n",a.start_time)
   pr.printf("  end: %s\n",a.end_time)
-  pr.printf("  location: %s\n",a.location or "")
+  pr.printf("  location: %s\n",a.location // 60 or "")
   pr.printf("  description: %s\n",(a.description or "") // 60)
   pr.printf("  message: %s\n",(a.message or "") // 60)
-  print(pr.tostring())
+  self:debugf(pr.tostring())
 end
 function Calendar:update(entity)
   self:logState(entity)
@@ -846,6 +938,32 @@ end
 function Calendar:publishEvent(name,descr)
   api.post("/customEvent",{name=name,descr=descr})
   api.post("/customEvent/"..name)
+end
+
+class 'Zone'(HASSChild)
+function Zone:__init(device)
+  HASSChild.__init(self, device)
+end
+function Zone:logState(entity)
+  local a = entity.attributes
+  for _,p in pairs(HASS.getEntitiesOfType('person')) do
+    self:setVariable(p.name,'false')
+  end
+  local pr = string.buff()
+  pr.printf("Zone %s\n",entity.state)
+  for _,p in ipairs(a.persons or {}) do
+    local name = (HASS.entities[p] or {}).name
+    if name then
+      pr.printf("  person: %s\n",HASS.entities[p].name)
+      self:setVariable(name,'true')
+    end
+  end
+  self:debugf(pr.tostring())
+end
+function Zone:update(entity)
+  self:logState(entity)
+  local personsInZone = entity.attributes.persons or {}
+  self:updateProperty('value',#personsInZone > 0) 
 end
 
 class 'InputText'(HASSChild)

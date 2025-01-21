@@ -14,18 +14,18 @@ of this license document, but changing it is not allowed.
 --%%name=HASS
 --%%type=com.fibaro.deviceController
 --%%proxy="HASSProxy2"
+--%%var=url:config.HASS_url
 --%%var=token:config.HASS_token
 --%%var=auto:"true"
 --%%clobber=token
---%%var=url:config.HASS_url
---%%var=debug:"main,wsc,child,color,battery,speaker,send"
+--%%var=debug:"main,wsc,child,color,battery,speaker,send,late"
 
 --%%file=lib/QwikChild.lua,QC;
 --%%file=QAs/HASS/Utils.lua,utils;
 --%%file=QAs/HASS/Classes.lua,classes;
 --%%file=lib/BetterQA.lua,BQA;
---%%file=lib/uiLib.lua,uiLib;
 --%%file=QAs/HASS/Config.lua,config;
+--%% file=QAs/HASS/User.lua,User;
 
 --%%u={label="title",text="Label (Title)"}
 --%%u={label="label_ID_2",text="QuickAppChildren:"}
@@ -39,7 +39,7 @@ of this license document, but changing it is not allowed.
 
 --%%debug=refresh:false
 
-local VERSION = "0.70"
+local VERSION = "0.72"
 local fmt = string.format
 local token,URL
 local dfltDebugFlags = "child"
@@ -48,8 +48,9 @@ local entityFilter = HASS.createEntityFilter()
 HASS = HASS or {}
 HASS.classes = HASS.classes or {}
 HASS.entities = HASS.entities or {}
-HASS.customTypes = HASS.customTypes or {}
+HASS.customTypes = HASS.createKeyList()
 HASS.entityFilter = entityFilter
+local skippedEntities = {}
 
 --[[---------------------------------------------------------
 MessageHandler.
@@ -67,11 +68,21 @@ end
 
 function MessageHandler.event(data,ws)
   local data = data.event.data
-  local entity = data.entity_id
-  DEBUGF('event',"Event %s",entity)
-  local entity = HASS.entities[entity]
+  local entity_id = data.entity_id
+  DEBUGF('event',"Event %s",entity_id)
+  local entity = HASS.entities[entity_id]
   if entity then entity:change(data.new_state,data.old_state)
-  else WARNINGF("Unknown entity %s",entity) end
+  elseif skippedEntities[entity_id] then
+    DEBUGF('event',"Ignoring %s",entity_id)
+  else -- late entity after a HASS restart? or an newly entity created
+    DEBUGF("late","Late entity %s",entity_id)
+    local stat,entity = pcall(Entity,data.new_state)
+    if not stat then 
+      ERRORF("Error creating entity %s",entity_id)
+    else
+      HASS.entities[entity_id] = entity
+    end
+  end
 end
 
 --[[---------------------------------------------------------
@@ -82,6 +93,7 @@ Flow continues in authenticated() when the websocket is authenticated.
 function QuickApp:onInit()
   printc("yellow","%s v:%s",self.name,VERSION)
   self:updateView("title","text",self.name.." v:"..VERSION)
+  self:setupUIhandler()
 
   local modules = {} -- Load user modules alphabetically...
   for name,fun in pairs(_G) do
@@ -119,22 +131,71 @@ function QuickApp:onInit()
   WS:connect()
 end
 
+local climate = json.decode([[{
+        "entity_id": "climate.bedroom",
+        "state": "off",
+        "attributes": {
+            "hvac_modes": [
+                "cool",
+                "heat",
+                "dry",
+                "heat_cool",
+                "fan_only",
+                "off"
+            ],
+            "min_temp": 17,
+            "max_temp": 30,
+            "target_temp_step": 1,
+            "fan_modes": [
+                "quiet",
+                "low",
+                "medium",
+                "medium_high",
+                "high",
+                "auto",
+                "strong"
+            ],
+            "swing_modes": [
+                "stopped",
+                "fixedtop",
+                "fixedmiddletop",
+                "fixedmiddle",
+                "fixedmiddlebottom",
+                "fixedbottom",
+                "rangefull"
+            ],
+            "current_temperature": 19.3,
+            "temperature": 22,
+            "current_humidity": 54.2,
+            "fan_mode": "auto",
+            "swing_mode": "stopped",
+            "friendly_name": "Bedroom",
+            "supported_features": 425
+        },
+        "last_changed": "2025-01-15T07:41:04.434429+00:00",
+        "last_reported": "2025-01-15T16:01:10.388966+00:00",
+        "last_updated": "2025-01-15T16:01:10.388966+00:00",
+        "context": {
+            "id": "01JHNB4ZQMHP2RW0YB085X2SYX",
+            "parent_id": null,
+            "user_id": null
+        }
+    }]])
+
 function QuickApp:authenticated() -- Called when websocket is authenticated
   DEBUGF('main',"Fetching HASS entities")
   self.WS:send({type= "get_states"},function(data)
     data = data.result
     local entities = HASS.entities
     DEBUGF('main',"...fetched %d entities",#data)
+    -- table.insert(data,1,climate)
     for _,e in ipairs(data) do
       if not entityFilter:skip(e) then
----@diagnostic disable-next-line: undefined-global
         local entity = Entity(e)
         entities[e.entity_id] = entity
-        -- if e.entity_id:match("sensor.jans_14_pro_geocoded_location") then
-        --   DEBUGF('main',"entity %s",e.entity_id)
-        -- end
       else 
         DEBUGF('main',"Skipping %s",e.entity_id)
+        skippedEntities[e.entity_id] = true
       end
     end
     self._initialized = true
@@ -344,23 +405,20 @@ function QuickApp:newChildQA(uid,name,room,entity_ids,className)
   local props = {
     name = name,
     type = cls.type,
-    initialProperties = cls.properties or {},
+    properties = cls.properties or {},
+    interfaces = cls.interfaces or {},
     store = { entities = entity_ids },
     room = room,
   }
 
-  if cls.uiView then
-    local uiView = fibaro.ui.UI2NewUiView(cls.uiView)
-    props.initialProperties.uiView = uiView
-  end
+  local UI = cls.UI
 
-  local interfaces = cls.interfaces or {}
   if cls.modify then 
     -- Custom modification of properties and interfaces
     -- Ex. to add a custom UI depending on the entities
-    props,interfaces = cls.modify(table.copy(props),table.copy(interfaces)) 
+    props = cls.modify(table.copy(props)) 
   end
-  return self:createChildDevice0(uid,props,interfaces,className)
+  return self:createChild(uid,props,className,UI)
 end
 
 function QuickApp:updateQA()

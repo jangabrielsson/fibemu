@@ -18,7 +18,14 @@ function MODULE_configs()
   HASS.customTypes['^sensor%.'] = function(e) 
     if e.attributes.Location then return 'sensor_location' end
   end
-  
+  HASS.customTypes['^sensor%.'] = function(e) 
+    local a = e.attributes
+    if a.state_class=='measurement' and not a.device_class then return 'sensor_measurement' end
+  end
+  HASS.customTypes['^climate%.'] = function(e) 
+    if e.attributes.hvac_modes then return 'climate_hvac' end
+  end
+
   -- Skip entities with specific attributes.
   -- Return true if entity should be skipped/filtered
   HASS.entityFilter['.attributes.fibaro_id'] = true -- Skip entities with fibaro_id
@@ -43,19 +50,25 @@ function MODULE_configs()
     'binary_sensor_door',
     'binary_sensor_garage_door',
     'binary_sensor_opening'
-  }
-  HASS.classes.SmokeSensor.auto='binary_sensor_smoke'   -- Define all smoke sensors as Smoke
-  HASS.classes.WindowSensor.auto='binary_sensor_window' -- Define all window sensors as WindowSensor
-  HASS.classes.Motion.auto={                            -- Define all motion sensors as MotionSensor
-  'binary_sensor_motion',
-  'binary_sensor_occupancy',
-  'binary_sensor_presence',
-  'binary_sensor_moving'}
-  HASS.classes.Humidity.auto='sensor_humidity'            -- Define all humidity sensors as Humidity
-  HASS.classes.Pm25.auto='sensor_pm25'                    -- Define all PM25 sensors as PM25
-  HASS.classes.Pm10.auto='sensor_pm10'                    -- Define all PM10 sensors as PM10
-  HASS.classes.Pm1.auto='sensor_pm1'                      -- Define all PM1 sensors as PM1
-  HASS.classes.Co.auto='sensor_carbon_monoxide'           -- Define all CO sensors as CO
+    }
+    HASS.classes.SmokeSensor.auto='binary_sensor_smoke'   -- Define all smoke sensors as Smoke
+    HASS.classes.WindowSensor.auto='binary_sensor_window' -- Define all window sensors as WindowSensor
+    HASS.classes.Motion.auto={                            -- Define all motion sensors as MotionSensor
+    'binary_sensor_motion',
+    'binary_sensor_occupancy',
+    'binary_sensor_presence',
+    'binary_sensor_moving'}
+    HASS.classes.Humidity.auto='sensor_humidity'            -- Define all humidity sensors as Humidity
+    HASS.classes.Pm25.auto='sensor_pm25'                    -- Define all PM25 sensors as PM25
+    HASS.classes.Pm10.auto='sensor_pm10'                    -- Define all PM10 sensors as PM10
+    HASS.classes.Pm1.auto='sensor_pm1'                      -- Define all PM1 sensors as PM1
+    HASS.classes.Co.auto='sensor_carbon_monoxide'           -- Define all CO sensors as CO
+    HASS.classes.DeviceTracker.auto='device_tracker'        -- Define all device tracker
+    HASS.classes.Zone.auto='zone'                           -- Define all zones
+    HASS.classes.Measurement.auto='sensor_measurement'      -- Define all measurements
+    HASS.classes.Calendar.auto='calendar'                   -- Define all calendars
+    --HASS.classes.Thermostat.auto = 'climate_hvac'          -- TBD
+    
   -- HASS.classes.RGBLight.qa = { -- Predefined QAs for RGB lights
   --   ['myQA_1'] = {
   --     entities = {
@@ -76,4 +89,5 @@ function MODULE_configs()
   -- }
   
   end
+
 end
