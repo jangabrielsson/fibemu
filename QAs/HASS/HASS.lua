@@ -39,7 +39,7 @@ of this license document, but changing it is not allowed.
 
 --%%debug=refresh:false
 
-local VERSION = "0.72"
+local VERSION = "0.73"
 local fmt = string.format
 local token,URL
 local dfltDebugFlags = "child"
