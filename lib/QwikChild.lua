@@ -1,5 +1,5 @@
 do
-  local VERSION = "2.0"
+  local VERSION = "2.1"
 
   print("QwikAppChild library v"..VERSION)
   local childID = 'ChildID'
@@ -164,7 +164,10 @@ do
     props.store = nil
     props.parentId = self.id
     table.insert(props.initialInterfaces, 'quickAppChild')
+    local p = props.initialProperties
+    if next(p.uiView)==nil then p.uiView = nil end
     local uiCallbacks = props.initialProperties.uiCallbacks
+    if next(uiCallbacks) == nil then props.initialProperties.uiCallbacks = nil end
     local device, res = api.post("/plugins/createChildDevice", props)
     assert(res == 200, "Can't create child device " .. tostring(res) .. " - " .. json.encode(props))
     setVar(device.id,childID,uid,true)
@@ -181,7 +184,7 @@ do
     return child
   end
   
-  local allChildren = {}
+  local allChildren = {} 
 
   function QuickApp:createChild(uid,props,className,UI)
     __assert_type(uid,'string')
@@ -191,7 +194,7 @@ do
     if not next(allChildren) then
       local devs = api.get("/devices?parentId="..self.id) or {}
       for _,dev in ipairs(devs) do
-        local uid = getVar(dev.id,childID)
+        local uid = getVar(dev.id,childID) 
         if uid then allChildren[uid] = dev.id end
       end
     end
@@ -204,6 +207,8 @@ do
     end
     props.initialProperties = props.properties or {}
     props.initialInterfaces = props.interfaces or {}
+    props.properties = nil
+    props.interfaces = nil
     if UI then
       __assert_type(UI,'table')
       local uiView = UI2NewUiView(UI)
