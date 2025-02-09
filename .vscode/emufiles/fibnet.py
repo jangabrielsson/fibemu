@@ -1,10 +1,10 @@
 from threading import Thread
 from threading import Timer
-import requests_async
 import requests
 from requests import exceptions
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+from async_asgi_testclient import TestClient
 import asyncio
 import socket, ssl
 import errno
@@ -50,10 +50,12 @@ def httpCall(method, url, options, data, local):
     verify = options['checkCertificate'] if options['checkCertificate']==False else True
     req = None
     if not local:
-        req = requests_retry_session()
+        return externalHttpCall(method, url, headers, data, timeout, verify)
     else:
-        req = requests_async.ASGISession(fibapi.app)
-    #req = requests if not local else requests_async.ASGISession(fibapi.app)
+        return internalHttpCall(method, url, headers, data, timeout, verify)
+
+def externalHttpCall(method, url, headers, data, timeout, verify):
+    req = requests_retry_session()
     if data:
         if headers and 'Content-Type' in headers and 'utf-8' in headers['Content-Type']:
             data = data.encode('utf-8')
@@ -71,13 +73,39 @@ def httpCall(method, url, options, data, local):
             case 'DELETE':
                 res = req.delete(url, headers=headers, data=data, timeout=timeout, verify=verify)
 
-        res = asyncio.run(res) if local else res
         if res.text.startswith("<!DOCTYPE html>"):
             return 500, "Internal Server Error", res.headers
         return res.status_code, res.text, res.headers
     except Exception as e:
         return 500, e.__doc__, {}
 
+def internalHttpCall(method, url, headers, data, timeout, verify):
+    req = TestClient(fibapi.app)
+    url = url.replace("http://0.0.0.0:5004", "")
+    if data:
+        if headers and 'Content-Type' in headers and 'utf-8' in headers['Content-Type']:
+            data = data.encode('utf-8')
+            #pass
+    try:
+        match method:
+            case 'GET':
+                res = req.get(url, headers=headers)
+            case 'PUT':
+                res = req.put(url, headers=headers, data=data)
+            case 'PATCH':
+                res = req.patch(url, headers=headers, data=data)
+            case 'POST':
+                res = req.post(url, data=data, headers=headers)
+            case 'DELETE':
+                res = req.delete(url, headers=headers, data=data)
+
+        res = asyncio.run(res)
+        if res.text.startswith("<!DOCTYPE html>"):
+            return 500, "Internal Server Error", res.headers
+        #print(f"RES: {res.status_code} {res.text}", file=sys.stderr)
+        return res.status_code, res.text, res.headers
+    except Exception as e:
+        return 500, e.__doc__, {}
 
 def httpCallAsync(fibemu, method, url, options, data, local):
     ''' http call in separate thread and post back to lua '''
