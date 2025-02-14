@@ -1,5 +1,5 @@
 do
-  local VERSION = "2.1"
+  local VERSION = "2.3"
 
   print("QwikAppChild library v"..VERSION)
   local childID = 'ChildID'
@@ -165,9 +165,9 @@ do
     props.parentId = self.id
     table.insert(props.initialInterfaces, 'quickAppChild')
     local p = props.initialProperties
-    if next(p.uiView)==nil then p.uiView = nil end
+    if p.uiView and next(p.uiView)==nil then p.uiView = nil end
     local uiCallbacks = props.initialProperties.uiCallbacks
-    if next(uiCallbacks) == nil then props.initialProperties.uiCallbacks = nil end
+    if uiCallbacks and next(uiCallbacks) == nil then props.initialProperties.uiCallbacks = nil end
     local device, res = api.post("/plugins/createChildDevice", props)
     assert(res == 200, "Can't create child device " .. tostring(res) .. " - " .. json.encode(props))
     setVar(device.id,childID,uid,true)
@@ -302,7 +302,7 @@ do
   end
 
   function QuickApp:removeUndefinedChildren(childrenDefs)
-    for uid,id in ipairs(allChildren) do
+    for uid,id in pairs(allChildren) do
       if not childrenDefs[uid] then
         DEBUGF("Deleting undefined child ID:%s, UID:%s",id,uid)
         api.delete("/plugins/removeChildDevice/" .. id)
